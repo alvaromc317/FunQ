@@ -12,7 +12,7 @@ fqpca(
   periodic = TRUE,
   splines.df = 30,
   tol = 0.001,
-  niters = 30,
+  n.iters = 30,
   solver = "SCS",
   verbose = FALSE,
   seed = NULL
@@ -33,7 +33,7 @@ fqpca(
 
 \item{tol}{Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.}
 
-\item{niters}{Maximum number of iterations. Default is 30.}
+\item{n.iters}{Maximum number of iterations. Default is 30.}
 
 \item{solver}{Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.}
 
@@ -52,6 +52,9 @@ Solves the functional quantile principal component analysis methodology
 
 x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
 x = x + rnorm(200*144, 0, 0.4)
+
+# Add missing observations
+x[sample(200*144, as.integer(0.2*200*144))] = NA
 
 results = fqpca(x=x, n.components=1, quantile.value=0.5)
 

@@ -2,3 +2,5 @@
 
 export(fqpca)
 export(predict_scores_fqpca)
+export(predict_scores_qfa)
+export(qfa)

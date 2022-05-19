@@ -23,6 +23,9 @@ Given a new matrix x, predicts the value of the scores associated to the given m
 x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
 x = x + rnorm(200*144, 0, 0.4)
 
+# Add missing observations
+x[sample(200*144, as.integer(0.2*200*144))] = NA
+
 results = fqpca(x=x[1:150,], n.components=1, quantile.value=0.5)
 
 predictions = predict_scores_fqpca(results, x=x[151:200,])

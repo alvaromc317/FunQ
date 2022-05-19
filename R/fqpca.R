@@ -196,7 +196,7 @@ inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile.value, lambda
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.
 #' @param splines.df Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda.ridge. Default is 30.
 #' @param tol Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.
-#' @param niters Maximum number of iterations. Default is 30.
+#' @param n.iters Maximum number of iterations. Default is 30.
 #' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.
 #' @param verbose Boolean indicating verbosity of the function. Default is FALSE.
 #' @param seed Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).
@@ -210,11 +210,14 @@ inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile.value, lambda
 #' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
 #' x = x + rnorm(200*144, 0, 0.4)
 #'
+#' # Add missing observations
+#' x[sample(200*144, as.integer(0.2*200*144))] = NA
+#'
 #' results = fqpca(x=x, n.components=1, quantile.value=0.5)
 #'
 #' loadings = results$loadings
 #' scores = results$scores
-fqpca = function(x, n.components=2,  quantile.value=0.5, lambda.ridge=1e-12,  periodic=TRUE, splines.df=30, tol=1e-3, niters=30, solver='SCS', verbose=FALSE, seed=NULL)
+fqpca = function(x, n.components=2,  quantile.value=0.5, lambda.ridge=1e-12,  periodic=TRUE, splines.df=30, tol=1e-3, n.iters=30, solver='SCS', verbose=FALSE, seed=NULL)
 {
   global_start_time = base::Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
@@ -288,7 +291,7 @@ fqpca = function(x, n.components=2,  quantile.value=0.5, lambda.ridge=1e-12,  pe
   error_checker_loop = FALSE
   error_checker_normalization = FALSE
   diverging_loop = FALSE
-  for(i in 1:niters)
+  for(i in 1:n.iters)
   {
     loop_start_time = base::Sys.time()
     loop_result = try(inner_loop(x=x, x_mask=x_mask, Lambda0=Lambda0, spline_basis_i=spline_basis_i, quantile.value=quantile.value, lambda.ridge=lambda.ridge, R_block=R_block, solver=solver), silent=TRUE)
@@ -353,7 +356,7 @@ fqpca = function(x, n.components=2,  quantile.value=0.5, lambda.ridge=1e-12,  pe
     Lambda0 = Lambda1
     F0 = F1
   }
-  if(i == niters){ if(verbose) {message('Algorithm reached max_iters: ', niters, ' iterations')}}
+  if(i == n.iters){ if(verbose) {message('Algorithm reached max_iters: ', n.iters, ' iterations')}}
 
   best_results = compute_F_Lambda(x=x, x_mask=x_mask, quantile.value=quantile.value, basis_coef=best_B, spline_basis=spline_basis, spline_basis_i=spline_basis_i)
   # Normalization of best results
@@ -414,6 +417,9 @@ fqpca = function(x, n.components=2,  quantile.value=0.5, lambda.ridge=1e-12,  pe
 #'
 #' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
 #' x = x + rnorm(200*144, 0, 0.4)
+#'
+#' # Add missing observations
+#' x[sample(200*144, as.integer(0.2*200*144))] = NA
 #'
 #' results = fqpca(x=x[1:150,], n.components=1, quantile.value=0.5)
 #'
