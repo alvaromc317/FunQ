@@ -208,7 +208,7 @@ inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile.value, lambda
 #' # Generate fake dataset with 200 observations and 144 time points
 #'
 #' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
-#' x = x + rnorm(200*144, 0, 0.4)
+#' x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 #'
 #' # Add missing observations
 #' x[sample(200*144, as.integer(0.2*200*144))] = NA
@@ -416,7 +416,7 @@ fqpca = function(x, n.components=2,  quantile.value=0.5, lambda.ridge=1e-12,  pe
 #' # Generate fake dataset with 200 observations and 144 time points
 #'
 #' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
-#' x = x + rnorm(200*144, 0, 0.4)
+#' x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 #'
 #' # Add missing observations
 #' x[sample(200*144, as.integer(0.2*200*144))] = NA

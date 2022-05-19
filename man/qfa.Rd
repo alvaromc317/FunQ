@@ -39,7 +39,7 @@ Solves the Quantile factor analysis methodology.
 # Generate fake dataset with 200 observations and 144 time points
 
 x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
-x = x + rnorm(200*144, 0, 0.4)
+x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 
 results = qfa(x=x, n.components=1, quantile.value=0.5)
 

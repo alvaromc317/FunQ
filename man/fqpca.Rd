@@ -51,7 +51,7 @@ Solves the functional quantile principal component analysis methodology
 # Generate fake dataset with 200 observations and 144 time points
 
 x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
-x = x + rnorm(200*144, 0, 0.4)
+x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 
 # Add missing observations
 x[sample(200*144, as.integer(0.2*200*144))] = NA
