@@ -6,13 +6,13 @@
 \usage{
 fqpca(
   x,
-  n.components = 2,
-  quantile.value = 0.5,
+  n_components = 2,
+  quantile_value = 0.5,
   lambda.ridge = 1e-12,
   periodic = TRUE,
-  splines.df = 30,
+  splines_df = 30,
   tol = 0.001,
-  n.iters = 30,
+  n_iters = 30,
   solver = "SCS",
   verbose = FALSE,
   seed = NULL
@@ -21,19 +21,19 @@ fqpca(
 \arguments{
 \item{x}{The N by T matrix of observed time instants}
 
-\item{n.components}{The number of estimated components. Default is 2.}
+\item{n_components}{The number of estimated components. Default is 2.}
 
-\item{quantile.value}{The quantile considered. Default is the median 0.5.}
+\item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
 \item{lambda.ridge}{The hyperparameter controlling the penalization on the splines. Default is 1e-12.}
 
 \item{periodic}{Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.}
 
-\item{splines.df}{Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda.ridge. Default is 30.}
+\item{splines_df}{Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda.ridge. Default is 30.}
 
 \item{tol}{Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.}
 
-\item{n.iters}{Maximum number of iterations. Default is 30.}
+\item{n_iters}{Maximum number of iterations. Default is 30.}
 
 \item{solver}{Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.}
 
@@ -56,7 +56,7 @@ x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 # Add missing observations
 x[sample(200*144, as.integer(0.2*200*144))] = NA
 
-results = fqpca(x=x, n.components=1, quantile.value=0.5)
+results = fqpca(x=x, n_components=1, quantile_value=0.5)
 
 loadings = results$loadings
 scores = results$scores

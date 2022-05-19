@@ -8,7 +8,7 @@ qr_ridge(
   x,
   y,
   R,
-  quantile.value = 0.5,
+  quantile_value = 0.5,
   lambda = 0.001,
   verbose = FALSE,
   solver = "SCS"
@@ -21,7 +21,7 @@ qr_ridge(
 
 \item{R}{Quadratic matrix used to apply a ridge based penalty.}
 
-\item{quantile.value}{The quantile considered. Default is the median 0.5.}
+\item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
 \item{lambda}{The hyperparameter controlling the penalization. Default is 1e-3.}
 

@@ -7,7 +7,7 @@
 compute_F_Lambda(
   x,
   x_mask,
-  quantile.value,
+  quantile_value,
   basis_coef,
   spline_basis,
   spline_basis_i
@@ -18,7 +18,7 @@ compute_F_Lambda(
 
 \item{x_mask}{Mask matrix of the same dimensions asx indicating wihch observations in x are known.}
 
-\item{quantile.value}{The quantile considered. Default is the median 0.5.}
+\item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
 \item{basis_coef}{The matrix of spline basis coefficients.}
 

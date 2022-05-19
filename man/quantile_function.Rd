@@ -4,12 +4,12 @@
 \alias{quantile_function}
 \title{QR objective value}
 \usage{
-quantile_function(x, quantile.value = 0.5)
+quantile_function(x, quantile_value = 0.5)
 }
 \arguments{
 \item{x}{The vector.}
 
-\item{quantile.value}{The quantile considered. Default is the median 0.5.}
+\item{quantile_value}{The quantile considered. Default is the median 0.5.}
 }
 \value{
 Objective value function for a quantile regression model.

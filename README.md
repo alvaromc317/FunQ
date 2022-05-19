@@ -70,21 +70,21 @@ traditional FPCA.
 
 ``` r
 library(fqpca)
-x.train = x[1:150,]
-x.test = x[151:n,]
-results = fqpca(x=x.train, n.components=2, quantile.value=0.5)
+x_train = x[1:150,]
+x_test = x[151:n,]
+results = fqpca(x=x_train, n_components=2, quantile_value=0.5)
 
 loadings = results$loadings
 scores = results$scores
 
-# Recover x.train based on decomposition
-x.train.estimated = scores %*% t(loadings)
+# Recover x_train based on decomposition
+x_train_estimated = scores %*% t(loadings)
 ```
 
 Finally, given a new set of observations, it is possible to decompose
 the new observations using the loadings already computed.
 
 ``` r
-scores.test = predict_scores_fqpca(results, x=x.test)
-x.test.estimated = scores.test %*% t(loadings)
+scores_test = predict(results, newdata=x_test)
+x_test_estimated = scores_test %*% t(loadings)
 ```

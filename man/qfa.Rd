@@ -6,10 +6,10 @@
 \usage{
 qfa(
   x,
-  n.components,
-  quantile.value = 0.5,
+  n_components,
+  quantile_value = 0.5,
   tol = 0.001,
-  n.iters = 100,
+  n_iters = 100,
   verbose = TRUE,
   seed = NULL
 )
@@ -17,13 +17,13 @@ qfa(
 \arguments{
 \item{x}{The N by T matrix of observed time instants}
 
-\item{n.components}{The number of estimated components. Default is 2.}
+\item{n_components}{The number of estimated components. Default is 2.}
 
-\item{quantile.value}{The quantile considered. Default is the median 0.5.}
+\item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
 \item{tol}{Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.}
 
-\item{n.iters}{Maximum number of iterations. Default is 30.}
+\item{n_iters}{Maximum number of iterations. Default is 30.}
 
 \item{verbose}{Boolean indicating verbosity of the function. Default is FALSE.}
 
@@ -41,7 +41,7 @@ Solves the Quantile factor analysis methodology.
 x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
 x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 
-results = qfa(x=x, n.components=1, quantile.value=0.5)
+results = qfa(x=x, n_components=1, quantile_value=0.5)
 
 loadings = results$loadings
 scores = results$scores

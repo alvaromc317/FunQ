@@ -9,7 +9,7 @@ inner_loop(
   x_mask,
   Lambda0,
   spline_basis_i,
-  quantile.value,
+  quantile_value,
   lambda.ridge,
   R_block,
   solver
@@ -24,7 +24,7 @@ inner_loop(
 
 \item{spline_basis_i}{A list containing, for each observation xi, the matrix of associated spline basis.}
 
-\item{quantile.value}{The quantile considered. Default is the median 0.5.}
+\item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
 \item{lambda.ridge}{The hyperparameter controlling the penalization on the splines. Default is 1e-12.}
 
