@@ -121,12 +121,12 @@ compute_F_Lambda = function(x, x_mask, quantile_value, basis_coef, spline_basis,
 #' @param Lambda0 Initial matrix of scores.
 #' @param spline_basis_i A list containing, for each observation xi, the matrix of associated spline basis.
 #' @param quantile_value The quantile considered. Default is the median 0.5.
-#' @param lambda.ridge The hyperparameter controlling the penalization on the splines. Default is 1e-12.
+#' @param lambda_ridge The hyperparameter controlling the penalization on the splines. Default is 1e-12.
 #' @param R_block Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.
 #' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.
 #'
 #' @return The loadings and scores matrices, the matrix of spline coefficients and the objective function value at the current iteration.
-inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda.ridge, R_block, solver)
+inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda_ridge, R_block, solver)
 {
   # At each iteration, call this function to obtain the estimation of F and Lambda
   n_obs = base::nrow(x)
@@ -150,7 +150,7 @@ inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda
     row_idx = row_idx+n_time_i
   }
   # Obtain spline coefficients and reshape as matrix
-  B_vector = qr_ridge(x=tensor_matrix, y=x_vector,  R=R_block, quantile_value=quantile_value, lambda=lambda.ridge, solver=solver)
+  B_vector = qr_ridge(x=tensor_matrix, y=x_vector,  R=R_block, quantile_value=quantile_value, lambda=lambda_ridge, solver=solver)
   B = base::matrix(B_vector, byrow=FALSE, ncol=n_components)
 
   # Obtain estimation of F
@@ -188,7 +188,7 @@ inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda
 new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_matrix,
                       spline_coefficients, mean_unnormalized_scores, sd_unnormalized_scores,
                       objective_function_value, list_objective_function_values, splines_df,
-                      periodic, quantile_value, n_components, n_iters, spline_basis, execution_time,
+                      periodic, quantile_value, n_components, n_iters, lambda_ridge, spline_basis, execution_time,
                       error_checker_normalization, error_checker_loop, diverging_loop)
 {
   structure(list(
@@ -205,6 +205,7 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
     periodic = periodic,
     quantile_value = quantile_value,
     n_iters = n_iters,
+    lambda_ridge=lambda_ridge,
     spline_basis = spline_basis,
     execution_time = execution_time,
     error_checker_normalization = error_checker_normalization,
@@ -222,9 +223,9 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
 #' @param x The N by T matrix of observed time instants
 #' @param n_components The number of estimated components. Default is 2.
 #' @param quantile_value The quantile considered. Default is the median 0.5.
-#' @param lambda.ridge The hyperparameter controlling the penalization on the splines. Default is 1e-12.
+#' @param lambda_ridge The hyperparameter controlling the penalization on the splines. Default is 1e-12.
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.
-#' @param splines_df Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda.ridge. Default is 30.
+#' @param splines_df Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda_ridge. Default is 30.
 #' @param tol Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.
 #' @param n_iters Maximum number of iterations. Default is 30.
 #' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.
@@ -243,11 +244,11 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
 #' # Add missing observations
 #' x[sample(200*144, as.integer(0.2*200*144))] = NA
 #'
-#' results = fqpca(x=x, n_components=1, quantile_value=0.5)
+#' results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=1e-12)
 #'
 #' loadings = results$loadings
 #' scores = results$scores
-fqpca = function(x, n_components=2,  quantile_value=0.5, lambda.ridge=1e-12,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', verbose=FALSE, seed=NULL)
+fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', verbose=FALSE, seed=NULL)
 {
   global_start_time = base::Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
@@ -324,7 +325,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda.ridge=1e-12,  pe
   for(i in 1:n_iters)
   {
     loop_start_time = base::Sys.time()
-    loop_result = try(inner_loop(x=x, x_mask=x_mask, Lambda0=Lambda0, spline_basis_i=spline_basis_i, quantile_value=quantile_value, lambda.ridge=lambda.ridge, R_block=R_block, solver=solver), silent=TRUE)
+    loop_result = try(inner_loop(x=x, x_mask=x_mask, Lambda0=Lambda0, spline_basis_i=spline_basis_i, quantile_value=quantile_value, lambda_ridge=lambda_ridge, R_block=R_block, solver=solver), silent=TRUE)
     error_chr = class(loop_result)
     if(error_chr=="try-error")
     {
@@ -420,6 +421,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda.ridge=1e-12,  pe
     quantile_value = quantile_value,
     n_components = n_components,
     n_iters = best_iteration,
+    lambda_ridge=lambda_ridge,
     spline_basis=spline_basis,
     execution_time=global_execution_time,
     error_checker_normalization=error_checker_normalization,

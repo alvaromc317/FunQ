@@ -8,7 +8,7 @@ fqpca(
   x,
   n_components = 2,
   quantile_value = 0.5,
-  lambda.ridge = 1e-12,
+  lambda_ridge = 1e-12,
   periodic = TRUE,
   splines_df = 30,
   tol = 0.001,
@@ -25,11 +25,11 @@ fqpca(
 
 \item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
-\item{lambda.ridge}{The hyperparameter controlling the penalization on the splines. Default is 1e-12.}
+\item{lambda_ridge}{The hyperparameter controlling the penalization on the splines. Default is 1e-12.}
 
 \item{periodic}{Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.}
 
-\item{splines_df}{Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda.ridge. Default is 30.}
+\item{splines_df}{Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda_ridge. Default is 30.}
 
 \item{tol}{Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.}
 
@@ -56,7 +56,7 @@ x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 # Add missing observations
 x[sample(200*144, as.integer(0.2*200*144))] = NA
 
-results = fqpca(x=x, n_components=1, quantile_value=0.5)
+results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=1e-12)
 
 loadings = results$loadings
 scores = results$scores

@@ -10,7 +10,7 @@ inner_loop(
   Lambda0,
   spline_basis_i,
   quantile_value,
-  lambda.ridge,
+  lambda_ridge,
   R_block,
   solver
 )
@@ -26,7 +26,7 @@ inner_loop(
 
 \item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
-\item{lambda.ridge}{The hyperparameter controlling the penalization on the splines. Default is 1e-12.}
+\item{lambda_ridge}{The hyperparameter controlling the penalization on the splines. Default is 1e-12.}
 
 \item{R_block}{Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.}
 
