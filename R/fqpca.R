@@ -204,6 +204,7 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
     splines_df = splines_df,
     periodic = periodic,
     quantile_value = quantile_value,
+    n_components = n_components,
     n_iters = n_iters,
     lambda_ridge=lambda_ridge,
     spline_basis = spline_basis,
