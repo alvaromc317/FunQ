@@ -2,7 +2,7 @@
 
 new_qfa <- function(loadings, scores, unnormalized_loadings, normalization_matrix,
                     objective_function_value, list_objective_function_values,
-                    quantile_value, n_iters, execution_time)
+                    quantile_value, n_components=n_components, n_iters, execution_time)
 {
   structure(list(
     loadings = loadings,
@@ -12,6 +12,7 @@ new_qfa <- function(loadings, scores, unnormalized_loadings, normalization_matri
     objective_function_value = objective_function_value,
     list_objective_function_values = list_objective_function_values,
     quantile_value = quantile_value,
+    n_components = n_components,
     n_iters = n_iters,
     execution_time = execution_time
   ),
@@ -120,6 +121,7 @@ qfa = function(x, n_components, quantile_value=0.5, tol=1e-3, n_iters=100, verbo
     objective_function_value = of_value1,
     list_objective_function_values = of_value,
     quantile_value = quantile_value,
+    n_components = n_components,
     n_iters = i,
     execution_time = global_execution_time
   )

@@ -188,7 +188,7 @@ inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda
 new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_matrix,
                       spline_coefficients, mean_unnormalized_scores, sd_unnormalized_scores,
                       objective_function_value, list_objective_function_values, splines_df,
-                      periodic, quantile_value, n_iter, spline_basis, execution_time,
+                      periodic, quantile_value, n_components, n_iters, spline_basis, execution_time,
                       error_checker_normalization, error_checker_loop, diverging_loop)
 {
   structure(list(
@@ -204,7 +204,7 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
     splines_df = splines_df,
     periodic = periodic,
     quantile_value = quantile_value,
-    n_iter = n_iter,
+    n_iters = n_iters,
     spline_basis = spline_basis,
     execution_time = execution_time,
     error_checker_normalization = error_checker_normalization,
@@ -418,7 +418,8 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda.ridge=1e-12,  pe
     splines_df=splines_df,
     periodic = periodic,
     quantile_value = quantile_value,
-    n_iter = best_iteration,
+    n_components = n_components,
+    n_iters = best_iteration,
     spline_basis=spline_basis,
     execution_time=global_execution_time,
     error_checker_normalization=error_checker_normalization,
