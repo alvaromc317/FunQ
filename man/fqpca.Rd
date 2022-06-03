@@ -48,7 +48,7 @@ A list containing the matrix of scores, the matrix of loadings, and a secondary 
 Solves the functional quantile principal component analysis methodology
 }
 \examples{
-# Example 1: Generate fake dataset with 200 observations and 144 time points
+# Generate fake dataset with 200 observations and 144 time points
 
 x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
 x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
@@ -56,22 +56,7 @@ x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 # Add missing observations
 x[sample(200*144, as.integer(0.2*200*144))] = NA
 
-results = fqpca(x=x, n_components=1, quantile_value=0.5)
-
-loadings = results$loadings
-scores = results$scores
-
-
-# Example 2: Generate fake dataset with 200 observations and 144 time points.
-# Change in the value of lambda_ridge
-
-x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
-x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
-
-# Add missing observations
-x[sample(200*144, as.integer(0.2*200*144))] = NA
-
-results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=0)
+results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=1e-12)
 
 loadings = results$loadings
 scores = results$scores

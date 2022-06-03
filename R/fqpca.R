@@ -150,13 +150,7 @@ inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda
     row_idx = row_idx+n_time_i
   }
   # Obtain spline coefficients and reshape as matrix
-  if(lambda_ridge != 0)
-  {
-    B_vector = qr_ridge(x=tensor_matrix, y=x_vector,  R=R_block, quantile_value=quantile_value, lambda=lambda_ridge, solver=solver)
-  } else if(lambda_ridge == 0)
-  {
-    B_vector = quantreg::rq(x_vector~-1+tensor_matrix, tau=quantile_value)$coefficients
-  }
+  B_vector = qr_ridge(x=tensor_matrix, y=x_vector,  R=R_block, quantile_value=quantile_value, lambda=lambda_ridge, solver=solver)
   B = base::matrix(B_vector, byrow=FALSE, ncol=n_components)
 
   # Obtain estimation of F
@@ -243,7 +237,7 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
 #' @export
 #'
 #' @examples
-#' # Example 1: Generate fake dataset with 200 observations and 144 time points
+#' # Generate fake dataset with 200 observations and 144 time points
 #'
 #' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
 #' x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
@@ -251,22 +245,7 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
 #' # Add missing observations
 #' x[sample(200*144, as.integer(0.2*200*144))] = NA
 #'
-#' results = fqpca(x=x, n_components=1, quantile_value=0.5)
-#'
-#' loadings = results$loadings
-#' scores = results$scores
-#'
-#'
-#' # Example 2: Generate fake dataset with 200 observations and 144 time points.
-#' # Change in the value of lambda_ridge
-#'
-#' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
-#' x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
-#'
-#' # Add missing observations
-#' x[sample(200*144, as.integer(0.2*200*144))] = NA
-#'
-#' results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=0)
+#' results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=1e-12)
 #'
 #' loadings = results$loadings
 #' scores = results$scores
