@@ -10,7 +10,7 @@ qfa(
   quantile_value = 0.5,
   tol = 0.001,
   n_iters = 100,
-  verbose = TRUE,
+  verbose = FALSE,
   seed = NULL
 )
 }

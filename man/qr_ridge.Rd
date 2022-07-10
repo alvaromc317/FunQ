@@ -4,15 +4,7 @@
 \alias{qr_ridge}
 \title{Penalized quantile regression}
 \usage{
-qr_ridge(
-  x,
-  y,
-  R,
-  quantile_value = 0.5,
-  lambda = 0.001,
-  verbose = FALSE,
-  solver = "SCS"
-)
+qr_ridge(x, y, R, quantile_value = 0.5, lambda = 0.001, solver = "SCS")
 }
 \arguments{
 \item{x}{N times p matrix of predictive variables.}
@@ -24,8 +16,6 @@ qr_ridge(
 \item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
 \item{lambda}{The hyperparameter controlling the penalization. Default is 1e-3.}
-
-\item{verbose}{Boolean indicating verbosity of the function. Default is FALSE.}
 
 \item{solver}{Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.}
 }

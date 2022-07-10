@@ -23,11 +23,10 @@ quantile_function = function(x, quantile_value=0.5)
 #' @param R Quadratic matrix used to apply a ridge based penalty.
 #' @param quantile_value The quantile considered. Default is the median 0.5.
 #' @param lambda The hyperparameter controlling the penalization. Default is 1e-3.
-#' @param verbose Boolean indicating verbosity of the function. Default is FALSE.
 #' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.
 #'
 #' @return Beta coefficients of the penalized quantile regression model.
-qr_ridge = function(x, y, R, quantile_value=0.5, lambda=1e-3, verbose=FALSE, solver='SCS')
+qr_ridge = function(x, y, R, quantile_value=0.5, lambda=1e-3, solver='SCS')
 {
   # Solve a quantile regression model with a ridge type penalty
   n = dim(x)[1]
@@ -37,9 +36,7 @@ qr_ridge = function(x, y, R, quantile_value=0.5, lambda=1e-3, verbose=FALSE, sol
   ridge_penalization = lambda * CVXR::quad_form(beta_var, R)
   objective = CVXR::Minimize(objective_function + ridge_penalization)
   problem = CVXR::Problem(objective)
-  solution = suppressWarnings(try(CVXR::solve(problem, solver=solver), silent=TRUE))
-  error_chr = class(solution)
-  if(error_chr=="try-error" & verbose==TRUE){message('Error with solver: ', solver, '. Use an alternative solver like ECOS, OSQP, or licensed programs like MOSEK or GUROBI')}
+  solution = CVXR::solve(problem, solver=solver)
   beta_sol = c(solution$getValue(beta_var))
   results = beta_sol
   return(results)
@@ -189,7 +186,7 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
                       spline_coefficients, mean_unnormalized_scores, sd_unnormalized_scores,
                       objective_function_value, list_objective_function_values, splines_df,
                       periodic, quantile_value, n_components, n_iters, lambda_ridge, spline_basis, execution_time,
-                      error_checker_normalization, error_checker_loop, diverging_loop)
+                      warning_checker_normalization, warning_checker_loop, warning_diverging_loop)
 {
   structure(list(
     loadings = loadings,
@@ -209,9 +206,9 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
     lambda_ridge=lambda_ridge,
     spline_basis = spline_basis,
     execution_time = execution_time,
-    error_checker_normalization = error_checker_normalization,
-    error_checker_loop = error_checker_loop,
-    diverging_loop = diverging_loop
+    warning_checker_normalization = warning_checker_normalization,
+    warning_checker_loop = warning_checker_loop,
+    warning_diverging_loop = warning_diverging_loop
   ),
   class = "fqpca")
 }
@@ -251,9 +248,15 @@ new_fqpca <- function(loadings, scores, unnormalized_loadings, normalization_mat
 #' scores = results$scores
 fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', verbose=FALSE, seed=NULL)
 {
+
+  if(!is.data.frame(x) & !is.matrix(x)){stop('x is not of a valid type. Object provided: ', typeof(x))}
+  if(! n_components == floor(n_components)){stop('n_components must be an integer number. Value provided: ', n_components)}
+  if(quantile_value<0 | quantile_value>1){stop('quantile_value must be a value between 0 and 1. Value provided: ', quantile_value)}
+  if(! n_iters == floor(n_iters)){stop('n_iters must be an integer number. Value provided: ', n_iters)}
+
   global_start_time = base::Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
-  x = base::as.matrix(x)
+  x = unname(base::as.matrix(x))
   # Step 1: Initialize values
   n_obs = base::dim(x)[1]
   n_time = base::dim(x)[2]
@@ -283,7 +286,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
     R_block = (1 - 1e-3) * R_block + 1e-3 * base::diag(base::nrow(R_block))
     if(all(base::eigen(R_block)$values > 0)){break}
   }
-  if(!all(base::eigen(R_block)$values > 0)) {message('Splines penalization matrix is not positive definite')}
+  if(!all(base::eigen(R_block)$values > 0)) {stop('Splines penalization matrix is not positive definite')}
 
   # Generate F0 and compute Lambda0 based on centered data ---
   basis_coef = base::matrix(stats::rnorm(base::dim(spline_basis)[2] * (n_components+1), mean=0, sd=1/n_time),
@@ -320,19 +323,19 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
 
   # Iterate until convergence or until max_iters is reached
   convergence_criteria = c()
-  error_checker_loop = FALSE
-  error_checker_normalization = FALSE
-  diverging_loop = FALSE
+  warning_checker_loop = FALSE
+  warning_checker_normalization = FALSE
+  warning_diverging_loop = FALSE
   for(i in 1:n_iters)
   {
     loop_start_time = base::Sys.time()
-    loop_result = try(inner_loop(x=x, x_mask=x_mask, Lambda0=Lambda0, spline_basis_i=spline_basis_i, quantile_value=quantile_value, lambda_ridge=lambda_ridge, R_block=R_block, solver=solver), silent=TRUE)
+    loop_result = try(inner_loop(x=x, x_mask=x_mask, Lambda0=Lambda0, spline_basis_i=spline_basis_i, quantile_value=quantile_value, lambda_ridge=lambda_ridge, R_block=R_block, solver=solver), silent=FALSE)
     error_chr = class(loop_result)
     if(error_chr=="try-error")
     {
       # If an error occurred (aka, algorithm failed to converge) exit the loop
-      message('Inner loop error')
-      error_checker_loop = TRUE
+      warning(paste0('Convergence on iteration ', i, ' failed. Providing results from previous iteration.'))
+      warning_checker_loop = TRUE
       loop_result = loop_result_backup
       break
     } else {
@@ -355,12 +358,12 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
     convergence_criteria[i] = base::abs(of_value1 - of_value0)
     # Measure computation time
     loop_end_time = base::Sys.time()
-    loop_execution_time = loop_end_time - loop_start_time
+    loop_execution_time = difftime(loop_end_time, loop_start_time, units='secs')
     if(verbose)
     {
       message('Iteration ', i, ' completed in ', base::round(loop_execution_time, 3), ' seconds',
               '\n', 'Convergence criteria value: ', base::round(convergence_criteria[i], 4),
-              '\n', 'OF0 value: ', base::round(of_value0, 4), ' OF1 value: ', base::round(of_value1, 4))
+              '\n', 'Objective function (i-1) value: ', base::round(of_value0, 4), ' Objective function i value: ', round(of_value1, 4))
       message('___________________________________________________')
     }
 
@@ -373,7 +376,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
     # 50 times larger than the original objective value function, break
     if( of_value[i+1] > 50 * of_value[2])
     {
-      diverging_loop = TRUE
+      warning_diverging_loop = TRUE
       if(verbose)
       {
         message('Breaking diverging loop at iteration ', i,
@@ -388,7 +391,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
     Lambda0 = Lambda1
     F0 = F1
   }
-  if(i == n_iters){ if(verbose) {message('Algorithm reached max_iters: ', n_iters, ' iterations')}}
+  if(i == n_iters){ if(verbose) {warning('Algorithm reached maximum number of iterations without convergence: ', n_iters, ' iterations')}}
 
   best_results = compute_F_Lambda(x=x, x_mask=x_mask, quantile_value=quantile_value, basis_coef=best_B, spline_basis=spline_basis, spline_basis_i=spline_basis_i)
   # Normalization of best results
@@ -396,8 +399,8 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
   error_chr = class(normalization_result)
   if(error_chr=="try-error")
   {
-    message('Failed normalization of results. Providing unnormalized results')
-    error_checker_normalization = TRUE
+    warning('Failed normalization of results. Providing unnormalized results')
+    warning_checker_normalization = TRUE
     normalization_result = list(Fhat=best_F, Lhat=best_Lambda, normalization_matrix=diag(n_components))
   }
   best_Fhat = normalization_result$Fhat
@@ -405,7 +408,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
   best_normalization_matrix = normalization_result$normalization_matrix
 
   global_end_time = base::Sys.time()
-  global_execution_time = global_end_time - global_start_time
+  global_execution_time = difftime(global_end_time, global_start_time, units='secs')
 
   results = new_fqpca(
     loadings = best_Fhat,
@@ -425,11 +428,10 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
     lambda_ridge=lambda_ridge,
     spline_basis=spline_basis,
     execution_time=global_execution_time,
-    error_checker_normalization=error_checker_normalization,
-    error_checker_loop=error_checker_loop,
-    diverging_loop=diverging_loop
+    warning_checker_normalization=warning_checker_normalization,
+    warning_checker_loop=warning_checker_loop,
+    warning_diverging_loop=warning_diverging_loop
   )
-
   return(results)
 }
 
@@ -465,6 +467,14 @@ predict.fqpca = function(object, newdata, ...)
   {
     stop('The object must be of class fqpca')
   }
+  if(!is.data.frame(newdata) & !is.matrix(newdata)){stop('x is not of a valid type. Object provided: ', typeof(newdata))}
+  newdata = unname(as.matrix(newdata))
+  if(ncol(newdata) == 1){ newdata = t(newdata)}
+
+  x_mask = !base::is.na(newdata)
+  n_obs = base::nrow(newdata)
+  n_time = base::ncol(newdata)
+  if(sum(!x_mask) == n_obs * n_time){stop('newdata contains no information. Check that there are values different from NA')}
   # Unload required information from fqfa object
   spline_coefficients=object$spline_coefficients
   normalization_matrix=object$normalization_matrix
@@ -473,12 +483,8 @@ predict.fqpca = function(object, newdata, ...)
   splines_df =object$splines_df
   periodic = object$periodic
   quantile_value = object$quantile_value
-  x = base::as.matrix(newdata)
-  n_obs = base::nrow(x)
-  n_time = base::ncol(x)
   n_components = base::ncol(spline_coefficients)
   x_axis = base::seq(0, 1, length.out = n_time)
-  x_mask = !base::is.na(x)
   mean_Lhat_matrix = base::matrix(base::rep(mean_unnormalized_scores, n_obs), nrow=n_obs, byrow=TRUE)
   sd_Lhat_matrix = base::matrix(base::rep(sd_unnormalized_scores, n_obs), nrow=n_obs, byrow=TRUE)
   if(periodic)
@@ -494,13 +500,12 @@ predict.fqpca = function(object, newdata, ...)
     xi_axis = x_axis[x_mask[i,]]
     spline_basis_i[[i]] = splines2::mSpline(xi_axis, degree=3, intercept=TRUE, knots=knots, periodic=periodic, Boundary.knots=c(min(x_axis), max(x_axis)))
   }
-
   # Given F1 compute Lambda1 based on the intercept - centered data
   Lambda1 =  base::matrix(0, n_obs, n_components-1)
   for(i in base::seq(n_obs))
   {
     Fi = spline_basis_i[[i]] %*% spline_coefficients
-    xi = x[i, x_mask[i,]]
+    xi = newdata[i, x_mask[i,]]
     xi = xi - Fi[,1]
     Lambda1[i,] =  quantreg::rq(xi ~ -1 + Fi[,2:(n_components)], tau=quantile_value)$coefficients
   }
