@@ -31,7 +31,7 @@ new_qfa <- function(loadings, scores, unnormalized_loadings, normalization_matri
 #' @param n_iters Maximum number of iterations. Default is 30.
 #' @param verbose Boolean indicating verbosity of the function. Default is FALSE.
 #' @param seed Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).
-#'
+#' @param method Parameter from the quantreg package. Method used to solve the quantile regression models.
 #' @return A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
 #' @export
 #'
@@ -45,16 +45,8 @@ new_qfa <- function(loadings, scores, unnormalized_loadings, normalization_matri
 #'
 #' loadings = results$loadings
 #' scores = results$scores
-qfa = function(x, n_components, quantile_value=0.5, tol=1e-3, n_iters=100, verbose=FALSE, seed=NULL)
+qfa = function(x, n_components, quantile_value=0.5, tol=1e-3, n_iters=100, verbose=FALSE, seed=NULL, method='br')
 {
-  # param x: is the N by T matrix of observed variables
-  # param n_components: is the number of estimated factors. Default is 2
-  # param quantile_value: quantile level. Defaul is 0.5
-  # param tol: convergence threshold.
-  # param n_iters: max number of iterations
-  # param verbose: boolean, should execution time per iteration be displayed?
-  # param seed: seed for the random generator number
-
   if(!is.data.frame(x) & !is.matrix(x)){stop('x is not of a valid type. Object provided: ', typeof(x))}
   if(! n_components == floor(n_components)){stop('n_components must be an integer number. Value provided: ', n_components)}
   if(quantile_value<0 | quantile_value>1){stop('quantile_value must be a value between 0 and 1. Value provided: ', quantile_value)}
@@ -70,20 +62,21 @@ qfa = function(x, n_components, quantile_value=0.5, tol=1e-3, n_iters=100, verbo
   n_time = base::dim(x)[2]
   loadings0 = base::matrix(c(stats::rnorm(n_time*n_components)), nrow = n_time)
   scores0 = base::matrix(0, nrow=n_obs, ncol=n_components)
-  for(j in 1:n_obs){ scores0[j,] = quantreg::rq(x[j,] ~ -1 + loadings0, tau=quantile_value)$coefficients }
+  for(j in 1:n_obs){ scores0[j,] = quantreg::rq(x[j,] ~ -1 + loadings0, tau=quantile_value, method=method)$coefficients }
   # Given scores0 and loadings0 compute convergence criteria value
   of_value0 = base::mean((quantile_value - (x - scores0 %*% t(loadings0) < 0)) * (x - scores0 %*% t(loadings0)))
   convergence_criteria = c()
   of_value = c(of_value0)
+
   for(i in 1:n_iters)
   {
     # Given scores from previous step, compute loadings
     loop_start_time = base::Sys.time()
     loadings = base::matrix(0, nrow=n_time, ncol=n_components)
-    for(k in 1:n_time){ loadings[k,] = quantreg::rq(x[,k] ~ -1 + scores0, tau=quantile_value)$coefficients}
+    for(k in 1:n_time){ loadings[k,] = quantreg::rq(x[,k] ~ -1 + scores0, tau=quantile_value, method=method)$coefficients}
     # Given loadings compute scores
     scores = base::matrix(0, nrow=n_obs, ncol=n_components)
-    for(j in 1:n_obs){ scores[j,] = quantreg::rq(x[j,] ~ -1 + loadings, tau=quantile_value)$coefficients }
+    for(j in 1:n_obs){ scores[j,] = quantreg::rq(x[j,] ~ -1 + loadings, tau=quantile_value, method=method)$coefficients }
     # Given scores and loadings compute convergence criteria
     of_value1 = base::mean((quantile_value - (x - scores %*% t(loadings) < 0)) * (x - scores %*% t(loadings)))
     of_value = c(of_value, of_value1)
