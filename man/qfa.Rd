@@ -11,7 +11,8 @@ qfa(
   tol = 0.001,
   n_iters = 100,
   verbose = FALSE,
-  seed = NULL
+  seed = NULL,
+  method = "br"
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ qfa(
 \item{verbose}{Boolean indicating verbosity of the function. Default is FALSE.}
 
 \item{seed}{Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
+
+\item{method}{Parameter from the quantreg package. Method used to solve the quantile regression models.}
 }
 \value{
 A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.

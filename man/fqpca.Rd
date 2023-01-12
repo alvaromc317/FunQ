@@ -14,6 +14,8 @@ fqpca(
   tol = 0.001,
   n_iters = 30,
   solver = "SCS",
+  penalized = TRUE,
+  method = "br",
   verbose = FALSE,
   seed = NULL
 )
@@ -25,7 +27,7 @@ fqpca(
 
 \item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
-\item{lambda_ridge}{The hyperparameter controlling the penalization on the splines. Default is 1e-12.}
+\item{lambda_ridge}{The hyperparameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-12.}
 
 \item{periodic}{Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.}
 
@@ -36,6 +38,10 @@ fqpca(
 \item{n_iters}{Maximum number of iterations. Default is 30.}
 
 \item{solver}{Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.}
+
+\item{penalized}{Boolean indicating if the model should solve a penalized splines model or a non penelized splines model}
+
+\item{method}{Method to be used by the quantreg package when solving quantile regression models. This parameter has no effect if penalized is TRUE (default)}
 
 \item{verbose}{Boolean indicating verbosity of the function. Default is FALSE.}
 

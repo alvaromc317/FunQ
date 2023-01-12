@@ -10,7 +10,8 @@ compute_F_Lambda(
   quantile_value,
   basis_coef,
   spline_basis,
-  spline_basis_i
+  spline_basis_i,
+  method
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ compute_F_Lambda(
 \item{spline_basis}{The matrix of spline basis.}
 
 \item{spline_basis_i}{A list containing, for each observation xi, the matrix of associated spline basis.}
+
+\item{method}{Method to be used by the quantreg package when solving quantile regression models.}
 }
 \value{
 The unnormalized matrices of loadings and scores, along with the mean and standard deviations of the scores (these last are used in the prediction function).
