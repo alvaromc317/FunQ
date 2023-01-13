@@ -1,6 +1,6 @@
 Package: fqpca
 Title: Functional Quantile Principal Component Analysis
-Version: 0.0.0.9000
+Version: 0.0.0.10000
 Authors@R: 
     person("Álvaro", "Méndez-Civieta", , "alvaro.mendez@uc3m.es", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-2044-4170"))

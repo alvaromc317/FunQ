@@ -1,35 +1,4 @@
-# FUNCTIONAL QUANTILE PCA ALGORITHM -------------------------------------------
-
-# NORMALIZATION PROCESS -------------------------------------------------------
-
-#' FQPCA normalization
-#'
-#' Performs the normalization of matrices of loadings and scores in order to ensure the solution is unique.
-#'
-#' @param Fhat Matrix of loadings
-#' @param Lhat Matrix of scores
-#'
-#' @return The normalized matrices of loadings and scores and the normalization matrix.
-algorithm_normalization = function(Fhat, Lhat)
-{
-  # Normalization process to ensure identifiability of solution
-  n_time = nrow(Fhat)
-  n_obs = nrow(Lhat)
-  Fhat_tmp = Fhat[, 2:dim(Fhat)[2]]
-  Lhat_tmp = Lhat[, 2:dim(Lhat)[2]]
-  # Step 4: Normalize variables (code extracted from IQR.m file (original))
-  sigmaF = (1/n_time) * t(Fhat_tmp) %*% Fhat_tmp
-  sigmaA = (1/n_obs) * t(Lhat_tmp) %*% Lhat_tmp
-  dum1 = expm::sqrtm(sigmaF) %*% sigmaA %*% expm::sqrtm(sigmaF)
-  svd_decomp = base::svd(dum1)
-  R = expm::sqrtm(base::solve(sigmaF)) %*% svd_decomp$u
-  Fhat_tmp = Fhat_tmp %*% R;
-  Lhat_tmp = Lhat_tmp %*% t(base::solve(R))
-  Fhat = cbind(Fhat[,1], Fhat_tmp)
-  Lhat = cbind(Lhat[,1], Lhat_tmp)
-  results = list(Fhat=Fhat, Lhat=Lhat, normalization_matrix=R)
-  return(results)
-}
+# FUNCTIONAL QUANTILE PCA ALGORITHM NO SCALING OF LAMBDA ----------------------
 
 # INNER FUNCTIONS -------------------------------------------------------------
 
@@ -46,7 +15,7 @@ algorithm_normalization = function(Fhat, Lhat)
 #' @param method Method to be used by the quantreg package when solving quantile regression models.
 #'
 #' @return The unnormalized matrices of loadings and scores, along with the mean and standard deviations of the scores (these last are used in the prediction function).
-compute_F_Lambda = function(x, x_mask, quantile_value, basis_coef, spline_basis, spline_basis_i, method)
+compute_F_Lambda_no_scaling = function(x, x_mask, quantile_value, basis_coef, spline_basis, spline_basis_i, method)
 {
   # Given the spline basis and the basis coefficients, obtain F and Lambda matrices
   n_components = ncol(basis_coef)
@@ -62,11 +31,8 @@ compute_F_Lambda = function(x, x_mask, quantile_value, basis_coef, spline_basis,
     xi = xi - Fi[,1]
     Lambda1[i,] =  quantreg::rq(xi ~ -1 + Fi[,2:(n_components)], tau=quantile_value, method=method)$coefficients
   }
-  Lambda1 = base::scale(Lambda1)
-  mean_Lambda1 = attr(Lambda1, 'scaled:center')
-  sd_Lambda1 = attr(Lambda1, 'scaled:scale')
   Lambda1 = cbind(1, Lambda1)
-  results = list(F1 = F1, Lambda1 =Lambda1, mean_Lambda1=mean_Lambda1, sd_Lambda1=sd_Lambda1)
+  results = list(F1 = F1, Lambda1 =Lambda1)
   return(results)
 }
 
@@ -84,7 +50,7 @@ compute_F_Lambda = function(x, x_mask, quantile_value, basis_coef, spline_basis,
 #' @param method Method to be used by the quantreg package when solving quantile regression models. This parameter has no effect if penalized is TRUE (default)
 #'
 #' @return The loadings and scores matrices, the matrix of spline coefficients and the objective function value at the current iteration.
-inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda_ridge, R_block, solver, penalized, method)
+inner_loop_no_scaling = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda_ridge, R_block, solver, penalized, method)
 {
   # At each iteration, call this function to obtain the estimation of F and Lambda
   n_obs = base::nrow(x)
@@ -133,7 +99,6 @@ inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda
     xi = xi - F1[[i]][,1]
     Lambda1[i,] =  quantreg::rq(xi ~ -1 + F1[[i]][,2:(n_components)], tau=quantile_value, method=method)$coefficients
   }
-  Lambda1 = base::scale(Lambda1)
   Lambda1 = base::cbind(1, Lambda1)
 
   # Given Lambda1 and F1 compute of convergence criteria
@@ -150,8 +115,8 @@ inner_loop = function(x, x_mask, Lambda0, spline_basis_i, quantile_value, lambda
 
 # MAIN ------------------------------------------------------------------------
 
-new_fqpca <- function(loadings, scores, penalized, unnormalized_loadings, normalization_matrix,
-                      spline_coefficients, mean_unnormalized_scores, sd_unnormalized_scores,
+new_fqpca_no_scaling <- function(loadings, scores, penalized, unnormalized_loadings, normalization_matrix,
+                      spline_coefficients,
                       objective_function_value, list_objective_function_values, splines_df, method,
                       periodic, quantile_value, n_components, n_iters, lambda_ridge, spline_basis, execution_time,
                       warning_checker_normalization, warning_checker_loop, warning_diverging_loop)
@@ -163,8 +128,6 @@ new_fqpca <- function(loadings, scores, penalized, unnormalized_loadings, normal
     unnormalized_loadings = unnormalized_loadings,
     normalization_matrix = normalization_matrix,
     spline_coefficients = spline_coefficients,
-    mean_unnormalized_scores = mean_unnormalized_scores,
-    sd_unnormalized_scores = sd_unnormalized_scores,
     objective_function_value = objective_function_value,
     list_objective_function_values = list_objective_function_values,
     splines_df = splines_df,
@@ -180,7 +143,7 @@ new_fqpca <- function(loadings, scores, penalized, unnormalized_loadings, normal
     warning_checker_loop = warning_checker_loop,
     warning_diverging_loop = warning_diverging_loop
   ),
-  class = "fqpca")
+  class = "fqpca_no_scaling")
 }
 
 
@@ -214,11 +177,11 @@ new_fqpca <- function(loadings, scores, penalized, unnormalized_loadings, normal
 #' # Add missing observations
 #' x[sample(200*144, as.integer(0.2*200*144))] = NA
 #'
-#' results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=1e-12)
+#' results = fqpca_no_scaling(x=x, n_components=1, quantile_value=0.5, lambda_ridge=1e-12)
 #'
 #' loadings = results$loadings
 #' scores = results$scores
-fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', penalized=TRUE, method='br', verbose=FALSE, seed=NULL)
+fqpca_no_scaling = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', penalized=TRUE, method='br', verbose=FALSE, seed=NULL)
 {
 
   if(!is.data.frame(x) & !is.matrix(x)){stop('x is not of a valid type. Object provided: ', typeof(x))}
@@ -272,8 +235,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
     xi = xi - F0[[i]][,1]
     Lambda0[i,] =  quantreg::rq(xi ~ -1 + F0[[i]][,2:(n_components+1)], tau=quantile_value, method=method)$coefficients
   }
-  # Center and scale Lambda. Add a 1 as an intercept column
-  Lambda0 = base::scale(Lambda0)
+  # Add a 1 as an intercept column
   Lambda0 = base::cbind(1, Lambda0)
   # Given Lambda0 and F0 compute convergence criteria (of==objective function)
   of_value0 = 0
@@ -365,7 +327,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
   }
   if(i == n_iters){ if(verbose) {warning('Algorithm reached maximum number of iterations without convergence: ', n_iters, ' iterations')}}
 
-  best_results = compute_F_Lambda(x=x, x_mask=x_mask, quantile_value=quantile_value, basis_coef=best_B, spline_basis=spline_basis, spline_basis_i=spline_basis_i, method=method)
+  best_results = compute_F_Lambda_no_scaling(x=x, x_mask=x_mask, quantile_value=quantile_value, basis_coef=best_B, spline_basis=spline_basis, spline_basis_i=spline_basis_i, method=method)
   # Normalization of best results
   normalization_result = try(algorithm_normalization(Fhat=best_results$F1, Lhat=best_results$Lambda1), silent=TRUE)
   error_chr = class(normalization_result)
@@ -382,15 +344,13 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
   global_end_time = base::Sys.time()
   global_execution_time = difftime(global_end_time, global_start_time, units='secs')
 
-  results = new_fqpca(
+  results = new_fqpca_no_scaling(
     loadings = best_Fhat,
     scores = best_Lhat,
     penalized=penalized,
     unnormalized_loadings = best_results$F1,
     normalization_matrix = best_normalization_matrix,
     spline_coefficients = best_B,
-    mean_unnormalized_scores = best_results$mean_Lambda1,
-    sd_unnormalized_scores = best_results$sd_Lambda1,
     objective_function_value = best_of,
     list_objective_function_values = of_value,
     splines_df=splines_df,
@@ -406,6 +366,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
     warning_checker_loop=warning_checker_loop,
     warning_diverging_loop=warning_diverging_loop
   )
+
   return(results)
 }
 
@@ -413,7 +374,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
 
 #' Predict FQPCA
 #'
-#' ## S3 method for class 'fqpca'
+#' ## S3 method for class 'fqpca_no_scaling'
 #' Given a new matrix x, predicts the value of the scores associated to the given matrix
 #'
 #' @param object An object output of the fqpca function.
@@ -432,14 +393,14 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
 #' # Add missing observations
 #' x[sample(200*144, as.integer(0.2*200*144))] = NA
 #'
-#' results = fqpca(x=x[1:150,], n_components=1, quantile_value=0.5)
+#' results = fqpca_no_scaling(x=x[1:150,], n_components=1, quantile_value=0.5)
 #'
 #' predictions = predict(results, newdata=x[151:200,])
-predict.fqpca = function(object, newdata, ...)
+predict.fqpca_no_scaling = function(object, newdata, ...)
 {
-  if (!inherits(object, "fqpca"))
+  if (!inherits(object, "fqpca_no_scaling"))
   {
-    stop('The object must be of class fqpca')
+    stop('The object must be of class fqpca_no_scaling')
   }
   if(!is.data.frame(newdata) & !is.matrix(newdata)){stop('x is not of a valid type. Object provided: ', typeof(newdata))}
   newdata = unname(as.matrix(newdata))
@@ -452,15 +413,11 @@ predict.fqpca = function(object, newdata, ...)
   # Unload required information from fqfa object
   spline_coefficients=object$spline_coefficients
   normalization_matrix=object$normalization_matrix
-  mean_unnormalized_scores=object$mean_unnormalized_scores
-  sd_unnormalized_scores=object$sd_unnormalized_scores
   splines_df = object$splines_df
   periodic = object$periodic
   quantile_value = object$quantile_value
   n_components = base::ncol(spline_coefficients)
   x_axis = base::seq(0, 1, length.out = n_time)
-  mean_Lhat_matrix = base::matrix(base::rep(mean_unnormalized_scores, n_obs), nrow=n_obs, byrow=TRUE)
-  sd_Lhat_matrix = base::matrix(base::rep(sd_unnormalized_scores, n_obs), nrow=n_obs, byrow=TRUE)
   if(periodic)
   {
     knots = base::seq(0, 1, length.out = 2 + splines_df - 1)  # 2 boundary knots + df - intercept
@@ -483,7 +440,6 @@ predict.fqpca = function(object, newdata, ...)
     xi = xi - Fi[,1]
     Lambda1[i,] =  quantreg::rq(xi ~ -1 + Fi[,2:(n_components)], tau=quantile_value)$coefficients
   }
-  Lambda1 = (Lambda1 - mean_Lhat_matrix) / sd_Lhat_matrix
   Lambda1 = Lambda1 %*% t(base::solve(normalization_matrix))
   Lambda1 = base::cbind(1, Lambda1)
   return(Lambda1)
