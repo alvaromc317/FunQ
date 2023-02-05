@@ -191,7 +191,7 @@ new_fqpca <- function(loadings, scores, penalized, unnormalized_loadings, normal
 #' @param x The N by T matrix of observed time instants
 #' @param n_components The number of estimated components. Default is 2.
 #' @param quantile_value The quantile considered. Default is the median 0.5.
-#' @param lambda_ridge The hyperparameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-12.
+#' @param lambda_ridge The hyperparameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-16.
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.
 #' @param splines_df Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda_ridge. Default is 30.
 #' @param tol Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.
@@ -218,7 +218,7 @@ new_fqpca <- function(loadings, scores, penalized, unnormalized_loadings, normal
 #'
 #' loadings = results$loadings
 #' scores = results$scores
-fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', penalized=TRUE, method='br', verbose=FALSE, seed=NULL)
+fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-16,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', penalized=TRUE, method='br', verbose=FALSE, seed=NULL)
 {
 
   if(!is.data.frame(x) & !is.matrix(x)){stop('x is not of a valid type. Object provided: ', typeof(x))}
@@ -260,7 +260,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, lambda_ridge=1e-12,  pe
   }
   if(!all(base::eigen(R_block)$values > 0)) {stop('Splines penalization matrix is not positive definite')}
 
-  # Generate F0 and compute Lambda0 based on centered data ---
+  # Generate B0 and compute Lambda0 based on centered data ---
   basis_coef = base::matrix(stats::rnorm(base::dim(spline_basis)[2] * (n_components+1), mean=0, sd=1/n_time),
                             nrow=base::dim(spline_basis)[2], ncol=n_components+1)
   Lambda0 = base::matrix(0, n_obs, n_components)
@@ -441,7 +441,7 @@ predict.fqpca = function(object, newdata, ...)
   {
     stop('The object must be of class fqpca')
   }
-  if(!is.data.frame(newdata) & !is.matrix(newdata)){stop('x is not of a valid type. Object provided: ', typeof(newdata))}
+  if(!is.data.frame(newdata) & !is.matrix(newdata)){stop('newdata is not of a valid type. Object provided: ', typeof(newdata), '\nValid types: data.frame or matrix')}
   newdata = unname(as.matrix(newdata))
   if(ncol(newdata) == 1){ newdata = t(newdata)}
 

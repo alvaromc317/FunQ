@@ -19,13 +19,13 @@ test_that('FQFA incorrect inputs', {
   expect_error(fqpca(x=matrix(0, 5, 5), n_components=1, quantile_value=2, verbose=FALSE)) # check quantile_value
 })
 
-test_that('QFA algorithm works', {
+test_that('FQPCA algorithm works', {
   set.seed(5)
   x = matrix(rep(sin(seq(0, 2*pi, length.out=12)), 20), byrow=TRUE, nrow=20)
   x = x + matrix(rnorm(20*12, 0, 0.4), nrow=20)
   x[sample(20*12, as.integer(0.2*20*12))] = NA
 
-  results = fqpca(x=x, n_components=1, quantile_value=0.5, seed=5, verbose=FALSE)
+  results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=1e-12, seed=5, verbose=FALSE)
   expected_loadings = matrix(c(-0.12518748, 0.91245330, 0.92836363, 0.82455808, 0.93730186, 0.30849490, -0.15466429, -0.83787132, -1.11032493, -0.84120435, -0.34595214, -0.12518748, 0.11003081, -0.03325746, 1.02132530, -0.71262706, -0.45000976, 0.13329688, -0.10406764, -0.47427733, 1.81574647, 2.30423128, -1.16673678, 0.11003081), nrow=12)
   expected_scores = matrix(c(1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 1.00000000, 0.34225282, -0.14231325, 0.09258555, 0.41611763, -0.18981294, 0.02760994, -0.03931977, -0.09162334, 0.09855796, -0.07074595, -0.24216121, 0.05600382, -0.11376266, -0.30919321, -0.05842662, 0.13815427, 0.11134802, -0.05858253, -0.04007066, 0.07338212), nrow=20)
   expect_equal(round(results$loadings, 4), round(expected_loadings, 4))
@@ -38,7 +38,7 @@ test_that('FQPCA Predictions works', {
   x = matrix(rep(sin(seq(0, 2*pi, length.out=12)), 20), byrow=TRUE, nrow=20)
   x = x + matrix(rnorm(20*12, 0, 0.4), nrow=20)
   x[sample(20*12, as.integer(0.2*20*12))] = NA
-  results = fqpca(x=x, n_components=1, quantile_value=0.5, seed=5, verbose=FALSE)
+  results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=1e-12, seed=5, verbose=FALSE)
   newdata = x[5:9, ]
   predictions = predict(results, newdata=newdata)
   expected_predictions = matrix(c(1, 1, 1, 1, 1, -0.18981294, 0.02760994, -0.03931977, -0.09162334, 0.09855796), ncol=2)

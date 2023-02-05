@@ -18,7 +18,14 @@ Imports:
     expm,
     quantreg,
     simex,
-    splines2
+    splines2,
+    tidyr,
+    dplyr, 
+    tibble,
+    caret
 Suggests: 
+    knitr,
+    rmarkdown,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
+VignetteBuilder: knitr
