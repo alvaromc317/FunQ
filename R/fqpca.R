@@ -172,35 +172,35 @@ compute_explained_variability = function(scores)
 
 new_fqpca <- function(loadings, scores, explained_variability, objective_function_value,
                       list_objective_function_values, n_components, quantile_value, alpha_ridge,
-                      periodic, splines_df, tol, n_iters, solver, penalized,method, verbose, seed,
+                      periodic, splines_df, tol, n_iters, solver, penalized, method, verbose, seed,
                       normalization_matrix, spline_coefficients, spline_basis, execution_time,
                       function_warnings)
 {
   structure(list(
-    loadings = loadings,
-    scores = scores,
-    explained_variability = explained_variability,
-    objective_function_value = objective_function_value,
-    list_objective_function_values = list_objective_function_values,
-    n_components = n_components,
-    quantile_value = quantile_value,
+    loadings=loadings,
+    scores=scores,
+    explained_variability=explained_variability,
+    objective_function_value=objective_function_value,
+    list_objective_function_values=list_objective_function_values,
+    execution_time=execution_time,
+    function_warnings=function_warnings,
+    n_components=n_components,
+    quantile_value=quantile_value,
     alpha_ridge=alpha_ridge,
-    periodic = periodic,
-    splines_df = splines_df,
-    tol = tol,
-    n_iters = n_iters,
-    solver = solver,
-    penalized = penalized,
-    method = method,
-    verbose = verbose,
-    seed = seed,
-    normalization_matrix = normalization_matrix,
-    spline_coefficients = spline_coefficients,
-    spline_basis = spline_basis,
-    execution_time = execution_time,
-    function_warnings
+    periodic=periodic,
+    splines_df=splines_df,
+    tol=tol,
+    n_iters=n_iters,
+    solver=solver,
+    penalized=penalized,
+    method=method,
+    verbose=verbose,
+    seed=seed,
+    normalization_matrix=normalization_matrix,
+    spline_coefficients=spline_coefficients,
+    spline_basis=spline_basis
   ),
-  class = "fqpca")
+  class = "fqpca_object")
 }
 
 
@@ -238,7 +238,7 @@ new_fqpca <- function(loadings, scores, explained_variability, objective_functio
 #'
 #' loadings = results$loadings
 #' scores = results$scores
-fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-16,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', penalized=TRUE, method='br', verbose=FALSE, seed=NULL)
+fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-16,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', penalized=TRUE, method='br', verbose=FALSE, seed=1)
 {
   if(!is.data.frame(x) & !is.matrix(x)){stop('x is not of a valid type. Object provided: ', typeof(x))}
   if(!n_components == floor(n_components)){stop('n_components must be an integer number. Value provided: ', n_components)}
@@ -397,28 +397,28 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-16,  per
   global_execution_time = difftime(global_end_time, global_start_time, units='secs')
 
   results = new_fqpca(
-    loadings = normalization_result$loadings,
-    scores = normalization_result$scores,
-    explained_variability = explained_variability,
-    objective_function_value = best_results$objective_function,
-    list_objective_function_values = objective_function_array,
-    n_components = n_components,
-    quantile_value = quantile_value,
-    alpha_ridge=alpha_ridge,
-    periodic = periodic,
-    splines_df=splines_df,
-    tol = tol,
-    n_iters = best_results$iteration,
-    solver = solver,
-    penalized = penalized,
-    method = method,
-    verbose = verbose,
-    seed = seed,
-    normalization_matrix = normalization_result$normalization_matrix,
-    spline_coefficients = best_results$spline_coefficients,
-    spline_basis=spline_basis,
+    loadings=normalization_result$loadings,
+    scores=normalization_result$scores,
+    explained_variability=explained_variability,
+    objective_function_value=best_results$objective_function,
+    list_objective_function_values=objective_function_array,
     execution_time=global_execution_time,
-    function_warnings=function_warnings
+    function_warnings=function_warnings,
+    n_components=n_components,
+    quantile_value=quantile_value,
+    alpha_ridge=alpha_ridge,
+    periodic=periodic,
+    splines_df=splines_df,
+    tol=tol,
+    n_iters=best_results$iteration,
+    solver=solver,
+    penalized=penalized,
+    method=method,
+    verbose=verbose,
+    seed=seed,
+    normalization_matrix=normalization_result$normalization_matrix,
+    spline_coefficients=best_results$spline_coefficients,
+    spline_basis=spline_basis
   )
   return(results)
 }
@@ -450,11 +450,11 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-16,  per
 #' results = fqpca(x=x[1:150,], n_components=1, quantile_value=0.5)
 #'
 #' predictions = predict(results, newdata=x[151:200,])
-predict.fqpca = function(object, newdata, ...)
+predict.fqpca_object = function(object, newdata, ...)
 {
-  if (!inherits(object, "fqpca"))
+  if (!inherits(object, "fqpca_object"))
   {
-    stop('The object must be of class fqpca')
+    stop('The object must be of class fqpca_object')
   }
   if(!is.data.frame(newdata) & !is.matrix(newdata)){stop('newdata is not of a valid type. Object provided: ', typeof(newdata), '\nValid types: data.frame or matrix')}
   newdata = unname(as.matrix(newdata))
@@ -503,11 +503,15 @@ predict.fqpca = function(object, newdata, ...)
 #' # Add missing observations
 #' x[sample(200*144, as.integer(0.2*200*144))] = NA
 #'
-#' results = fqpca(x=x[1:150,], n_components=1, quantile_value=0.5)
+#' results = fqpca(x=x[1:150,], n_components=3, quantile_value=0.5)
 #'
 #' plot(results)
-plot.fqpca = function(x, ...)
+plot.fqpca_object = function(x, ...)
 {
+  if (!inherits(x, "fqpca_object"))
+  {
+    stop('The object must be of class fqpca_object')
+  }
   loadings = x$loadings
   graphics::par(mfrow = c(1, 2))
   graphics::plot(loadings[,1], type='l', lty=1, lwd=2, xlab='', ylab='')

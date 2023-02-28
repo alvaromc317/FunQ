@@ -390,7 +390,7 @@ cross_validation_alpha = function(x, n_components=1,  quantile_value=0.5, alpha_
         x_predicted = fqpca_results$scores %*% t(fqpca_results$loadings)
       }else if(criteria=='rows')
       {
-        test_scores = predict.fqpca(fqpca_results, x_test)
+        test_scores = predict.fqpca_object(fqpca_results, x_test)
         x_predicted = test_scores %*% t(fqpca_results$loadings)
       }
       error_matrix[i, j] = mean(quantile_function(quantile_value = quantile_value, x=(x_test - x_predicted)), na.rm=TRUE)

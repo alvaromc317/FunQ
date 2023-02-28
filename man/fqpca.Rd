@@ -17,7 +17,7 @@ fqpca(
   penalized = TRUE,
   method = "br",
   verbose = FALSE,
-  seed = NULL
+  seed = 1
 )
 }
 \arguments{
