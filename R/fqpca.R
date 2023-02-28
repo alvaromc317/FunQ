@@ -12,7 +12,7 @@
 #' @param loadings The matrix of estimated loadings
 #'
 #' @return The objective value function
-compute_objective_value = function(quantile_value, x, scores, loadings)
+compute_objective_value = function(x, quantile_value, scores, loadings)
 {
   x_reconstruction = scores %*% t(loadings)
   objective_value = base::sum(quantile_function(quantile_value=quantile_value, x=(x - x_reconstruction)), na.rm=T)
@@ -148,28 +148,49 @@ algorithm_normalization = function(loadings, scores)
   return(results)
 }
 
+#' FQPCA explained variability
+#'
+#' Computes the percentage of explained variability based on the variance of the scores matrix
+#'
+#' @param scores Matrix of scores
+#'
+#' @return The percentage of variability each component is explaining.
+compute_explained_variability = function(scores)
+{
+  scores = scores[,-1]
+  variability = base::diag(stats::var(scores))
+  percentage_variability = variability / base::sum(variability)
+  return(percentage_variability)
+}
+
 # MAIN ------------------------------------------------------------------------
 
-new_fqpca <- function(loadings, scores, penalized, unnormalized_loadings, normalization_matrix,
-                      spline_coefficients, objective_function_value, list_objective_function_values, splines_df, method,
-                      periodic, quantile_value, n_components, n_iters, alpha_ridge, spline_basis, execution_time,
+new_fqpca <- function(loadings, scores, explained_variability, objective_function_value,
+                      list_objective_function_values, n_components, quantile_value, alpha_ridge,
+                      periodic, splines_df, tol, n_iters, solver, penalized,method, verbose, seed,
+                      normalization_matrix, spline_coefficients, spline_basis, execution_time,
                       function_warnings)
 {
   structure(list(
     loadings = loadings,
     scores = scores,
-    penalized = penalized,
-    normalization_matrix = normalization_matrix,
-    spline_coefficients = spline_coefficients,
+    explained_variability = explained_variability,
     objective_function_value = objective_function_value,
     list_objective_function_values = list_objective_function_values,
-    splines_df = splines_df,
-    method = method,
-    periodic = periodic,
-    quantile_value = quantile_value,
     n_components = n_components,
-    n_iters = n_iters,
+    quantile_value = quantile_value,
     alpha_ridge=alpha_ridge,
+    periodic = periodic,
+    splines_df = splines_df,
+    tol = tol,
+    n_iters = n_iters,
+    solver = solver,
+    penalized = penalized,
+    method = method,
+    verbose = verbose,
+    seed = seed,
+    normalization_matrix = normalization_matrix,
+    spline_coefficients = spline_coefficients,
     spline_basis = spline_basis,
     execution_time = execution_time,
     function_warnings
@@ -263,9 +284,9 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-16,  per
 
   # Compute objective value function
   objective_function_0 = compute_objective_value(quantile_value=quantile_value, x=x, scores=scores_0, loadings=loadings_0)
-  objective_function_array = objective_function_0
 
   # Initialize storage of final solution
+  objective_function_array = objective_function_0
   best_results = list(loadings=loadings_0, scores=scores_0, objective_function=objective_function_0, spline_coefficients=spline_coefficients_0, iteration=0)
 
   # Iterate until convergence or until max_iters is reached
@@ -363,30 +384,40 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-16,  per
     normalization_result = list(loadings=best_results$loadings, scores=best_results$scores, normalization_matrix=diag(n_components))
   }
 
+  # EXPLAINED VARIABILITY -----------------------------------------------------
+
+  explained_variability = compute_explained_variability(normalization_result$scores)
+
   global_end_time = base::Sys.time()
   global_execution_time = difftime(global_end_time, global_start_time, units='secs')
 
   results = new_fqpca(
     loadings = normalization_result$loadings,
     scores = normalization_result$scores,
-    penalized=penalized,
-    normalization_matrix = normalization_result$normalization_matrix,
-    spline_coefficients = best_results$spline_coefficients,
+    explained_variability = explained_variability,
     objective_function_value = best_results$objective_function,
     list_objective_function_values = objective_function_array,
-    splines_df=splines_df,
-    method=method,
-    periodic = periodic,
-    quantile_value = quantile_value,
     n_components = n_components,
-    n_iters = best_results$iteration,
+    quantile_value = quantile_value,
     alpha_ridge=alpha_ridge,
+    periodic = periodic,
+    splines_df=splines_df,
+    tol = tol,
+    n_iters = best_results$iteration,
+    solver = solver,
+    penalized = penalized,
+    method = method,
+    verbose = verbose,
+    seed = seed,
+    normalization_matrix = normalization_result$normalization_matrix,
+    spline_coefficients = best_results$spline_coefficients,
     spline_basis=spline_basis,
     execution_time=global_execution_time,
     function_warnings=function_warnings
   )
   return(results)
 }
+
 
 # PREDICTIONS -----------------------------------------------------------------
 

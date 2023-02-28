@@ -4,12 +4,12 @@
 \alias{compute_objective_value}
 \title{Compute objective value function}
 \usage{
-compute_objective_value(quantile_value, x, scores, loadings)
+compute_objective_value(x, quantile_value, scores, loadings)
 }
 \arguments{
-\item{quantile_value}{The quantile considered.}
-
 \item{x}{The N by T matrix of observed time instants.}
+
+\item{quantile_value}{The quantile considered.}
 
 \item{scores}{The matrix of estimated scores}
 
