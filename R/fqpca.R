@@ -157,7 +157,12 @@ algorithm_normalization = function(loadings, scores)
 #' @return The percentage of variability each component is explaining.
 compute_explained_variability = function(scores)
 {
-  scores = scores[,-1]
+  if(base::ncol(scores) == 2)
+  {
+    scores = matrix(scores[,-1], ncol=1)
+  } else{
+    scores = scores[,-1]
+  }
   variability = base::diag(stats::var(scores))
   percentage_variability = variability / base::sum(variability)
   return(percentage_variability)
