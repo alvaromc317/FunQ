@@ -175,3 +175,31 @@ predict.qfa = function(object, newdata, ...)
   scores = scores %*% t(base::solve(normalization_matrix))
   return(scores)
 }
+
+#' Plot QFA loadings
+#'
+#' ## S3 method for class 'qfa'
+#' Given a fqpca object, plot the loadings
+#'
+#' @param x An object output of the fqpca function.
+#' @param ... further arguments passed to or from other methods.
+#'
+#' @return The plot of loadings
+#' @export
+#'
+#' @examples
+#' # Generate fake dataset with 200 observations and 144 time points
+#'
+#' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
+#' x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
+#'
+#' results = qfa(x=x[1:150,], n_components=1, quantile_value=0.5)
+#'
+#' plot(results)
+plot.qfa = function(x, ...)
+{
+  loadings = x$loadings
+  graphics::matplot(loadings, type = "l", lty = 1, lwd = 2)
+  graphics::legend("topright", legend = 1:ncol(loadings), col=1:ncol(loadings), lty = 1, lwd = 2)
+  graphics::title('Loadings')
+}

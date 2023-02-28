@@ -43,7 +43,7 @@ pivot_wide_x = function(x_long, dimensions=NULL)
 
 # QUANTILE BASED FUNCTIONS ----------------------------------------------------
 
-#' QR objective value
+#' quantile_regression objective value
 #'
 #' Objective value function of a quantile regression model
 #'
@@ -67,7 +67,7 @@ quantile_function = function(x, quantile_value=0.5)
 #' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.
 #'
 #' @return Beta coefficients of the penalized quantile regression model.
-qr = function(x, y, quantile_value=0.5, solver='SCS')
+quantile_regression = function(x, y, quantile_value=0.5, solver='SCS')
 {
   # Solve a quantile regression model with a ridge type penalty
   n = dim(x)[1]
@@ -95,7 +95,7 @@ qr = function(x, y, quantile_value=0.5, solver='SCS')
 #' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.
 #'
 #' @return Beta coefficients of the penalized quantile regression model.
-qr_ridge = function(x, y, R, quantile_value=0.5, lambda=1e-3, solver='SCS')
+quantile_regression_ridge = function(x, y, R, quantile_value=0.5, lambda=1e-3, solver='SCS')
 {
   # Solve a quantile regression model with a ridge type penalty
   n = dim(x)[1]
@@ -316,16 +316,16 @@ create_folds = function(x, criteria='points', folds=3, seed=NULL)
 
 #' CROSS VALIDATION
 #'
-#' Performs cross validation on lambda parameter of fqpca
+#' Performs cross validation on alpha parameter of fqpca
 #'
 #' @param x The N by T matrix of observed time instants
 #' @param n_components The number of estimated components. Default is 2.
 #' @param quantile_value The quantile considered. Default is the median 0.5.
-#' @param lambda_grid An array containing the list of possible lambda values (these should be always positive numbers).
+#' @param alpha_grid An array containing the list of possible alpha values (these should be always positive numbers).
 #' @param n_folds Number of folds to be used on the cross validation process. Default is 3
 #' @param criteria Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix. Default is points
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.
-#' @param splines_df Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda_ridge. Default is 30.
+#' @param splines_df Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter alpha_ridge. Default is 30.
 #' @param tol Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.
 #' @param n_iters Maximum number of iterations. Default is 30.
 #' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.
@@ -333,7 +333,6 @@ create_folds = function(x, criteria='points', folds=3, seed=NULL)
 #' @param method Method to be used by the quantreg package when solving quantile regression models. This parameter has no effect if penalized is TRUE (default)
 #' @param verbose_fqpca Boolean indicating verbosity of the fqpca function. Default is FALSE.
 #' @param verbose_cv Boolean indicating verbosity of the Cross validation process. Default is TRUE.
-#' @param metric Minimization error metric. Currently only value available is 'quantile_error'. Default value 'quantile_error'.
 #' @param seed Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).
 #'
 #' @return A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
@@ -348,9 +347,9 @@ create_folds = function(x, criteria='points', folds=3, seed=NULL)
 #' # Add missing observations
 #' x[sample(200*144, as.integer(0.2*200*144))] = NA
 #'
-#' cv_result = cross_validation_lambda(x, lambda_grid=c(0, 1e-15), n_folds=2)
+#' cv_result = cross_validation_alpha(x, alpha_grid=c(0, 1e-15), n_folds=2)
 #'
-cross_validation_lambda = function(x, n_components=1,  quantile_value=0.5, lambda_grid = c(0, 10^seq(-16, -5, by=1)), n_folds=3, criteria='points', periodic=TRUE, splines_df=30, tol=1e-3, n_iters=50, solver='SCS', penalized=TRUE, method='br', verbose_fqpca=FALSE, verbose_cv=TRUE, metric='quantile_error', seed=NULL)
+cross_validation_alpha = function(x, n_components=1,  quantile_value=0.5, alpha_grid = c(0, 10^seq(-16, -5, by=1)), n_folds=3, criteria='points', periodic=TRUE, splines_df=30, tol=1e-3, n_iters=50, solver='SCS', penalized=TRUE, method='br', verbose_fqpca=FALSE, verbose_cv=TRUE, seed=NULL)
 {
   start_time = Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
@@ -359,14 +358,14 @@ cross_validation_lambda = function(x, n_components=1,  quantile_value=0.5, lambd
   x_folds = create_folds(x, criteria=criteria, folds=n_folds, seed=seed)
 
   # Initialize error storage
-  error_matrix = matrix(-1, nrow=length(lambda_grid), ncol=n_folds)
+  error_matrix = matrix(-1, nrow=length(alpha_grid), ncol=n_folds)
 
   # CROSS VALIDATION
-  for(i in seq_along(lambda_grid))
+  for(i in seq_along(alpha_grid))
   {
     start_loop_time = Sys.time()
-    if(verbose_cv){message('Lambda: ', lambda_grid[i], ' ---------------------')}
-    lambda_ridge = lambda_grid[i]
+    if(verbose_cv){message('Alpha: ', alpha_grid[i], ' ---------------------')}
+    alpha_ridge = alpha_grid[i]
     for(j in 1:n_folds)
     {
       if(verbose_cv){message('Fold: ', j)}
@@ -383,7 +382,7 @@ cross_validation_lambda = function(x, n_components=1,  quantile_value=0.5, lambd
       } else{stop('Invalid value for criteria. Valid values are observations or curves')}
 
       # Execute model
-      fqpca_results = fqpca(x=x_train, n_components=n_components, quantile_value=quantile_value, lambda_ridge=lambda_ridge, periodic=periodic, splines_df=splines_df, tol=tol, n_iters=n_iters, solver=solver, penalized=penalized, method=method, verbose=verbose_fqpca, seed=seed)
+      fqpca_results = fqpca(x=x_train, n_components=n_components, quantile_value=quantile_value, alpha_ridge=alpha_ridge, periodic=periodic, splines_df=splines_df, tol=tol, n_iters=n_iters, solver=solver, penalized=penalized, method=method, verbose=verbose_fqpca, seed=seed)
 
       # Obtain reconstruction
       if(criteria == 'points')
@@ -394,17 +393,12 @@ cross_validation_lambda = function(x, n_components=1,  quantile_value=0.5, lambd
         test_scores = predict.fqpca(fqpca_results, x_test)
         x_predicted = test_scores %*% t(fqpca_results$loadings)
       }
-
-      # Compute error value
-      if(metric == 'quantile_error')
-      {
-        error_matrix[i, j] = mean(quantile_function(quantile_value = quantile_value, x=(x_test - x_predicted)), na.rm=TRUE)
-      }
+      error_matrix[i, j] = mean(quantile_function(quantile_value = quantile_value, x=(x_test - x_predicted)), na.rm=TRUE)
     }
     end_loop_time =  Sys.time()
-    if(verbose_cv){message('Lambda 0execution completed in: ', round(difftime(end_loop_time, start_loop_time, units = "secs"), 2), ' seconds')}
+    if(verbose_cv){message('Alpha ', alpha_ridge, ' execution completed in: ', round(difftime(end_loop_time, start_loop_time, units = "secs"), 2), ' seconds')}
   }
   end_time = Sys.time()
   execution_time = difftime(end_time, start_time, units = "secs")
-  return(list(error_matrix = error_matrix, execution_time=execution_time, lambda_grid=lambda_grid, criteria=criteria))
+  return(list(error_matrix = error_matrix, execution_time=execution_time, alpha_grid=alpha_grid, criteria=criteria))
 }

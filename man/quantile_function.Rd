@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{quantile_function}
 \alias{quantile_function}
-\title{QR objective value}
+\title{quantile_regression objective value}
 \usage{
 quantile_function(x, quantile_value = 0.5)
 }

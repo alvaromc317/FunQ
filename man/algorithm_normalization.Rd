@@ -4,12 +4,12 @@
 \alias{algorithm_normalization}
 \title{FQPCA normalization}
 \usage{
-algorithm_normalization(Fhat, Lhat)
+algorithm_normalization(loadings, scores)
 }
 \arguments{
-\item{Fhat}{Matrix of loadings}
+\item{loadings}{Matrix of loadings}
 
-\item{Lhat}{Matrix of scores}
+\item{scores}{Matrix of scores}
 }
 \value{
 The normalized matrices of loadings and scores and the normalization matrix.

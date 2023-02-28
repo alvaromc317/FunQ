@@ -8,7 +8,7 @@ fqpca(
   x,
   n_components = 2,
   quantile_value = 0.5,
-  lambda_ridge = 1e-16,
+  alpha_ridge = 1e-16,
   periodic = TRUE,
   splines_df = 30,
   tol = 0.001,
@@ -27,11 +27,11 @@ fqpca(
 
 \item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
-\item{lambda_ridge}{The hyperparameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-16.}
+\item{alpha_ridge}{The hyperparameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-16.}
 
 \item{periodic}{Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.}
 
-\item{splines_df}{Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter lambda_ridge. Default is 30.}
+\item{splines_df}{Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter alpha_ridge. Default is 30.}
 
 \item{tol}{Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.}
 
@@ -43,7 +43,7 @@ fqpca(
 
 \item{method}{Method to be used by the quantreg package when solving quantile regression models. This parameter has no effect if penalized is TRUE (default)}
 
-\item{verbose}{Boolean indicating verbosity of the function. Default is FALSE.}
+\item{verbose}{Boolean indicating the verbosity of the function.}
 
 \item{seed}{Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
 }
@@ -62,7 +62,7 @@ x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 # Add missing observations
 x[sample(200*144, as.integer(0.2*200*144))] = NA
 
-results = fqpca(x=x, n_components=1, quantile_value=0.5, lambda_ridge=1e-12)
+results = fqpca(x=x, n_components=1, quantile_value=0.5, alpha_ridge=1e-12)
 
 loadings = results$loadings
 scores = results$scores

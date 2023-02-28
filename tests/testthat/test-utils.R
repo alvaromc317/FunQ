@@ -8,7 +8,7 @@ test_that("CVXR Quantile regression function works", {
   set.seed(5)
   x = matrix(rnorm(20), nrow=10)
   y = x %*% matrix(c(1,2), nrow=2) +  rnorm(10)
-  solution = qr(x=x, y=y, quantile_value=0.5)
+  solution = quantile_regression(x=x, y=y, quantile_value=0.5)
   expect_equal(round(solution, 4), round(c(1.041265, 1.301729), 4))
 })
 
@@ -16,7 +16,7 @@ test_that("CVXR Quantile ridge regression function works", {
   set.seed(5)
   x = matrix(rnorm(20), nrow=10)
   y = x %*% matrix(c(1,2), nrow=2) +  rnorm(10)
-  solution = qr_ridge(x=x, y=y, R=diag(2), quantile_value=0.5, lambda=10)
+  solution = quantile_regression_ridge(x=x, y=y, R=diag(2), quantile_value=0.5, lambda=10)
   expect_equal(round(solution, 4), round(c(0.01354876, 0.00802739), 4))
 })
 
@@ -84,7 +84,7 @@ test_that("create_folds based on points function; train portion works", {
 
 # CROSS VALIDATION PROCESS ----------------------------------------------------
 
-test_that("cross_validation_lambda based on points function works", {
+test_that("cross_validation_alpha based on points function works", {
   set.seed(5)
   x = matrix(rep(sin(seq(0, 2*pi, length.out=50)), 100), byrow=TRUE, nrow=100)
   x = x + matrix(rnorm(100*50, 0, 0.4), nrow=100)
@@ -92,8 +92,8 @@ test_that("cross_validation_lambda based on points function works", {
   # Add missing observations
   x[sample(100*50, as.integer(0.2*100*50))] = NA
 
-  cv_result = cross_validation_lambda(x, lambda_grid=c(0, 1e-15), n_folds=2, verbose_cv=FALSE)
+  cv_result = cross_validation_alpha(x, alpha_grid=c(0, 1e-15), n_folds=2, verbose_cv=FALSE)
   true_result = round(cv_result$error_matrix, 4)
-  expected_result = round(matrix(c(0.1795428, 0.1750413, 0.1742043, 0.1744016), nrow=2, byrow=T), 4)
+  expected_result = round(matrix(c(0.1789, 0.1751, 0.1748, 0.1750), nrow=2, byrow=T), 4)
   expect_equal(true_result, expected_result)
 })
