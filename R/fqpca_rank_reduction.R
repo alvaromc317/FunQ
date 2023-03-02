@@ -1,124 +1,3 @@
-# FUNCTIONAL QUANTILE PCA ALGORITHM -------------------------------------------
-
-# INNER LOOP FUNCTIONS --------------------------------------------------------
-
-#' Compute objective value function
-#'
-#' Inner function to compute the objective value
-#'
-#' @param x The N by T matrix of observed time instants.
-#' @param quantile_value The quantile considered.
-#' @param scores The matrix of estimated scores
-#' @param loadings The matrix of estimated loadings
-#'
-#' @return The objective value function
-compute_objective_value = function(x, quantile_value, scores, loadings)
-{
-  x_reconstruction = scores %*% t(loadings)
-  objective_value = base::sum(quantile_function(quantile_value=quantile_value, x=(x - x_reconstruction)), na.rm=T)
-  objective_value = objective_value / sum(!is.na(x))
-  return(objective_value)
-}
-
-#' Compute splines coefficients
-#'
-#' Inner function to compute the splines coefficients of the fqpca methodology.
-#'
-#' @param x The N by T matrix of observed time instants.
-#' @param x_mask Mask matrix of the same dimensions as x indicating wich observations in x are known.
-#' @param scores Initial matrix of scores.
-#' @param spline_basis The spline basis matrix.
-#' @param quantile_value The quantile considered. Default is the median 0.5.
-#' @param alpha_ridge The hyper-parameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-12.
-#' @param R_block Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if parameter 'penalized' is TRUE.
-#' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'. This parameter only has effect if parameter 'penalized' is TRUE.
-#' @param penalized Boolean indicating if the model should solve a penalized splines model or a non penalized splines model
-#' @param method Method to be used by the quantreg package when solving quantile regression models. This parameter has no effect if penalized is TRUE (default)
-#'
-#' @return The matrix of spline coefficients splines coefficients
-compute_spline_coefficients = function(x, x_mask, scores, spline_basis, quantile_value, alpha_ridge, R_block, solver, penalized, method)
-{
-  # At each iteration, call this function to obtain the estimation of F and Lambda
-  n_obs = base::nrow(x)
-  n_components = base::ncol(scores)
-  n_basis = base::ncol(spline_basis)
-  # vectorize X [x11, ..., x1T, x21, ..., x2T,...XNT]
-  x_vector = c()
-  for(i in base::seq(n_obs))
-  {
-    xi = x[i, x_mask[i,]]
-    x_vector = c(x_vector, xi)
-  }
-  # Compute tensor product of Lambda and spline basis
-  tensor_matrix = base::matrix(0, nrow=base::length(x_vector), ncol=n_components * n_basis)
-  row_idx = 1
-  for(i in base::seq(n_obs))
-  {
-    lambda_i = base::matrix(scores[i,], nrow=1)
-    tmp_splines = spline_basis[x_mask[i,], ]
-    n_time_i = base::nrow(tmp_splines)
-    tensor_matrix[row_idx:(row_idx+n_time_i-1),] = base::kronecker(lambda_i, tmp_splines)
-    row_idx = row_idx+n_time_i
-  }
-  # Obtain spline coefficients and reshape as matrix
-  if(penalized)
-  {
-    B_vector = quantile_regression_ridge(x=tensor_matrix, y=x_vector,  R=R_block, quantile_value=quantile_value, lambda=alpha_ridge, solver=solver)
-  } else if(!penalized)
-  {
-    B_vector = quantreg::rq(x_vector ~ -1 + tensor_matrix, tau=quantile_value, method=method)$coefficients
-  }
-  spline_coefficients = base::matrix(B_vector, byrow=FALSE, ncol=n_components)
-  return(spline_coefficients)
-}
-
-#' Compute loadings (aka principal components)
-#'
-#' Inner function to compute the loadings of the fqpca methodology.
-#'
-#' @param spline_basis The spline basis matrix.
-#' @param spline_coefficients the matrix of spline coefficients
-#'
-#' @return The matrix of loadings
-compute_loadings = function(spline_basis, spline_coefficients)
-{
-  loadings = spline_basis %*% spline_coefficients
-  return(loadings)
-}
-
-#' Compute scores
-#'
-#' Inner function to compute the scores of the fqpca methodology.
-#'
-#' @param x The N by T matrix of observed time instants.
-#' @param x_mask Mask matrix of the same dimensions as x indicating wich observations in x are known.
-#' @param loadings Matrix of loading coefficients
-#' @param quantile_value The quantile considered.
-#' @param method Method to be used by the quantreg package when solving quantile regression models. This parameter has no effect if penalized is TRUE (default)
-#'
-#' @return The matrix of scores
-compute_scores = function(x, x_mask, loadings, quantile_value, method)
-{
-  n_obs = base::nrow(x)
-  n_components = base::ncol(loadings)
-  # Initialize the matrix of scores
-  scores =  base::matrix(0, n_obs, n_components-1)
-  for(i in base::seq(n_obs))
-  {
-    # Obtain the loadings associated to observation i with a specific time grid
-    loadings_obs = loadings[x_mask[i, ], ]
-    # Obtain the observation removing missing data
-    xi = x[i, x_mask[i, ]]
-    # Substract intercept
-    xi = xi - loadings_obs[,1]
-    scores[i,] =  quantreg::rq(xi ~ -1 + loadings_obs[,2:n_components], tau=quantile_value, method=method)$coefficients
-  }
-  # Add intercept column
-  scores = base::cbind(1, scores)
-  return(scores)
-}
-
-# OUTER LOOP FUNCTIONS --------------------------------------------------------
 
 #' FQPCA normalization
 #'
@@ -128,7 +7,7 @@ compute_scores = function(x, x_mask, loadings, quantile_value, method)
 #' @param scores Matrix of scores
 #'
 #' @return The normalized matrices of loadings and scores and the normalization matrix.
-algorithm_normalization = function(loadings, scores)
+algorithm_normalization_original = function(loadings, scores)
 {
   # Normalization process to ensure an identifiable solution
   n_time = nrow(loadings)
@@ -138,11 +17,6 @@ algorithm_normalization = function(loadings, scores)
   # Remove intercept from normalization
   loadings_no_intercept = matrix(loadings[, 2:ncol(loadings)], ncol=n_components)
   scores_no_intercept = matrix(scores[, 2:ncol(scores)], ncol=n_components)
-
-  # Ensure scores are mean-centered and move the effect of the mean scores to the intercept
-  means_scores = matrix(colMeans(scores_no_intercept), ncol=1)
-  scores_no_intercept = scale(scores_no_intercept, center=TRUE, scale=FALSE)
-  loadings[, 1] = loadings[, 1] + loadings_no_intercept %*% means_scores
 
   # Make rotations to ensure identifiability
   sigmaF = (1/n_time) * t(loadings_no_intercept) %*% loadings_no_intercept
@@ -160,31 +34,9 @@ algorithm_normalization = function(loadings, scores)
   return(results)
 }
 
-#' FQPCA explained variability
-#'
-#' Computes the percentage of explained variability based on the variance of the scores matrix
-#'
-#' @param scores Matrix of scores
-#'
-#' @return The percentage of variability each component is explaining.
-compute_explained_variability = function(scores)
-{
-  if(base::ncol(scores) == 2)
-  {
-    scores = matrix(scores[,-1], ncol=1)
-  } else{
-    scores = scores[,-1]
-  }
-  variability = base::diag(stats::var(scores))
-  percentage_variability = variability / base::sum(variability)
-  return(percentage_variability)
-}
-
-# MAIN ------------------------------------------------------------------------
-
-new_fqpca <- function(loadings, scores, explained_variability, objective_function_value,
+new_fqpca_original <- function(loadings, scores, explained_variability, objective_function_value,
                       list_objective_function_values, execution_time, function_warnings,
-                      mean_scores_unnormalized,n_components, quantile_value, alpha_ridge,
+                      n_components, quantile_value, alpha_ridge,
                       periodic, splines_df, tol, n_iters, solver, penalized, method, verbose, seed,
                       normalization_matrix, spline_coefficients, spline_basis)
 {
@@ -196,7 +48,6 @@ new_fqpca <- function(loadings, scores, explained_variability, objective_functio
     list_objective_function_values=list_objective_function_values,
     execution_time=execution_time,
     function_warnings=function_warnings,
-    mean_scores_unnormalized=mean_scores_unnormalized,
     n_components=n_components,
     quantile_value=quantile_value,
     alpha_ridge=alpha_ridge,
@@ -213,9 +64,8 @@ new_fqpca <- function(loadings, scores, explained_variability, objective_functio
     spline_coefficients=spline_coefficients,
     spline_basis=spline_basis
   ),
-  class = "fqpca_object")
+  class = "fqpca_object_original")
 }
-
 
 #' FQPCA
 #'
@@ -239,19 +89,19 @@ new_fqpca <- function(loadings, scores, explained_variability, objective_functio
 #' @export
 #'
 #' @examples
-#' # Generate fake dataset with 150 observations and 144 time points
+#' # Generate fake dataset with 200 observations and 144 time points
 #'
-#' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
-#' x = x + matrix(rnorm(150*144, 0, 0.4), nrow=150)
+#' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
+#' x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
 #'
 #' # Add missing observations
-#' x[sample(150*144, as.integer(0.2*150*144))] = NA
+#' x[sample(200*144, as.integer(0.2*200*144))] = NA
 #'
-#' results = fqpca(x=x, n_components=2, quantile_value=0.5, alpha_ridge=1e-7)
+#' results = fqpca_rank(x=x, n_components=2, quantile_value=0.5, alpha_ridge=1e-12)
 #'
 #' loadings = results$loadings
 #' scores = results$scores
-fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-8,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', penalized=TRUE, method='br', verbose=FALSE, seed=1)
+fqpca_rank = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-16,  periodic=TRUE, splines_df=30, tol=1e-3, n_iters=30, solver='SCS', penalized=TRUE, method='br', verbose=FALSE, seed=1)
 {
   if(!is.data.frame(x) & !is.matrix(x)){stop('x is not of a valid type. Object provided: ', typeof(x))}
   if(!n_components == floor(n_components)){stop('n_components must be an integer number. Value provided: ', n_components)}
@@ -267,6 +117,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-8,  peri
   n_time = base::dim(x)[2]
   x_axis = base::seq(0, 1, length.out = n_time)
   x_mask = !base::is.na(x)
+  true_n_components = n_components
 
   # INITIALIZATION OF SPLINE BASIS --------------------------------------------
 
@@ -309,7 +160,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-8,  peri
 
   # Iterate until convergence or until max_iters is reached
   convergence_criteria = c()
-  function_warnings = list(splines=FALSE, scores=FALSE, diverging_loop=FALSE, normalization=FALSE)
+  function_warnings = list(splines=FALSE, scores=FALSE, diverging_loop=FALSE, normalization=FALSE, loadings_singularity=FALSE)
 
   for(i in 1:n_iters)
   {
@@ -329,6 +180,25 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-8,  peri
     # Compute loadings
     loadings_1 = compute_loadings(spline_basis=spline_basis, spline_coefficients=spline_coefficients_1)
 
+    # Normalization result
+    normalization_result = try(algorithm_normalization_original(loadings=loadings_1, scores=scores_0), silent=TRUE)
+    error_chr = class(normalization_result)
+    if(error_chr=="try-error")
+    {
+      warning('Failed normalization step to ensure identifiability at iteration ', i, ' Providing unnormalized results')
+      normalization_result = list(loadings=loadings_1, scores=scores_0, normalization_matrix=diag(n_components))
+    }
+
+    loadings_1 = normalization_result$loadings
+
+    rank_loadings = base::qr(loadings_1)$rank
+    if(rank_loadings != n_components+1)
+    {
+      function_warnings$loadings_singularity = TRUE
+      n_components = rank_loadings-1
+      loadings_1 = base::matrix(loadings_1[, 1:rank_loadings], ncol=rank_loadings)
+    }
+
     # Compute scores
     scores_1 = try(compute_scores(x=x, x_mask=x_mask, loadings=loadings_1, quantile_value=quantile_value, method=method), silent=FALSE)
     if(!is.matrix(scores_1))
@@ -346,7 +216,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-8,  peri
 
     if(objective_function_1 < best_results$objective_function)
     {
-      best_results = list(loadings=loadings_1, scores=scores_1, objective_function=objective_function_1, spline_coefficients=spline_coefficients_1, iteration=i)
+      best_results = list(loadings=loadings_1, scores=scores_1, objective_function=objective_function_1, spline_coefficients=spline_coefficients_1, iteration=i, n_components=ncol(loadings_1)-1)
     }
 
     convergence_criteria[i] = base::abs(objective_function_1 - objective_function_0)
@@ -390,11 +260,11 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-8,  peri
     scores_0 = scores_1
   }
   if(i == n_iters){ if(verbose) {warning('Algorithm reached maximum number of iterations without convergence: ', n_iters, ' iterations')}}
+  if(true_n_components != best_results$n_components){warning('Loadings matrix is singular. Reducing the number of components from ',true_n_components, ' to ',best_results$n_components, ' to obtain a full-rank matrix')}
 
   # NORMALIZATION TO ENSURE IDENTIFIABILITY -----------------------------------
 
-  mean_scores = colMeans(matrix(best_results$scores[,-1], ncol=n_components)) # Required in the prediction step
-  normalization_result = try(algorithm_normalization(loadings=best_results$loadings, scores=best_results$scores), silent=TRUE)
+  normalization_result = try(algorithm_normalization_original(loadings=best_results$loadings, scores=best_results$scores), silent=TRUE)
   error_chr = class(normalization_result)
   if(error_chr=="try-error")
   {
@@ -410,7 +280,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-8,  peri
   global_end_time = base::Sys.time()
   global_execution_time = difftime(global_end_time, global_start_time, units='secs')
 
-  results = new_fqpca(
+  results = new_fqpca_original(
     loadings=normalization_result$loadings,
     scores=normalization_result$scores,
     explained_variability=explained_variability,
@@ -418,8 +288,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-8,  peri
     list_objective_function_values=objective_function_array,
     execution_time=global_execution_time,
     function_warnings=function_warnings,
-    mean_scores_unnormalized = mean_scores,
-    n_components=n_components,
+    n_components=best_results$n_components,
     quantile_value=quantile_value,
     alpha_ridge=alpha_ridge,
     periodic=periodic,
@@ -436,108 +305,4 @@ fqpca = function(x, n_components=2,  quantile_value=0.5, alpha_ridge=1e-8,  peri
     spline_basis=spline_basis
   )
   return(results)
-}
-
-
-# PREDICTIONS -----------------------------------------------------------------
-
-#' Predict FQPCA
-#'
-#' ## S3 method for class 'fqpca'
-#' Given a new matrix x, predicts the value of the scores associated to the given matrix
-#'
-#' @param object An object output of the fqpca function.
-#' @param newdata The N by T matrix of observed time instants to be tested.
-#' @param ... further arguments passed to or from other methods.
-#'
-#' @return The normalized matrix of scores.
-#' @export
-#'
-#' @examples
-#' # Generate fake dataset with 150 observations and 144 time points
-#'
-#' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
-#' x = x + matrix(rnorm(150*144, 0, 0.4), nrow=150)
-#'
-#' # Add missing observations
-#' x[sample(150*144, as.integer(0.2*150*144))] = NA
-#'
-#' results = fqpca(x=x[1:100,], n_components=2, quantile_value=0.5)
-#'
-#' predictions = predict(object=results, newdata=x[101:150,])
-predict.fqpca_object = function(object, newdata, ...)
-{
-  if (!inherits(object, "fqpca_object"))
-  {
-    stop('The object must be of class fqpca_object')
-  }
-  if(!is.data.frame(newdata) & !is.matrix(newdata)){stop('newdata is not of a valid type. Object provided: ', typeof(newdata), '\nValid types: data.frame or matrix')}
-  newdata = unname(as.matrix(newdata))
-  if(ncol(newdata) == 1){ newdata = t(newdata)}
-
-  x_mask = !base::is.na(newdata)
-  n_obs = base::nrow(newdata)
-  n_time = base::ncol(newdata)
-  if(sum(!x_mask) == n_obs * n_time){stop('newdata contains no information. Check that there are values different from NA')}
-
-  # Estimation of unnormalized loadings
-  loadings_1 = compute_loadings(spline_basis=object$spline_basis, spline_coefficients=object$spline_coefficients)
-
-  # Estimation of scores
-  scores_1 = try(compute_scores(x=newdata, x_mask=x_mask, loadings=loadings_1, quantile_value=object$quantile_value, method=object$method), silent=FALSE)
-  if(!is.matrix(scores_1))
-  {
-    stop('Computation of scores failed.')
-  }
-  scores_1 = matrix(scores_1[,-1], ncol=object$n_components) # Remove intercept column
-  scores_1 = scores_1 - matrix(rep(object$mean_scores_unnormalized, n_obs), nrow=n_obs, byrow=T)
-  scores_1 = scores_1 %*% t(base::solve(object$normalization_matrix)) # Normalize
-  scores_1 = base::cbind(1, scores_1) # Add intercept column
-  return(scores_1)
-}
-
-# BASIC PLOT ------------------------------------------------------------------
-
-#' Plot FQPCA loading functions
-#'
-#' ## S3 method for class 'fqpca'
-#' Given a fqpca object, plot the loading functions
-#'
-#' @param x An object output of the fqpca function.
-#' @param ... further arguments passed to or from other methods.
-#'
-#' @return The plot of loadings
-#' @export
-#'
-#' @examples
-#' # Generate fake dataset with 150 observations and 144 time points
-#'
-#' x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
-#' x = x + matrix(rnorm(150*144, 0, 0.4), nrow=150)
-#'
-#' # Add missing observations
-#' x[sample(150*144, as.integer(0.2*150*144))] = NA
-#'
-#' results = fqpca(x=x, n_components=2, quantile_value=0.5)
-#'
-#' plot(results)
-plot.fqpca_object = function(x, ...)
-{
-  if (!inherits(x, "fqpca_object"))
-  {
-    stop('The object must be of class fqpca_object')
-  }
-  loadings = x$loadings
-  graphics::par(mfrow = c(1, 2))
-  graphics::plot(loadings[,1], type='l', lty=1, lwd=2, xlab='', ylab='')
-  graphics::title('Intercept curve')
-
-  no_intercept_loadings = loadings[,-1]
-  if(base::ncol(loadings) == 2)
-  {
-    no_intercept_loadings = base::matrix(no_intercept_loadings, ncol=1)
-  }
-  graphics::matplot(no_intercept_loadings, type = "l", lty = 1, lwd = 2, xlab='', ylab='')
-  graphics::legend("topright", legend = 1:ncol(no_intercept_loadings), col=1:ncol(no_intercept_loadings), lty = 1, lwd = 2)
-  graphics::title('Principal components functions')
 }

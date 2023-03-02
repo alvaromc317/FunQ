@@ -23,15 +23,15 @@ Given a new matrix x, predicts the value of the scores associated to the given m
 }
 }
 \examples{
-# Generate fake dataset with 200 observations and 144 time points
+# Generate fake dataset with 150 observations and 144 time points
 
-x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
-x = x + matrix(rnorm(200*144, 0, 0.4), nrow=200)
+x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
+x = x + matrix(rnorm(150*144, 0, 0.4), nrow=150)
 
 # Add missing observations
-x[sample(200*144, as.integer(0.2*200*144))] = NA
+x[sample(150*144, as.integer(0.2*150*144))] = NA
 
-results = fqpca(x=x[1:150,], n_components=1, quantile_value=0.5)
+results = fqpca(x=x[1:100,], n_components=2, quantile_value=0.5)
 
-predictions = predict(results, newdata=x[151:200,])
+predictions = predict(object=results, newdata=x[101:150,])
 }
