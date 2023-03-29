@@ -16,8 +16,7 @@ cross_validation_alpha(
   tol = 0.001,
   n_iters = 50,
   solver = "SCS",
-  penalized = TRUE,
-  method = "br",
+  penalized_loadings = TRUE,
   verbose_fqpca = FALSE,
   verbose_cv = TRUE,
   seed = NULL
@@ -38,17 +37,15 @@ cross_validation_alpha(
 
 \item{periodic}{Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.}
 
-\item{splines_df}{Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyperparameter alpha_ridge. Default is 30.}
+\item{splines_df}{Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyper-parameter alpha_ridge. Default is 30.}
 
-\item{tol}{Tolerance on the convergence of the algorithm. Smaller values can spped up computation but may affect the quality of the estimations. Default is 1e-3.}
+\item{tol}{Tolerance on the convergence of the algorithm. Smaller values can speed up computation but may affect the quality of the estimations. Default is 1e-3.}
 
 \item{n_iters}{Maximum number of iterations. Default is 30.}
 
 \item{solver}{Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.}
 
-\item{penalized}{Boolean indicating if the model should solve a penalized splines model or a non penelized splines model}
-
-\item{method}{Method to be used by the quantreg package when solving quantile regression models. This parameter has no effect if penalized is TRUE (default)}
+\item{penalized_loadings}{Boolean indicating if the model should solve a penalized splines model or a non penalized splines model}
 
 \item{verbose_fqpca}{Boolean indicating verbosity of the fqpca function. Default is FALSE.}
 
