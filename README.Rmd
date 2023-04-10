@@ -78,3 +78,16 @@ Finally, given a new set of observations, it is possible to decompose the new ob
 scores_test = predict(results, newdata=x_test)
 x_test_estimated = scores_test %*% t(loadings)
 ```
+
+You can plot the computed loadings on a somewhat not very pretty plot, but still useful
+
+```{r, fig.height = 4, fig.width = 5.5}
+plot(results)
+```
+
+And you can also compute the quantile error between the curve reconstruction and the true data
+
+
+```{r}
+quantile_error(x=x_train, x_pred=x_train_estimated, quantile_value=0.5)
+```

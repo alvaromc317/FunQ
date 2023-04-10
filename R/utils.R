@@ -111,6 +111,21 @@ quantile_regression_ridge = function(x, y, R, quantile_value=0.5, lambda=1e-3, s
   return(results)
 }
 
+
+#' Quantile error computation
+#'
+#' @param x The N by T matrix of observed time instants
+#' @param x_pred N by T matrix of predicted time instants
+#' @param quantile_value The quantile considered.
+#'
+#' @return the quantile error between the two matrices
+#'
+#' @export
+quantile_error = function(x, x_pred, quantile_value)
+{
+  mean(quantile_function(quantile_value = quantile_value, x=(x - x_pred)), na.rm=TRUE)
+}
+
 # TRAIN TEST SPLIT ------------------------------------------------------------
 
 #' Split rows of a given matrix X into train / test
@@ -346,7 +361,8 @@ create_folds = function(x, criteria='points', folds=3, seed=NULL)
 #'                    validation process.
 #' @param seed Default=NULL. Seed for the random generator number.
 #'              Parameter included for reproducibility purposes.
-#' @return A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
+#' @return A list containing the matrix of scores, the matrix of loadings,
+#'         and a secondary list with extra information.
 #' @export
 #'
 #' @examples
@@ -404,7 +420,7 @@ cross_validation_alpha = function(x, n_components=2,  quantile_value=0.5, alpha_
         test_scores = predict.fqpca_object(fqpca_results, x_test)
         x_predicted = test_scores %*% t(fqpca_results$loadings)
       }
-      error_matrix[i, j] = mean(quantile_function(quantile_value = quantile_value, x=(x_test - x_predicted)), na.rm=TRUE)
+      error_matrix[i, j] = quantile_error(x=x_test, x_pred=x_predicted, quantile_value=quantile_value)
     }
     end_loop_time =  Sys.time()
     if(verbose_cv){message('Alpha ', alpha_ridge, ' execution completed in: ', round(difftime(end_loop_time, start_loop_time, units = "secs"), 2), ' seconds')}

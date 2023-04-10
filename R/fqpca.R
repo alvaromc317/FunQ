@@ -566,6 +566,5 @@ plot.fqpca_object = function(x, ...)
     no_intercept_loadings = base::matrix(no_intercept_loadings, ncol=1)
   }
   graphics::matplot(no_intercept_loadings, type = "l", lty = 1, lwd = 2, xlab='', ylab='')
-  graphics::legend("topright", legend = 1:ncol(no_intercept_loadings), col=1:ncol(no_intercept_loadings), lty = 1, lwd = 2)
   graphics::title('Principal components functions')
 }

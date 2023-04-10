@@ -65,7 +65,8 @@ validation process.}
 Parameter included for reproducibility purposes.}
 }
 \value{
-A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
+A list containing the matrix of scores, the matrix of loadings,
+and a secondary list with extra information.
 }
 \description{
 Performs cross validation on alpha parameter of fqpca
