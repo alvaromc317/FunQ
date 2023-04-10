@@ -1,20 +1,18 @@
-Package: fqpca
+Package: FunQuantPCA
 Title: Functional Quantile Principal Component Analysis
-Version: 0.0.0.10000
+Version: 0.1.1
 Authors@R: 
     person("Álvaro", "Méndez-Civieta", , "alvaro.mendez@uc3m.es", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-2044-4170"))
 Description: Estimation of functional quantile principal component models. 
-    This is a dimensionality reduction technique that extends the concept of 
-    functional principal components to the quantile regression framework, 
-    obtaining a model that can explain the quantiles of the data conditional 
-    on a set of common loading functions.
+    FQPCA extends the concept of functional principal component analysis (FPCA) 
+    to the quantile regression framework obtaining a model that can explain the 
+    quantiles of the data conditional on a set of common loading functions.
 License: GPL (>= 3) + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
-Imports: 
-    CVXR,
+Imports:
     expm,
     quantreg,
     simex,
@@ -24,6 +22,7 @@ Imports:
     tibble,
     caret
 Suggests: 
+    CVXR,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)

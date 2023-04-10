@@ -10,10 +10,10 @@ compute_spline_coefficients(
   scores,
   spline_basis,
   quantile_value,
+  method,
   alpha_ridge,
   R_block,
-  solver,
-  penalized_loadings
+  valid_in_quantreg
 )
 }
 \arguments{
@@ -27,13 +27,16 @@ compute_spline_coefficients(
 
 \item{quantile_value}{The quantile considered. Default is the median 0.5.}
 
+\item{method}{Method used in the resolution of the quantile regression model.
+It currently accepts the methods c('br', 'fn', 'pfn', 'sfn')
+along with any available solver in CVXR package like the free
+'SCS' or the comercial 'MOSEK'.}
+
 \item{alpha_ridge}{The hyper-parameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-12.}
 
 \item{R_block}{Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if parameter 'penalized' is TRUE.}
 
-\item{solver}{Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'. This parameter only has effect if parameter 'penalized' is TRUE.}
-
-\item{penalized_loadings}{Boolean indicating if the model should solve a penalized splines model or a non penalized splines model}
+\item{valid_in_quantreg}{Array of valid quantreg methods}
 }
 \value{
 The matrix of spline coefficients splines coefficients

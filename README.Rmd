@@ -13,20 +13,23 @@ knitr::opts_chunk$set(
 )
 ```
 
-# `fqpca` package
+# `FunQuantPCA` package
 
 <!-- badges: start -->
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Package Version](https://img.shields.io/badge/version-0.1.1-blue.svg)](https://cran.r-project.org/package=yourPackageName)
+[![lifecycle](https://img.shields.io/badge/lifecycle-experimental-brightgreen.svg)](https://www.tidyverse.org/lifecycle/)
 <!-- badges: end -->
 
-`fqpca` is an R package that solves the functional quantile principal component analysis (fqpca) methodology. This is a dimensionality reduction technique that extends the concept of functional principal component analysis (FPCA) to the quantile regression framework. FPCA is commonly used to identify and describe variation in samples of curves, but is only able to provide mean based estimations which are known to be affected by outliers and skewness. On the other hand, FQPCA is able to capture shifts on the scale of the data affecting the quantiles, and is also a robust methodology suitable for dealing with outliers, heteroscedastic data or skewed data. The model is estimated using penalized M splines, and can deal with sparse and irregular time measurements.
+`FunQuantPCA` is an R package that solves the functional quantile principal component analysis (fqpca) methodology. FQPCA extends the concept of functional principal component analysis (FPCA) to the quantile regression framework. The goal of many methods in FDA is to recover the curve-specific mean by leveraging information across time points, subjects, or both. Our goal is broader: we seek to describe the full curve and time-specific probability distribution that underlies individual measurements. Although only one draw from the curve-and time-specific distribution of each individual is available, we will leverage information across time points and curves to estimate smooth, curve-specific quantile functions. This approach allows a richer understanding of functional data than considering only the expected value, and may be particularly useful when distributions are skewed, vary across subjects or present outliers.
 
 ## Installation
 
-You can install the development version of fqpca from [GitHub](https://github.com/) with:
+You can install the development version of FunQuantPCA from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("alvaromc317/fqpca")
+devtools::install_github("alvaromc317/FunQuantPCA")
 ```
 
 ## Example
@@ -48,16 +51,16 @@ x = x + matrix(rnorm(n*t, 0, 0.4), nrow=n) + rchisq(n, 3)
 matplot(t(x[1:20,]), type="l")
 ```
 
-The above plot visualizes a subset of the data generated this way. Since the main methodology in the package can deal with sparse and irregular time measurements, we will include 50% of missing observations in the data matrix. 
+The above plot visualizes a subset of the data generated this way. Since the main methodology in the package can deal with sparse and irregular time measurements, we will include 75% of missing observations in the data matrix. 
 
 ```{r}
-x[sample(n*t, as.integer(0.5*n*t))] = NA
+x[sample(n*t, as.integer(0.75*n*t))] = NA
 ```
 
 Now, we apply the `fqpca` methodology on this dataset and obtain the decomposition of the data in terms of the median (`quantile.value=0.5`), which is a robust alternative to the mean based predictions of traditional FPCA.
 
 ```{r}
-library(fqpca)
+library(FunQuantPCA)
 x_train = x[1:150,]
 x_test = x[151:n,]
 results = fqpca(x=x_train, n_components=2, quantile_value=0.5)

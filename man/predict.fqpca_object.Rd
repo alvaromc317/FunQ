@@ -17,7 +17,7 @@
 The normalized matrix of scores.
 }
 \description{
-\subsection{S3 method for class 'fqpca'}{
+\subsection{S3 method for class 'fqpca_object'}{
 
 Given a new matrix x, predicts the value of the scores associated to the given matrix
 }

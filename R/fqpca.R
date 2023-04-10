@@ -29,13 +29,16 @@ compute_objective_value = function(x, quantile_value, scores, loadings)
 #' @param scores Initial matrix of scores.
 #' @param spline_basis The spline basis matrix.
 #' @param quantile_value The quantile considered. Default is the median 0.5.
+#' @param method Method used in the resolution of the quantile regression model.
+#'                It currently accepts the methods c('br', 'fn', 'pfn', 'sfn')
+#'                along with any available solver in CVXR package like the free
+#'                'SCS' or the comercial 'MOSEK'.
 #' @param alpha_ridge The hyper-parameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-12.
 #' @param R_block Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if parameter 'penalized' is TRUE.
-#' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'. This parameter only has effect if parameter 'penalized' is TRUE.
-#' @param penalized_loadings Boolean indicating if the model should solve a penalized splines model or a non penalized splines model
+#' @param valid_in_quantreg Array of valid quantreg methods
 #'
 #' @return The matrix of spline coefficients splines coefficients
-compute_spline_coefficients = function(x, x_mask, scores, spline_basis, quantile_value, alpha_ridge, R_block, solver, penalized_loadings)
+compute_spline_coefficients = function(x, x_mask, scores, spline_basis, quantile_value, method, alpha_ridge, R_block, valid_in_quantreg)
 {
   # At each iteration, call this function to obtain the estimation of F and Lambda
   n_obs = base::nrow(x)
@@ -59,13 +62,12 @@ compute_spline_coefficients = function(x, x_mask, scores, spline_basis, quantile
     tensor_matrix[row_idx:(row_idx+n_time_i-1),] = base::kronecker(lambda_i, tmp_splines)
     row_idx = row_idx+n_time_i
   }
-  # Obtain spline coefficients and reshape as matrix
-  if(penalized_loadings)
+
+  if(method %in% valid_in_quantreg)
   {
-    B_vector = quantile_regression_ridge(x=tensor_matrix, y=x_vector,  R=R_block, quantile_value=quantile_value, lambda=alpha_ridge, solver=solver)
-  } else if(!penalized_loadings)
-  {
-    B_vector = quantile_regression(x=tensor_matrix, y=x_vector, quantile_value=quantile_value, solver=solver)
+    B_vector = quantreg::rq(x_vector ~ -1+tensor_matrix, tau=quantile_value, method=method)$coefficients
+  } else{
+    B_vector = quantile_regression_ridge(x=tensor_matrix, y=x_vector,  R=R_block, quantile_value=quantile_value, lambda=alpha_ridge, solver=method)
   }
   spline_coefficients = base::matrix(B_vector, byrow=FALSE, ncol=n_components)
   return(spline_coefficients)
@@ -183,8 +185,8 @@ compute_explained_variability = function(scores)
 
 new_fqpca <- function(loadings, scores, explained_variability, objective_function_value,
                       list_objective_function_values, execution_time, function_warnings,
-                      mean_scores_unnormalized, n_components, quantile_value, alpha_ridge,
-                      periodic, splines_df, tol, n_iters, solver, penalized_loadings, verbose, seed,
+                      mean_scores_unnormalized, n_components, quantile_value, method,
+                      alpha_ridge, periodic, splines_df, tol, n_iters, verbose, seed,
                       normalization_matrix, spline_coefficients, spline_basis)
 {
   structure(list(
@@ -198,13 +200,12 @@ new_fqpca <- function(loadings, scores, explained_variability, objective_functio
     mean_scores_unnormalized=mean_scores_unnormalized,
     n_components=n_components,
     quantile_value=quantile_value,
+    method=method,
     alpha_ridge=alpha_ridge,
     periodic=periodic,
     splines_df=splines_df,
     tol=tol,
     n_iters=n_iters,
-    solver=solver,
-    penalized_loadings=penalized_loadings,
     verbose=verbose,
     seed=seed,
     normalization_matrix=normalization_matrix,
@@ -220,19 +221,27 @@ new_fqpca <- function(loadings, scores, explained_variability, objective_functio
 #' Solves the functional quantile principal component analysis methodology
 #'
 #' @param x The N by T matrix of observed time instants
-#' @param n_components The number of estimated components. Default is 2.
-#' @param quantile_value The quantile considered. Default is the median 0.5.
-#' @param alpha_ridge The hyperparameter controlling the penalization on the splines. This parameter has no effect if parameter penalized_loadings is set to FALSE. Default is 1e-16.
-#' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.
-#' @param splines_df Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyper-parameter alpha_ridge. Default is 30.
-#' @param tol Tolerance on the convergence of the algorithm. Smaller values can speed up computation but may affect the quality of the estimations. Default is 1e-3.
-#' @param n_iters Maximum number of iterations. Default is 30.
-#' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.
-#' @param penalized_loadings Boolean indicating if the model should solve a penalized splines model or a non penalized splines model
-#' @param verbose Boolean indicating the verbosity of the function.
-#' @param seed Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).
+#' @param n_components Default=2. The number of estimated components.
+#' @param quantile_value Default=0.5. The quantile considered.
+#' @param periodic Default=TRUE. Boolean indicating if the data is expected to
+#'                  be periodic (start coincides with end) or not.
+#' @param splines_df Default=10. Degrees of freedom for the splines.
+#' @param method Default='fn'. Method used in the resolution of the quantile
+#'                regression model. It currently accepts the methods
+#'                c('br', 'fn', 'pfn', 'sfn') along with any available solver in
+#'                CVXR package like the free 'SCS' or the comercial 'MOSEK'.
+#' @param alpha_ridge  Default=0. Hyper parameter controlling the penalization
+#'                      on the second derivative of the splines. It has effect
+#'                      only with CVXR solvers.
+#' @param tol Default=1e-3. Tolerance on the convergence of the algorithm.
+#'             Smaller values can speed up computation but may affect the
+#'             quality of the estimations.
+#' @param n_iters Default=30. Maximum number of iterations.
+#' @param verbose Default=FALSE. Boolean indicating the verbosity.
+#' @param seed Default=NULL. Seed for the random generator number.
+#'              Parameter included for reproducibility purposes.
 #'
-#' @return A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
+#' @return fqpca_object
 #' @export
 #'
 #' @examples
@@ -244,18 +253,38 @@ new_fqpca <- function(loadings, scores, explained_variability, objective_functio
 #' # Add missing observations
 #' x[sample(150*144, as.integer(0.2*150*144))] = NA
 #'
-#' results = fqpca(x=x, n_components=2, quantile_value=0.5, alpha_ridge=1e-7)
+#' results = fqpca(x=x, n_components=2, quantile_value=0.5)
 #'
 #' loadings = results$loadings
 #' scores = results$scores
-fqpca = function(x, n_components=2,  quantile_value=0.5,  periodic=TRUE, splines_df=30, alpha_ridge=1e-8, penalized_loadings=TRUE, tol=1e-3, n_iters=30, solver='SCS', verbose=FALSE, seed=1)
+fqpca = function(x, n_components=2,  quantile_value=0.5,  periodic=TRUE, splines_df=10, method='fn', alpha_ridge=0, tol=1e-3, n_iters=30, verbose=FALSE, seed=NULL)
 {
+  global_start_time = base::Sys.time()
+
+  # BASIC COMPROBATIONS -------------------------------------------------------
+
   if(!is.data.frame(x) & !is.matrix(x)){stop('x is not of a valid type. Object provided: ', typeof(x))}
   if(!n_components == floor(n_components)){stop('n_components must be an integer number. Value provided: ', n_components)}
   if(quantile_value<0 | quantile_value>1){stop('quantile_value must be a value between 0 and 1. Value provided: ', quantile_value)}
+  if(!splines_df == floor(splines_df)){stop('splines_df must be an integer number. Value provided: ', splines_df)}
+  if(!n_iters == floor(n_iters)){stop('n_iters must be an integer number. Value provided: ', n_iters)}
+  if(alpha_ridge<0){stop('alpha_ridge must be equal or larger than 0')}
+  if(tol<0){stop('tol must be equal or larger than 0')}
   if(!n_iters == floor(n_iters)){stop('n_iters must be an integer number. Value provided: ', n_iters)}
 
-  global_start_time = base::Sys.time()
+  valid_in_quantreg = c('br', 'fn', 'sfn', 'pfn')
+  valid_in_cvxr = CVXR::installed_solvers()
+  if(method %in% valid_in_cvxr)
+  {
+    penalized = TRUE
+  } else if(method %in% valid_in_quantreg)
+  {
+    penalized = FALSE
+  } else{
+    stop('Invalid method provided. Valid methods include the quantreg methods
+         c("br", "fn", "sfn", "pfn") and any installed solver for CVXR.
+         Value provided: ', method)
+  }
 
   if(!base::is.null(seed)){base::set.seed(seed)}
   x = unname(base::as.matrix(x))
@@ -276,16 +305,20 @@ fqpca = function(x, n_components=2,  quantile_value=0.5,  periodic=TRUE, splines
   }
   knots = knots[2:(base::length(knots)-1)]
   spline_basis =  splines2::mSpline(x_axis, degree=3, intercept=TRUE, knots=knots, periodic=periodic, Boundary.knots=c(min(x_axis), max(x_axis)))
-  deriv_basis = stats::deriv(spline_basis, derivs=2)
-  R = t(deriv_basis) %*% deriv_basis
-  R_block = simex::diag.block(R, n_components + 1)
-  # Ensure that R_block is semi definite positive: (all eigenvalues are greater or equal to 0)
-  for(i in 1:5000)
+
+  if(penalized)
   {
-    R_block = (1 - 1e-3) * R_block + 1e-3 * base::diag(base::nrow(R_block))
-    if(all(base::eigen(R_block)$values > 0)){break}
-  }
-  if(!all(base::eigen(R_block)$values > 0)) {stop('Splines penalization matrix is not positive definite')}
+    deriv_basis = stats::deriv(spline_basis, derivs=2)
+    R = t(deriv_basis) %*% deriv_basis
+    R_block = simex::diag.block(R, n_components + 1)
+    # Ensure that R_block is semi definite positive: (all eigenvalues are greater or equal to 0)
+    for(i in 1:5000)
+    {
+      R_block = (1 - 1e-3) * R_block + 1e-3 * base::diag(base::nrow(R_block))
+      if(all(base::eigen(R_block)$values > 0)){break}
+    }
+    if(!all(base::eigen(R_block)$values > 0)) {stop('Splines penalization matrix is not positive definite')}
+  } else{R_block = NULL}
 
   # INITIALIZATION OF SCORES AND LOADINGS -------------------------------------
 
@@ -315,7 +348,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5,  periodic=TRUE, splines
     # COMPUTATION OF LOADINGS AND SCORES ---------------------------
 
     # Obtain splines coefficients
-    spline_coefficients_1 = try(compute_spline_coefficients(x=x, x_mask=x_mask, scores=scores_0, spline_basis=spline_basis, quantile_value=quantile_value, alpha_ridge=alpha_ridge, R_block=R_block, solver=solver, penalized_loadings=penalized_loadings), silent=TRUE)
+    spline_coefficients_1 = try(compute_spline_coefficients(x=x, x_mask=x_mask, scores=scores_0, spline_basis=spline_basis, quantile_value=quantile_value, method=method, alpha_ridge=alpha_ridge, R_block=R_block, valid_in_quantreg=valid_in_quantreg), silent=TRUE)
     if(!is.matrix(spline_coefficients_1))
     {
       warning('Computation of spline coefficients failed at iteration ', i, '. Providing results from previous iteration.')
@@ -418,13 +451,12 @@ fqpca = function(x, n_components=2,  quantile_value=0.5,  periodic=TRUE, splines
     mean_scores_unnormalized = mean_scores,
     n_components=n_components,
     quantile_value=quantile_value,
+    method=method,
     alpha_ridge=alpha_ridge,
     periodic=periodic,
     splines_df=splines_df,
     tol=tol,
     n_iters=best_results$iteration,
-    solver=solver,
-    penalized_loadings=penalized_loadings,
     verbose=verbose,
     seed=seed,
     normalization_matrix=normalization_result$normalization_matrix,
@@ -439,7 +471,7 @@ fqpca = function(x, n_components=2,  quantile_value=0.5,  periodic=TRUE, splines
 
 #' Predict FQPCA
 #'
-#' ## S3 method for class 'fqpca'
+#' ## S3 method for class 'fqpca_object'
 #' Given a new matrix x, predicts the value of the scores associated to the given matrix
 #'
 #' @param object An object output of the fqpca function.

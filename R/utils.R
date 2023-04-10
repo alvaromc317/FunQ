@@ -317,23 +317,35 @@ create_folds = function(x, criteria='points', folds=3, seed=NULL)
 #' CROSS VALIDATION
 #'
 #' Performs cross validation on alpha parameter of fqpca
-#'
+#
 #' @param x The N by T matrix of observed time instants
-#' @param n_components The number of estimated components. Default is 2.
-#' @param quantile_value The quantile considered. Default is the median 0.5.
-#' @param alpha_grid An array containing the list of possible alpha values (these should be always positive numbers).
-#' @param n_folds Number of folds to be used on the cross validation process. Default is 3
-#' @param criteria Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix. Default is points
-#' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.
-#' @param splines_df Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyper-parameter alpha_ridge. Default is 30.
-#' @param tol Tolerance on the convergence of the algorithm. Smaller values can speed up computation but may affect the quality of the estimations. Default is 1e-3.
-#' @param n_iters Maximum number of iterations. Default is 30.
-#' @param solver Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.
-#' @param penalized_loadings Boolean indicating if the model should solve a penalized splines model or a non penalized splines model
-#' @param verbose_fqpca Boolean indicating verbosity of the fqpca function. Default is FALSE.
-#' @param verbose_cv Boolean indicating verbosity of the Cross validation process. Default is TRUE.
-#' @param seed Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).
-#'
+#' @param n_components Default=2. The number of estimated components.
+#' @param quantile_value Default=0.5. The quantile considered.
+#' @param periodic Default=TRUE. Boolean indicating if the data is expected to
+#'                  be periodic (start coincides with end) or not.
+#' @param splines_df Default=10. Degrees of freedom for the splines.
+#' @param method Default='fn'. Method used in the resolution of the quantile
+#'                regression model. It currently accepts the methods
+#'                c('br', 'fn', 'pfn', 'sfn') along with any available solver in
+#'                CVXR package like the free 'SCS' or the comercial 'MOSEK'.
+#' @param alpha_grid Default=c(0, 1e-16, 1e-14). An array containing the list of
+#'                    possible alpha values  (these should be always positive
+#'                    numbers).
+#' @param n_folds Default=3. Number of folds to be used on cross validation.
+#' @param criteria Default='points'. Criteria used to divide the data.
+#'                 Valid values are 'rows', which considers the division based
+#'                 on full rows, or 'points', which considers the division based
+#'                 on points within the matrix. Default is points
+#' @param tol Default=1e-3. Tolerance on the convergence of the algorithm.
+#'             Smaller values can speed up computation but may affect the
+#'             quality of the estimations.
+#' @param n_iters Default=30. Maximum number of iterations.
+#' @param verbose_fqpca Default=FALSE. Boolean indicating verbosity of the
+#'                       fqpca function.
+#' @param verbose_cv Default=TRUE. Boolean indicating verbosity of the cross
+#'                    validation process.
+#' @param seed Default=NULL. Seed for the random generator number.
+#'              Parameter included for reproducibility purposes.
 #' @return A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
 #' @export
 #'
@@ -348,7 +360,7 @@ create_folds = function(x, criteria='points', folds=3, seed=NULL)
 #'
 #' cv_result = cross_validation_alpha(x, alpha_grid=c(0, 1e-15), n_folds=2)
 #'
-cross_validation_alpha = function(x, n_components=1,  quantile_value=0.5, alpha_grid = c(0, 10^seq(-16, -5, by=1)), n_folds=3, criteria='points', periodic=TRUE, splines_df=30, tol=1e-3, n_iters=50, solver='SCS', penalized_loadings=TRUE, verbose_fqpca=FALSE, verbose_cv=TRUE, seed=NULL)
+cross_validation_alpha = function(x, n_components=2,  quantile_value=0.5, alpha_grid = c(0, 1e-16, 1e-14), n_folds=3, criteria='points', periodic=TRUE, splines_df=10, tol=1e-3, n_iters=50, method='fn', verbose_fqpca=FALSE, verbose_cv=TRUE, seed=NULL)
 {
   start_time = Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
@@ -381,7 +393,7 @@ cross_validation_alpha = function(x, n_components=1,  quantile_value=0.5, alpha_
       } else{stop('Invalid value for criteria. Valid values are observations or curves')}
 
       # Execute model
-      fqpca_results = fqpca(x=x_train, n_components=n_components, quantile_value=quantile_value, alpha_ridge=alpha_ridge, periodic=periodic, splines_df=splines_df, tol=tol, n_iters=n_iters, solver=solver, penalized_loadings=penalized_loadings, verbose=verbose_fqpca, seed=seed)
+      fqpca_results = fqpca(x=x_train, n_components=n_components,  quantile_value=quantile_value,  periodic=periodic, splines_df=splines_df, method=method, alpha_ridge=alpha_ridge, tol=tol, n_iters=n_iters, verbose=verbose_fqpca, seed=seed)
 
       # Obtain reconstruction
       if(criteria == 'points')

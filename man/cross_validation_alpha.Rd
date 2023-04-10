@@ -6,17 +6,16 @@
 \usage{
 cross_validation_alpha(
   x,
-  n_components = 1,
+  n_components = 2,
   quantile_value = 0.5,
-  alpha_grid = c(0, 10^seq(-16, -5, by = 1)),
+  alpha_grid = c(0, 1e-16, 1e-14),
   n_folds = 3,
   criteria = "points",
   periodic = TRUE,
-  splines_df = 30,
+  splines_df = 10,
   tol = 0.001,
   n_iters = 50,
-  solver = "SCS",
-  penalized_loadings = TRUE,
+  method = "fn",
   verbose_fqpca = FALSE,
   verbose_cv = TRUE,
   seed = NULL
@@ -25,33 +24,45 @@ cross_validation_alpha(
 \arguments{
 \item{x}{The N by T matrix of observed time instants}
 
-\item{n_components}{The number of estimated components. Default is 2.}
+\item{n_components}{Default=2. The number of estimated components.}
 
-\item{quantile_value}{The quantile considered. Default is the median 0.5.}
+\item{quantile_value}{Default=0.5. The quantile considered.}
 
-\item{alpha_grid}{An array containing the list of possible alpha values (these should be always positive numbers).}
+\item{alpha_grid}{Default=c(0, 1e-16, 1e-14). An array containing the list of
+possible alpha values  (these should be always positive
+numbers).}
 
-\item{n_folds}{Number of folds to be used on the cross validation process. Default is 3}
+\item{n_folds}{Default=3. Number of folds to be used on cross validation.}
 
-\item{criteria}{Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix. Default is points}
+\item{criteria}{Default='points'. Criteria used to divide the data.
+Valid values are 'rows', which considers the division based
+on full rows, or 'points', which considers the division based
+on points within the matrix. Default is points}
 
-\item{periodic}{Boolean indicating if the data is expected to be periodic (start coincides with end) or not. Default is TRUE.}
+\item{periodic}{Default=TRUE. Boolean indicating if the data is expected to
+be periodic (start coincides with end) or not.}
 
-\item{splines_df}{Degrees of freedom for the splines. It is recommended not to modify this parameter and control the smoothness via the hyper-parameter alpha_ridge. Default is 30.}
+\item{splines_df}{Default=10. Degrees of freedom for the splines.}
 
-\item{tol}{Tolerance on the convergence of the algorithm. Smaller values can speed up computation but may affect the quality of the estimations. Default is 1e-3.}
+\item{tol}{Default=1e-3. Tolerance on the convergence of the algorithm.
+Smaller values can speed up computation but may affect the
+quality of the estimations.}
 
-\item{n_iters}{Maximum number of iterations. Default is 30.}
+\item{n_iters}{Default=30. Maximum number of iterations.}
 
-\item{solver}{Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.}
+\item{method}{Default='fn'. Method used in the resolution of the quantile
+regression model. It currently accepts the methods
+c('br', 'fn', 'pfn', 'sfn') along with any available solver in
+CVXR package like the free 'SCS' or the comercial 'MOSEK'.}
 
-\item{penalized_loadings}{Boolean indicating if the model should solve a penalized splines model or a non penalized splines model}
+\item{verbose_fqpca}{Default=FALSE. Boolean indicating verbosity of the
+fqpca function.}
 
-\item{verbose_fqpca}{Boolean indicating verbosity of the fqpca function. Default is FALSE.}
+\item{verbose_cv}{Default=TRUE. Boolean indicating verbosity of the cross
+validation process.}
 
-\item{verbose_cv}{Boolean indicating verbosity of the Cross validation process. Default is TRUE.}
-
-\item{seed}{Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
+\item{seed}{Default=NULL. Seed for the random generator number.
+Parameter included for reproducibility purposes.}
 }
 \value{
 A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
