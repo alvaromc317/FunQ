@@ -8,7 +8,7 @@ quantile_regression_ridge(
   x,
   y,
   R,
-  quantile_value = 0.5,
+  quantile.value = 0.5,
   lambda = 0.001,
   solver = "SCS"
 )
@@ -20,7 +20,7 @@ quantile_regression_ridge(
 
 \item{R}{Quadratic matrix used to apply a ridge based penalty.}
 
-\item{quantile_value}{The quantile considered. Default is the median 0.5.}
+\item{quantile.value}{The quantile considered. Default is the median 0.5.}
 
 \item{lambda}{The hyperparameter controlling the penalization. Default is 1e-3.}
 

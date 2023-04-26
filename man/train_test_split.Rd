@@ -7,8 +7,8 @@
 train_test_split(
   x,
   criteria = "points",
-  train_pct = NULL,
-  train_size = NULL,
+  train.pct = NULL,
+  train.size = NULL,
   seed = NULL
 )
 }
@@ -17,9 +17,9 @@ train_test_split(
 
 \item{criteria}{Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix.}
 
-\item{train_pct}{Float number indicating the \% of rows used for training}
+\item{train.pct}{Float number indicating the \% of rows used for training}
 
-\item{train_size}{Integer number indicating number of rows used for training. train_size is superseded by train_pct}
+\item{train.size}{Integer number indicating number of rows used for training. train.size is superseded by train.pct}
 
 \item{seed}{Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
 }
@@ -36,10 +36,10 @@ data points.
 x = matrix(rnorm(50), nrow=10)
 
 # Divide based on full rows
-train_test_rows = train_test_split(x, criteria='rows', train_pct=0.5)
+train_test_rows = train_test_split(x, criteria='rows', train.pct=0.5)
 x_train = train_test_rows$x_train
 x_test = train_test_rows$x_test
 
-train_test_points = train_test_split(x, criteria='points', train_pct=0.5)
+train_test_points = train_test_split(x, criteria='points', train.pct=0.5)
 
 }

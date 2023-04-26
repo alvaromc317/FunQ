@@ -5,34 +5,34 @@
 \title{Compute splines coefficients}
 \usage{
 compute_spline_coefficients(
-  x,
-  x_mask,
+  Y,
+  Y_mask,
   scores,
-  spline_basis,
-  quantile_value,
+  spline.basis,
+  quantile.value,
   method,
-  alpha_ridge,
+  alpha.ridge,
   R_block,
   valid_in_quantreg
 )
 }
 \arguments{
-\item{x}{The N by T matrix of observed time instants.}
+\item{Y}{The N by T matrix of observed time instants.}
 
-\item{x_mask}{Mask matrix of the same dimensions as x indicating wich observations in x are known.}
+\item{Y_mask}{Mask matrix of the same dimensions as Y indicating wich observations in Y are known.}
 
 \item{scores}{Initial matrix of scores.}
 
-\item{spline_basis}{The spline basis matrix.}
+\item{spline.basis}{The spline basis matrix.}
 
-\item{quantile_value}{The quantile considered. Default is the median 0.5.}
+\item{quantile.value}{The quantile considered. Default is the median 0.5.}
 
 \item{method}{Method used in the resolution of the quantile regression model.
 It currently accepts the methods c('br', 'fn', 'pfn', 'sfn')
-along with any available solver in CVXR package like the free
-'SCS' or the comercial 'MOSEK'.}
+from quantreg package along with any available solver in CVXR
+package like the free 'SCS' or the commercial 'MOSEK'.}
 
-\item{alpha_ridge}{The hyper-parameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-12.}
+\item{alpha.ridge}{The hyper-parameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-12.}
 
 \item{R_block}{Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if parameter 'penalized' is TRUE.}
 

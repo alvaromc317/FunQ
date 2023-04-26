@@ -4,16 +4,16 @@
 \alias{compute_scores}
 \title{Compute scores}
 \usage{
-compute_scores(x, x_mask, loadings, quantile_value)
+compute_scores(Y, Y_mask, loadings, quantile.value)
 }
 \arguments{
-\item{x}{The N by T matrix of observed time instants.}
+\item{Y}{The N by T matrix of observed time instants.}
 
-\item{x_mask}{Mask matrix of the same dimensions as x indicating wich observations in x are known.}
+\item{Y_mask}{Mask matrix of the same dimensions as Y indicating wich observations in Y are known.}
 
 \item{loadings}{Matrix of loading coefficients}
 
-\item{quantile_value}{The quantile considered.}
+\item{quantile.value}{The quantile considered.}
 }
 \value{
 The matrix of scores

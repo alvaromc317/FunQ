@@ -19,19 +19,19 @@ The normalized matrix of scores.
 \description{
 \subsection{S3 method for class 'fqpca_object'}{
 
-Given a new matrix x, predicts the value of the scores associated to the given matrix
+Given a new matrix Y, predicts the value of the scores associated to the given matrix
 }
 }
 \examples{
 # Generate fake dataset with 150 observations and 144 time points
 
-x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
-x = x + matrix(rnorm(150*144, 0, 0.4), nrow=150)
+Y = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
+Y = Y + matrix(rnorm(150*144, 0, 0.4), nrow=150)
 
 # Add missing observations
-x[sample(150*144, as.integer(0.2*150*144))] = NA
+Y[sample(150*144, as.integer(0.2*150*144))] = NA
 
-results = fqpca(x=x[1:100,], n_components=2, quantile_value=0.5)
+results = fqpca(Y=Y[1:100,], npc=2, quantile.value=0.5)
 
-predictions = predict(object=results, newdata=x[101:150,])
+predictions = predict(object=results, newdata=Y[101:150,])
 }

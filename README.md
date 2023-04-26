@@ -37,7 +37,35 @@ You can install the development version of FunQuantPCA from
 devtools::install_github("alvaromc317/FunQuantPCA")
 ```
 
-## Example
+## Main characteristics
+
+The key methodology in the `FunQuantPCA` package is the `fqpca`
+function, that implements the Functional Quantile Principal COmponent
+Analysis methodology.
+
+- This function can receive the functional data as a `matrix`,
+  `dataframe`, `tibble` or `tf` (from the `tidyfun` package) objects.
+- It can deal with irregular time grids, which means that can deal with
+  missing data.
+- Can control the level of smoothness of the results based on two
+  approaches:
+  - Based on the degrees of freedom of the spline basis reconstruction,
+    using the parameter `splines.df` This is our preferred approach.
+  - Based on the inclusion of a second derivative penalty on the splines
+    coefficients, changing the `method` parameter to use a valid `CVXR`
+    solver (for example, setting `method='SCS'`) and then selecting the
+    desired hyper-parameter value (for example `alpha.ridge=1e-7`). This
+    approach is experimental and is prone to show computational issues
+    for large values of the hyper-parameter.
+
+The `FunQuantPCA` also implements functions to perform cross validation
+on either the `splines.df` parameter
+(`FunQuantPCA::cross_validation_df`) or the `alpha.ridge` parameter
+(`cross_validation_alpha`). These cross validation functions consider
+the quantile error as the reference prediction error. This error is
+available using the function `quantile_error`.
+
+## Example 1: setting the basics
 
 `fqpca` is mainly designed to deal with functional data. The following
 example generates a fake dataset with 200 observations taken every 10
@@ -51,20 +79,20 @@ $\lambda_1\sim N(0,0.4)$ \* $\varepsilon_i\sim\chi^2(3)$
 n = 200
 t = 144
 time.points = seq(0, 2*pi, length.out=t)
-x = matrix(rep(sin(time.points) + sin(0.5*time.points), n), byrow=TRUE, nrow=n)
-x = x + matrix(rnorm(n*t, 0, 0.4), nrow=n) + rchisq(n, 3)
-matplot(t(x[1:20,]), type="l")
+Y = matrix(rep(sin(time.points) + sin(0.5*time.points), n), byrow=TRUE, nrow=n)
+Y = Y + matrix(rnorm(n*t, 0, 0.4), nrow=n) + rchisq(n, 3)
+matplot(t(Y[1:20,]), type="l")
 ```
 
 <img src="man/figures/README-unnamed-chunk-2-1.png" width="100%" />
 
 The above plot visualizes a subset of the data generated this way. Since
-the main methodology in the package can deal with sparse and irregular
-time measurements, we will include 75% of missing observations in the
-data matrix.
+the fqpca methodology can deal with sparse and irregular time
+measurements, we will include 50% of missing observations in the data
+matrix.
 
 ``` r
-x[sample(n*t, as.integer(0.75*n*t))] = NA
+Y[sample(n*t, as.integer(0.50*n*t))] = NA
 ```
 
 Now, we apply the `fqpca` methodology on this dataset and obtain the
@@ -74,27 +102,29 @@ traditional FPCA.
 
 ``` r
 library(FunQuantPCA)
-x_train = x[1:150,]
-x_test = x[151:n,]
-results = fqpca(x=x_train, n_components=2, quantile_value=0.5)
+
+Y.train = Y[1:150,]
+Y.test = Y[151:n,]
+
+results = fqpca(Y=Y.train, npc=2, quantile.value=0.5)
 
 loadings = results$loadings
 scores = results$scores
 
 # Recover x_train based on decomposition
-x_train_estimated = scores %*% t(loadings)
+Y.train.estimated = scores %*% t(loadings)
 ```
 
 Finally, given a new set of observations, it is possible to decompose
 the new observations using the loadings already computed.
 
 ``` r
-scores_test = predict(results, newdata=x_test)
-x_test_estimated = scores_test %*% t(loadings)
+scores.test = predict(results, newdata=Y.test)
+Y.test.estimated = scores.test %*% t(loadings)
 ```
 
 You can plot the computed loadings on a somewhat not very pretty plot,
-but still useful
+but still useful plot
 
 ``` r
 plot(results)
@@ -103,9 +133,74 @@ plot(results)
 <img src="man/figures/README-unnamed-chunk-6-1.png" width="100%" />
 
 And you can also compute the quantile error between the curve
-reconstruction and the true data
+reconstruction and the true data, which is the metric we recommend to
+use as prediction error metric.
 
 ``` r
-quantile_error(x=x_train, x_pred=x_train_estimated, quantile_value=0.5)
-#> [1] 0.1531883
+quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
+#> [1] 0.1558924
 ```
+
+## Example 2: cross validating
+
+The `FunQuantPCA` package implements functions that allow to perform
+cross validation based on both the `splines.df` or the `alpha.ridge`
+criterias. Let’s see an example using the well known weather dataset.
+
+``` r
+data = t(fda::CanadianWeather$dailyAv[,,1])
+tf_data = tf::tfd(data, arg = 1:365)
+
+plot(tf_data, col='black')
+```
+
+<img src="man/figures/README-unnamed-chunk-8-1.png" width="100%" />
+
+``` r
+cv_result = cross_validation_df(tf_data, splines.df.grid=c(5, 10, 15), n.folds=2)
+#> Degrees of freedom: 5 ---------------------
+#> Fold: 1
+#> Fold: 2
+#> Degrees of freedom: 5 .Execution completed in: 0.69 seconds
+#> Degrees of freedom: 10 ---------------------
+#> Fold: 1
+#> Fold: 2
+#> Degrees of freedom: 10 .Execution completed in: 0.92 seconds
+#> Degrees of freedom: 15 ---------------------
+#> Fold: 1
+#> Fold: 2
+#> Degrees of freedom: 15 .Execution completed in: 1.32 seconds
+
+cv_result$error.matrix
+#>           [,1]      [,2]
+#> [1,] 0.5602010 0.5608482
+#> [2,] 0.5328463 0.5367434
+#> [3,] 0.5286107 0.5296056
+```
+
+The dimensions of the error matrix are (length(splines.df.grid),
+n.folds)
+
+``` r
+cv_result = cross_validation_alpha(tf_data, alpha.grid=c(0, 1e-10, 1e-5), n.folds=2)
+#> Alpha: 0 ---------------------
+#> Fold: 1
+#> Fold: 2
+#> Alpha 0 execution completed in: 0.78 seconds
+#> Alpha: 1e-10 ---------------------
+#> Fold: 1
+#> Fold: 2
+#> Alpha 1e-10 execution completed in: 0.76 seconds
+#> Alpha: 1e-05 ---------------------
+#> Fold: 1
+#> Fold: 2
+#> Alpha 1e-05 execution completed in: 0.99 seconds
+
+cv_result$error.matrix
+#>           [,1]      [,2]
+#> [1,] 0.5340568 0.5401382
+#> [2,] 0.5342125 0.5391926
+#> [3,] 0.5340499 0.5395207
+```
+
+The dimensions of the error matrix are (length(alpha.grid), n.folds)

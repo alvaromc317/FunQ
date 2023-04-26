@@ -4,12 +4,12 @@
 \alias{compute_loadings}
 \title{Compute loadings (aka principal components)}
 \usage{
-compute_loadings(spline_basis, spline_coefficients)
+compute_loadings(spline.basis, spline.coefficients)
 }
 \arguments{
-\item{spline_basis}{The spline basis matrix.}
+\item{spline.basis}{The spline basis matrix.}
 
-\item{spline_coefficients}{the matrix of spline coefficients}
+\item{spline.coefficients}{the matrix of spline coefficients}
 }
 \value{
 The matrix of loadings

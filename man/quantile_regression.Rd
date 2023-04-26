@@ -4,14 +4,14 @@
 \alias{quantile_regression}
 \title{Quantile regression model}
 \usage{
-quantile_regression(x, y, quantile_value = 0.5, solver = "SCS")
+quantile_regression(x, y, quantile.value = 0.5, solver = "SCS")
 }
 \arguments{
 \item{x}{N times p matrix of predictive variables.}
 
 \item{y}{N times 1 vector of response.}
 
-\item{quantile_value}{The quantile considered. Default is the median 0.5.}
+\item{quantile.value}{The quantile considered. Default is the median 0.5.}
 
 \item{solver}{Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.}
 }

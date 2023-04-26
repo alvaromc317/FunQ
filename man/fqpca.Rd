@@ -5,45 +5,50 @@
 \title{FQPCA}
 \usage{
 fqpca(
-  x,
-  n_components = 2,
-  quantile_value = 0.5,
+  Y,
+  npc = 2,
+  quantile.value = 0.5,
   periodic = TRUE,
-  splines_df = 10,
+  splines.df = 10,
   method = "fn",
-  alpha_ridge = 0,
+  alpha.ridge = 0,
   tol = 0.001,
-  n_iters = 30,
+  n.iters = 30,
   verbose = FALSE,
   seed = NULL
 )
 }
 \arguments{
-\item{x}{The N by T matrix of observed time instants}
+\item{Y}{The object storing the functional data. This can be either a matrix
+data.frame or tibble of dimensions N by T, or a tf object from the
+tidyfun package}
 
-\item{n_components}{Default=2. The number of estimated components.}
+\item{npc}{Default=2 The number of estimated components.}
 
-\item{quantile_value}{Default=0.5. The quantile considered.}
+\item{quantile.value}{Default=0.5. The quantile considered.}
 
 \item{periodic}{Default=TRUE. Boolean indicating if the data is expected to
 be periodic (start coincides with end) or not.}
 
-\item{splines_df}{Default=10. Degrees of freedom for the splines.}
+\item{splines.df}{Default=10. Degrees of freedom for the splines.}
 
 \item{method}{Default='fn'. Method used in the resolution of the quantile
 regression model. It currently accepts the methods
-c('br', 'fn', 'pfn', 'sfn') along with any available solver in
-CVXR package like the free 'SCS' or the comercial 'MOSEK'.}
+c('br', 'fn', 'pfn', 'sfn') from quantreg package along with
+any available solver in CVXR package like the free 'SCS'
+or the commercial 'MOSEK'.}
 
-\item{alpha_ridge}{Default=0. Hyper parameter controlling the penalization
+\item{alpha.ridge}{Default=0. Hyper parameter controlling the penalization
 on the second derivative of the splines. It has effect
-only with CVXR solvers.}
+only with CVXR solvers. Large values are associated with
+smoother results. This component is experimental and may
+lead to computational issues.}
 
 \item{tol}{Default=1e-3. Tolerance on the convergence of the algorithm.
 Smaller values can speed up computation but may affect the
 quality of the estimations.}
 
-\item{n_iters}{Default=30. Maximum number of iterations.}
+\item{n.iters}{Default=30. Maximum number of iterations.}
 
 \item{verbose}{Default=FALSE. Boolean indicating the verbosity.}
 
@@ -59,13 +64,13 @@ Solves the functional quantile principal component analysis methodology
 \examples{
 # Generate fake dataset with 150 observations and 144 time points
 
-x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
-x = x + matrix(rnorm(150*144, 0, 0.4), nrow=150)
+Y = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
+Y = Y + matrix(rnorm(150*144, 0, 0.4), nrow=150)
 
 # Add missing observations
-x[sample(150*144, as.integer(0.2*150*144))] = NA
+Y[sample(150*144, as.integer(0.2*150*144))] = NA
 
-results = fqpca(x=x, n_components=2, quantile_value=0.5)
+results = fqpca(Y=Y, npc=2, quantile.value=0.5)
 
 loadings = results$loadings
 scores = results$scores

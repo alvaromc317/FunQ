@@ -23,13 +23,13 @@ Given a fqpca object, plot the loading functions
 \examples{
 # Generate fake dataset with 150 observations and 144 time points
 
-x = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
-x = x + matrix(rnorm(150*144, 0, 0.4), nrow=150)
+Y = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
+Y = Y + matrix(rnorm(150*144, 0, 0.4), nrow=150)
 
 # Add missing observations
-x[sample(150*144, as.integer(0.2*150*144))] = NA
+Y[sample(150*144, as.integer(0.2*150*144))] = NA
 
-results = fqpca(x=x, n_components=2, quantile_value=0.5)
+results = fqpca(Y=Y, npc=2, quantile.value=0.5)
 
 plot(results)
 }

@@ -20,7 +20,8 @@ Imports:
     tidyr,
     dplyr, 
     tibble,
-    caret
+    caret,
+    tf
 Suggests: 
     CVXR,
     knitr,

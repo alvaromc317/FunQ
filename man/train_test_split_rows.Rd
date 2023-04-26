@@ -4,14 +4,14 @@
 \alias{train_test_split_rows}
 \title{Split rows of a given matrix X into train / test}
 \usage{
-train_test_split_rows(x, train_pct = NULL, train_size = NULL, seed = NULL)
+train_test_split_rows(x, train.pct = NULL, train.size = NULL, seed = NULL)
 }
 \arguments{
 \item{x}{N times p matrix of predictive variables.}
 
-\item{train_pct}{Float number indicating the \% of rows used for training}
+\item{train.pct}{Float number indicating the \% of rows used for training}
 
-\item{train_size}{Integer number indicating number of rows used for training. train_size is superseded by train_pct}
+\item{train.size}{Integer number indicating number of rows used for training. train.size is superseded by train.pct}
 
 \item{seed}{Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
 }
@@ -20,5 +20,5 @@ a list containing a matrix x_train and a matrix x_test
 }
 \description{
 Split rows of a given matrix X into train / test based on parameters
-train_pct and train_size. If both are informed train_pct takes preference
+train.pct and train.size. If both are informed train.pct takes preference
 }
