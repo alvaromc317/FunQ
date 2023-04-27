@@ -138,7 +138,7 @@ use as prediction error metric.
 
 ``` r
 quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
-#> [1] 0.1558924
+#> [1] 0.1565877
 ```
 
 ## Example 2: cross validating
@@ -161,21 +161,21 @@ cv_result = cross_validation_df(tf_data, splines.df.grid=c(5, 10, 15), n.folds=2
 #> Degrees of freedom: 5 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 5 .Execution completed in: 0.69 seconds
+#> Degrees of freedom: 5 .Execution completed in: 0.8 seconds
 #> Degrees of freedom: 10 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 10 .Execution completed in: 0.92 seconds
+#> Degrees of freedom: 10 .Execution completed in: 0.84 seconds
 #> Degrees of freedom: 15 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 15 .Execution completed in: 1.32 seconds
+#> Degrees of freedom: 15 .Execution completed in: 1.13 seconds
 
 cv_result$error.matrix
 #>           [,1]      [,2]
-#> [1,] 0.5602010 0.5608482
-#> [2,] 0.5328463 0.5367434
-#> [3,] 0.5286107 0.5296056
+#> [1,] 0.5591821 0.5662003
+#> [2,] 0.5323909 0.5428881
+#> [3,] 0.5304518 0.5373080
 ```
 
 The dimensions of the error matrix are (length(splines.df.grid),
@@ -186,21 +186,21 @@ cv_result = cross_validation_alpha(tf_data, alpha.grid=c(0, 1e-10, 1e-5), n.fold
 #> Alpha: 0 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 0 execution completed in: 0.78 seconds
+#> Alpha 0 execution completed in: 0.61 seconds
 #> Alpha: 1e-10 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 1e-10 execution completed in: 0.76 seconds
+#> Alpha 1e-10 execution completed in: 0.63 seconds
 #> Alpha: 1e-05 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 1e-05 execution completed in: 0.99 seconds
+#> Alpha 1e-05 execution completed in: 0.67 seconds
 
 cv_result$error.matrix
 #>           [,1]      [,2]
-#> [1,] 0.5340568 0.5401382
-#> [2,] 0.5342125 0.5391926
-#> [3,] 0.5340499 0.5395207
+#> [1,] 0.5392742 0.5306674
+#> [2,] 0.5387241 0.5304573
+#> [3,] 0.5388511 0.5301380
 ```
 
 The dimensions of the error matrix are (length(alpha.grid), n.folds)

@@ -356,9 +356,8 @@ create_folds = function(x, criteria='points', folds=3, seed=NULL)
 #' @param periodic Default=TRUE. Boolean indicating if the data is expected to
 #'                  be periodic (start coincides with end) or not.
 #' @param splines.df Default=10. Degrees of freedom for the splines.
-#' @param method Default='fn'. Method used in the resolution of the quantile
-#'                regression model. It currently accepts the methods
-#'                c('br', 'fn', 'pfn', 'sfn') from quantreg package along with
+#' @param method Default='SCS'. Method used in the resolution of the quantile
+#'                regression model. This penalized version of fqpca requires
 #'                any available solver in CVXR package like the free 'SCS'
 #'                or the commercial 'MOSEK'.
 #' @param alpha.grid Default=c(0, 1e-16, 1e-14). An array containing the list of
@@ -394,7 +393,7 @@ create_folds = function(x, criteria='points', folds=3, seed=NULL)
 #'
 #' cv_result = cross_validation_alpha(Y, alpha.grid=c(0, 1e-15), n.folds=2)
 #'
-cross_validation_alpha = function(Y, npc=2,  quantile.value=0.5, alpha.grid = c(0, 1e-16, 1e-14), n.folds=3, criteria='points', periodic=TRUE, splines.df=10, tol=1e-3, n.iters=50, method='fn', verbose.fqpca=FALSE, verbose.cv=TRUE, seed=NULL)
+cross_validation_alpha = function(Y, npc=2,  quantile.value=0.5, alpha.grid = c(0, 1e-16, 1e-14), n.folds=3, criteria='points', periodic=TRUE, splines.df=10, tol=1e-3, n.iters=50, method='SCS', verbose.fqpca=FALSE, verbose.cv=TRUE, seed=NULL)
 {
   start_time = Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}

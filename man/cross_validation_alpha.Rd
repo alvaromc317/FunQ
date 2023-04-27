@@ -15,7 +15,7 @@ cross_validation_alpha(
   splines.df = 10,
   tol = 0.001,
   n.iters = 50,
-  method = "fn",
+  method = "SCS",
   verbose.fqpca = FALSE,
   verbose.cv = TRUE,
   seed = NULL
@@ -52,9 +52,8 @@ quality of the estimations.}
 
 \item{n.iters}{Default=30. Maximum number of iterations.}
 
-\item{method}{Default='fn'. Method used in the resolution of the quantile
-regression model. It currently accepts the methods
-c('br', 'fn', 'pfn', 'sfn') from quantreg package along with
+\item{method}{Default='SCS'. Method used in the resolution of the quantile
+regression model. This penalized version of fqpca requires
 any available solver in CVXR package like the free 'SCS'
 or the commercial 'MOSEK'.}
 

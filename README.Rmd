@@ -54,7 +54,7 @@ where
 * $\varepsilon_i\sim\chi^2(3)$
 
 
-```{r, fig.height = 3, fig.width = 4}
+```{r, fig.height = 6, fig.width = 10}
 n = 200
 t = 144
 time.points = seq(0, 2*pi, length.out=t)
@@ -95,7 +95,7 @@ Y.test.estimated = scores.test %*% t(loadings)
 
 You can plot the computed loadings on a somewhat not very pretty plot, but still useful plot
 
-```{r, fig.height = 3, fig.width = 4}
+```{r, fig.height = 6, fig.width = 10}
 plot(results)
 ```
 
@@ -109,7 +109,7 @@ quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
 
 The `FunQuantPCA` package implements functions that allow to perform cross validation based on both the `splines.df` or the `alpha.ridge` criterias. Let's see an example using the well known weather dataset.
 
-```{r, fig.height = 3, fig.width = 4}
+```{r, fig.height = 6, fig.width = 10}
 data = t(fda::CanadianWeather$dailyAv[,,1])
 tf_data = tf::tfd(data, arg = 1:365)
 

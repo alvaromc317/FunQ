@@ -94,7 +94,7 @@ test_that("cross_validation_alpha based on points function works", {
 
   cv_result = cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=2, verbose.cv=FALSE)
   true_result = round(cv_result$error.matrix, 4)
-  expected_result = round(matrix(c(0.1799, 0.1800, 0.1814, 0.1748), nrow=2, byrow=T), 4)
+  expected_result = round(matrix(c(0.1798, 0.1758, 0.1822, 0.1763), nrow=2, byrow=T), 4)
   expect_equal(true_result, expected_result)
 })
 
@@ -109,7 +109,7 @@ test_that("cross_validation_alpha based on points using tf object function works
   Y = tf::tfd(Y)
   cv_result = cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=2, verbose.cv=FALSE)
   true_result = round(cv_result$error.matrix, 4)
-  expected_result = round(matrix(c(0.1799, 0.1800, 0.1814, 0.1748), nrow=2, byrow=T), 4)
+  expected_result = round(matrix(c(0.1798, 0.1758, 0.1822, 0.1763), nrow=2, byrow=T), 4)
   expect_equal(true_result, expected_result)
 })
 
