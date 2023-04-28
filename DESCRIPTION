@@ -21,9 +21,9 @@ Imports:
     dplyr, 
     tibble,
     caret,
-    tf
 Suggests: 
     CVXR,
+    tf,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)

@@ -42,7 +42,7 @@ The key methodology in the `FunQuantPCA` package is the `fqpca` function, that i
     * Based on the degrees of freedom of the spline basis reconstruction, using the parameter `splines.df` This is our preferred approach.
     * Based on the inclusion of a second derivative penalty on the splines coefficients, changing the `method` parameter to use a valid `CVXR` solver (for example, setting `method='SCS'`) and then selecting the desired hyper-parameter value (for example `alpha.ridge=1e-7`). This approach is experimental and is prone to show computational issues for large values of the hyper-parameter. 
     
-The `FunQuantPCA` also implements functions to perform cross validation on either the `splines.df` parameter (`FunQuantPCA::cross_validation_df`) or the `alpha.ridge` parameter (`cross_validation_alpha`). These cross validation functions consider the quantile error as the reference prediction error. This error is available using the function `quantile_error`.
+The `FunQuantPCA` also implements functions to perform cross validation on either the `splines.df` parameter (`cross_validation_df`) or the `alpha.ridge` parameter (`cross_validation_alpha`). These cross validation functions consider the quantile error as the reference prediction error. This error is available using the function `quantile_error`.
 
 ## Example 1: setting the basics
 
@@ -108,6 +108,13 @@ quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
 ## Example 2: cross validating
 
 The `FunQuantPCA` package implements functions that allow to perform cross validation based on both the `splines.df` or the `alpha.ridge` criterias. Let's see an example using the well known weather dataset.
+
+
+```{r, echo=T, eval=F}
+# We use the tidy structure of the tidyfun package to deal with the functional data
+devtools::install_github("tidyfun/tidyfun")
+```
+
 
 ```{r, fig.height = 6, fig.width = 10}
 data = t(fda::CanadianWeather$dailyAv[,,1])

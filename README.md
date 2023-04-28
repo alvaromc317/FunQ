@@ -59,11 +59,11 @@ Analysis methodology.
     for large values of the hyper-parameter.
 
 The `FunQuantPCA` also implements functions to perform cross validation
-on either the `splines.df` parameter
-(`FunQuantPCA::cross_validation_df`) or the `alpha.ridge` parameter
-(`cross_validation_alpha`). These cross validation functions consider
-the quantile error as the reference prediction error. This error is
-available using the function `quantile_error`.
+on either the `splines.df` parameter (`cross_validation_df`) or the
+`alpha.ridge` parameter (`cross_validation_alpha`). These cross
+validation functions consider the quantile error as the reference
+prediction error. This error is available using the function
+`quantile_error`.
 
 ## Example 1: setting the basics
 
@@ -138,7 +138,7 @@ use as prediction error metric.
 
 ``` r
 quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
-#> [1] 0.1565877
+#> [1] 0.1555834
 ```
 
 ## Example 2: cross validating
@@ -148,34 +148,39 @@ cross validation based on both the `splines.df` or the `alpha.ridge`
 criterias. Let’s see an example using the well known weather dataset.
 
 ``` r
+# We use the tidy structure of the tidyfun package to deal with the functional data
+devtools::install_github("tidyfun/tidyfun")
+```
+
+``` r
 data = t(fda::CanadianWeather$dailyAv[,,1])
 tf_data = tf::tfd(data, arg = 1:365)
 
 plot(tf_data, col='black')
 ```
 
-<img src="man/figures/README-unnamed-chunk-8-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-9-1.png" width="100%" />
 
 ``` r
 cv_result = cross_validation_df(tf_data, splines.df.grid=c(5, 10, 15), n.folds=2)
 #> Degrees of freedom: 5 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 5 .Execution completed in: 0.8 seconds
+#> Degrees of freedom: 5 .Execution completed in: 0.34 seconds
 #> Degrees of freedom: 10 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 10 .Execution completed in: 0.84 seconds
+#> Degrees of freedom: 10 .Execution completed in: 0.37 seconds
 #> Degrees of freedom: 15 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 15 .Execution completed in: 1.13 seconds
+#> Degrees of freedom: 15 .Execution completed in: 0.53 seconds
 
 cv_result$error.matrix
 #>           [,1]      [,2]
-#> [1,] 0.5591821 0.5662003
-#> [2,] 0.5323909 0.5428881
-#> [3,] 0.5304518 0.5373080
+#> [1,] 0.5666780 0.5530419
+#> [2,] 0.5388732 0.5305361
+#> [3,] 0.5354073 0.5271400
 ```
 
 The dimensions of the error matrix are (length(splines.df.grid),
@@ -186,21 +191,21 @@ cv_result = cross_validation_alpha(tf_data, alpha.grid=c(0, 1e-10, 1e-5), n.fold
 #> Alpha: 0 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 0 execution completed in: 0.61 seconds
+#> Alpha 0 execution completed in: 15.26 seconds
 #> Alpha: 1e-10 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 1e-10 execution completed in: 0.63 seconds
+#> Alpha 1e-10 execution completed in: 14.17 seconds
 #> Alpha: 1e-05 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 1e-05 execution completed in: 0.67 seconds
+#> Alpha 1e-05 execution completed in: 8.22 seconds
 
 cv_result$error.matrix
 #>           [,1]      [,2]
-#> [1,] 0.5392742 0.5306674
-#> [2,] 0.5387241 0.5304573
-#> [3,] 0.5388511 0.5301380
+#> [1,] 0.5372310 0.5306715
+#> [2,] 0.5372664 0.5324790
+#> [3,] 0.6021891 0.5915106
 ```
 
 The dimensions of the error matrix are (length(alpha.grid), n.folds)

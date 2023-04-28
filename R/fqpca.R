@@ -267,7 +267,6 @@ fqpca = function(Y, npc=2,  quantile.value=0.5,  periodic=TRUE, splines.df=10, m
 
   # BASIC COMPROBATIONS -------------------------------------------------------
 
-  if(!is.data.frame(Y) & !is.matrix(Y) & !tf::is_tf(Y)){stop('Y is not of a valid type. Object provided: ', class(Y))}
   if(!npc == floor(npc)){stop('npc must be an integer number. Value provided: ', npc)}
   if(quantile.value<0 | quantile.value>1){stop('quantile.value must be a value between 0 and 1. Value provided: ', quantile.value)}
   if(!splines.df == floor(splines.df)){stop('splines.df must be an integer number. Value provided: ', splines.df)}
@@ -275,6 +274,15 @@ fqpca = function(Y, npc=2,  quantile.value=0.5,  periodic=TRUE, splines.df=10, m
   if(alpha.ridge<0){stop('alpha.ridge must be greater or equal than 0')}
   if(tol<0){stop('tol must be greater or equal than 0')}
   if(!n.iters == floor(n.iters)){stop('n.iters must be an integer number. Value provided: ', n.iters)}
+
+  if(!is.data.frame(Y) & !is.matrix(Y))
+  {
+    # This structure allows tf to be a suggested package rather than mandatory
+    if(!tf::is_tf(Y))
+    {
+      stop('Y is not of a valid type. Object provided: ', class(Y))
+    }
+  }
 
   # DETERMINE IF THE ALGORITHM RUNS USING PENALIZED OR UNPENALIZED SPLINES ----
 
@@ -508,7 +516,16 @@ predict.fqpca_object = function(object, newdata, ...)
   {
     stop('The object must be of class fqpca_object')
   }
-  if(!is.data.frame(newdata) & !is.matrix(newdata) & !tf::is_tf(newdata)){stop('newdata is not of a valid type. Object provided: ', class(newdata), '\nValid types: data.frame matrix or tf')}
+
+  if(!is.data.frame(newdata) & !is.matrix(newdata))
+  {
+    # This structure allows tf to be a suggested package rather than mandatory
+    if(!tf::is_tf(newdata))
+    {
+      stop('newdata is not of a valid type. Object provided: ', class(newdata))
+    }
+  }
+
   newdata = unname(as.matrix(newdata))
   if(ncol(newdata) == 1){ newdata = t(newdata)}
 
