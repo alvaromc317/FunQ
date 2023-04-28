@@ -284,6 +284,8 @@ fqpca = function(Y, npc=2,  quantile.value=0.5,  periodic=TRUE, splines.df=10, m
     }
   }
 
+  if(npc > splines.df){stop('The number of componets cannot be larger than the degrees of freedom.')}
+
   # DETERMINE IF THE ALGORITHM RUNS USING PENALIZED OR UNPENALIZED SPLINES ----
 
   valid_in_quantreg = c('br', 'fn', 'sfn', 'pfn')

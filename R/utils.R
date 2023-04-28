@@ -520,6 +520,17 @@ cross_validation_df = function(Y, npc=2,  quantile.value=0.5,  alpha.ridge=0, n.
     start_loop_time = Sys.time()
     if(verbose.cv){message('Degrees of freedom: ', splines.df.grid[i], ' ---------------------')}
     splines.df = splines.df.grid[i]
+
+    # Detect if the number of components is larger than the degrees of freedom.
+    npc_splines_warning = FALSE
+    if(npc > splines.df)
+    {
+      npc_splines_warning = TRUE
+      warning('The npc is larger than splines.df\n  Current splines.df value: ', splines.df, '\n  Taking npc=splines.df for this iteration of the Cross-Validation process')
+      npc_original = npc
+      npc = splines.df
+    }
+
     for(j in 1:n.folds)
     {
       if(verbose.cv){message('Fold: ', j)}
@@ -549,9 +560,17 @@ cross_validation_df = function(Y, npc=2,  quantile.value=0.5,  alpha.ridge=0, n.
       }
       error.matrix[i, j] = quantile_error(Y=Y_test, Y.pred=Y_predicted, quantile.value=quantile.value)
     }
+
     end_loop_time =  Sys.time()
     if(verbose.cv){message('Degrees of freedom: ', splines.df, ' .Execution completed in: ', round(difftime(end_loop_time, start_loop_time, units = "secs"), 2), ' seconds')}
   }
+
+  # Recover the original npc value
+  if(npc_splines_warning)
+  {
+    npc = npc_original
+  }
+
   end_time = Sys.time()
   execution.time = difftime(end_time, start_time, units = "secs")
   return(list(error.matrix = error.matrix, execution.time=execution.time, splines.df.grid=splines.df.grid, criteria=criteria))
