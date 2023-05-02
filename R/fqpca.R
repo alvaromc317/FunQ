@@ -343,7 +343,7 @@ fqpca <- function(Y, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.d
 
   # Generate initial splines basis coefficients
   spline_coefficients_0 <- base::matrix(stats::rnorm(base::dim(spline.basis)[2] * (npc+1), mean = 0, sd = 1),
-                                        nrow<-base::dim(spline.basis)[2], ncol = npc+1)
+                                        nrow = base::dim(spline.basis)[2], ncol = npc+1)
 
   # Initialize scores and loadings with these spline coefficients
   loadings_0 <- compute_loadings(spline.basis = spline.basis, spline.coefficients = spline_coefficients_0)
