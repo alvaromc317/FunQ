@@ -50,11 +50,14 @@ The `FunQuantPCA` also implements functions to perform cross validation on eithe
 
 $$x_i = \lambda_1(sin(t)+sin(0.5t))+\varepsilon_i$$
 where
+
 * $\lambda_1\sim N(0,0.4)$ 
 * $\varepsilon_i\sim\chi^2(3)$
 
 
 ```{r, fig.height = 6, fig.width = 10}
+set.seed(5)
+
 n = 200
 t = 144
 time.points = seq(0, 2*pi, length.out=t)
@@ -124,12 +127,30 @@ plot(tf_data, col='black')
 ```
 
 ```{r}
-cv_result = cross_validation_df(tf_data, splines.df.grid=c(5, 10, 15), n.folds=2)
+splines.df.grid = c(5, 10, 15)
+cv_result = cross_validation_df(tf_data, splines.df.grid=splines.df.grid, n.folds=2)
 
 cv_result$error.matrix
 ```
 
-The dimensions of the error matrix are (length(splines.df.grid), n.folds)
+The dimensions of the error matrix are (length(splines.df.grid), n.folds). We can find the optimal number of degrees of freedom by taking, for example, the mean of each row and picking the minimum.
+
+```{r}
+optimal_df = which.min(rowMeans(cv_result$error.matrix))
+
+paste0('Optimal number of degrees of freedom: ', splines.df.grid[optimal_df])
+```
+
+Now we can build the final model using the optimal number of degrees of freedom, and check the number of components based on the percentage of explained variability.
+
+```{r}
+results = fqpca(Y=tf_data, npc=10, quantile.value=0.5, splines.df=15, seed=5)
+
+cumsum(results$pve)
+```
+This shows that with 2 components we are able to explain 97% of the variability in the data. 
+
+The package also includes a function that allows to perform cross validation on the hyper-parameter controlling the effect of a second derivative penalty on the splines. Be aware that this smoothness controlling process is experimental and may be subject to computation issues.
 
 ```{r}
 cv_result = cross_validation_alpha(tf_data, alpha.grid=c(0, 1e-10, 1e-5), n.folds=2)

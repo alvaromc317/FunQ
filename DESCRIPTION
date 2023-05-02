@@ -22,11 +22,12 @@ Imports:
     tibble,
     caret,
     CVXR,
-    lifecycle
-Suggests:
     tf,
+Suggests:
     knitr,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+Remotes:
+  tidyfun/tf,
 Config/testthat/edition: 3
 VignetteBuilder: knitr

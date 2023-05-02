@@ -72,10 +72,14 @@ example generates a fake dataset with 200 observations taken every 10
 minutes during one day. This defines a data matrix with 200 rows and 144
 columns following the formula:
 
-$$x_i = \lambda_1(sin(t)+sin(0.5t))+\varepsilon_i$$ where \*
-$\lambda_1\sim N(0,0.4)$ \* $\varepsilon_i\sim\chi^2(3)$
+$$x_i = \lambda_1(sin(t)+sin(0.5t))+\varepsilon_i$$ where
+
+- $\lambda_1\sim N(0,0.4)$
+- $\varepsilon_i\sim\chi^2(3)$
 
 ``` r
+set.seed(5)
+
 n = 200
 t = 144
 time.points = seq(0, 2*pi, length.out=t)
@@ -138,7 +142,7 @@ use as prediction error metric.
 
 ``` r
 quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
-#> [1] 0.1541145
+#> [1] 0.1575061
 ```
 
 ## Example 2: cross validating
@@ -162,50 +166,80 @@ plot(tf_data, col='black')
 <img src="man/figures/README-unnamed-chunk-9-1.png" width="100%" />
 
 ``` r
-cv_result = cross_validation_df(tf_data, splines.df.grid=c(5, 10, 15), n.folds=2)
+splines.df.grid = c(5, 10, 15)
+cv_result = cross_validation_df(tf_data, splines.df.grid=splines.df.grid, n.folds=2)
 #> Degrees of freedom: 5 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 5 .Execution completed in: 0.5 seconds
+#> Degrees of freedom: 5 .Execution completed in: 0.38 seconds
 #> Degrees of freedom: 10 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 10 .Execution completed in: 0.62 seconds
+#> Degrees of freedom: 10 .Execution completed in: 0.6 seconds
 #> Degrees of freedom: 15 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 15 .Execution completed in: 0.54 seconds
+#> Degrees of freedom: 15 .Execution completed in: 0.53 seconds
 
 cv_result$error.matrix
 #>           [,1]      [,2]
-#> [1,] 0.5594877 0.5595035
-#> [2,] 0.5339964 0.5302255
-#> [3,] 0.5289778 0.5277949
+#> [1,] 0.5597133 0.5693647
+#> [2,] 0.5267699 0.5433952
+#> [3,] 0.5244181 0.5390324
 ```
 
 The dimensions of the error matrix are (length(splines.df.grid),
-n.folds)
+n.folds). We can find the optimal number of degrees of freedom by
+taking, for example, the mean of each row and picking the minimum.
+
+``` r
+optimal_df = which.min(rowMeans(cv_result$error.matrix))
+
+paste0('Optimal number of degrees of freedom: ', splines.df.grid[optimal_df])
+#> [1] "Optimal number of degrees of freedom: 15"
+```
+
+Now we can build the final model using the optimal number of degrees of
+freedom, and check the number of components based on the percentage of
+explained variability.
+
+``` r
+results = fqpca(Y=tf_data, npc=10, quantile.value=0.5, splines.df=15, seed=5)
+
+cumsum(results$pve)
+#>  [1] 0.8881699 0.9733824 0.9922474 0.9974198 0.9984257 0.9992301 0.9996471
+#>  [8] 0.9998388 0.9999582 1.0000000
+```
+
+This shows that with 2 components we are able to explain 97% of the
+variability in the data.
+
+The package also includes a function that allows to perform cross
+validation on the hyper-parameter controlling the effect of a second
+derivative penalty on the splines. Be aware that this smoothness
+controlling process is experimental and may be subject to computation
+issues.
 
 ``` r
 cv_result = cross_validation_alpha(tf_data, alpha.grid=c(0, 1e-10, 1e-5), n.folds=2)
 #> alpha: 0 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 0 execution completed in: 26.48 seconds
+#> Alpha 0 execution completed in: 17.1 seconds
 #> alpha: 1e-10 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 1e-10 execution completed in: 15.37 seconds
+#> Alpha 1e-10 execution completed in: 11.42 seconds
 #> alpha: 1e-05 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 1e-05 execution completed in: 24.98 seconds
+#> Alpha 1e-05 execution completed in: 9.44 seconds
 
 cv_result$error.matrix
 #>           [,1]      [,2]
-#> [1,] 0.5352868 0.5373103
-#> [2,] 0.5367752 0.5400901
-#> [3,] 0.6306825 0.6297293
+#> [1,] 0.5337405 0.5356558
+#> [2,] 0.5399521 0.5355772
+#> [3,] 0.6243240 0.6118602
 ```
 
 The dimensions of the error matrix are (length(alpha.grid), n.folds)
