@@ -26,44 +26,44 @@ cross_validation_alpha(
 data.frame or tibble of dimensions N by T, or a tf object from the
 tidyfun package}
 
-\item{npc}{Default=2. The number of estimated components.}
+\item{npc}{Default<-2. The number of estimated components.}
 
-\item{quantile.value}{Default=0.5. The quantile considered.}
+\item{quantile.value}{Default<-0.5. The quantile considered.}
 
-\item{alpha.grid}{Default=c(0, 1e-16, 1e-14). An array containing the list of
+\item{alpha.grid}{Default<-c(0, 1e-16, 1e-14). An array containing the list of
 possible alpha values  (these should be always positive
 numbers).}
 
-\item{n.folds}{Default=3. Number of folds to be used on cross validation.}
+\item{n.folds}{Default<-3. Number of folds to be used on cross validation.}
 
-\item{criteria}{Default='points'. Criteria used to divide the data.
+\item{criteria}{Default<-'points'. Criteria used to divide the data.
 Valid values are 'rows', which considers the division based
 on full rows, or 'points', which considers the division based
 on points within the matrix. Default is points}
 
-\item{periodic}{Default=TRUE. Boolean indicating if the data is expected to
+\item{periodic}{Default<-TRUE. Boolean indicating if the data is expected to
 be periodic (start coincides with end) or not.}
 
-\item{splines.df}{Default=10. Degrees of freedom for the splines.}
+\item{splines.df}{Default<-10. Degrees of freedom for the splines.}
 
-\item{tol}{Default=1e-3. Tolerance on the convergence of the algorithm.
+\item{tol}{Default<-1e-3. Tolerance on the convergence of the algorithm.
 Smaller values can speed up computation but may affect the
 quality of the estimations.}
 
-\item{n.iters}{Default=30. Maximum number of iterations.}
+\item{n.iters}{Default<-30. Maximum number of iterations.}
 
-\item{method}{Default='SCS'. Method used in the resolution of the quantile
+\item{method}{Default<-'SCS'. Method used in the resolution of the quantile
 regression model. This penalized version of fqpca requires
 any available solver in CVXR package like the free 'SCS'
 or the commercial 'MOSEK'.}
 
-\item{verbose.fqpca}{Default=FALSE. Boolean indicating verbosity of the
+\item{verbose.fqpca}{Default<-FALSE. Boolean indicating verbosity of the
 fqpca function.}
 
-\item{verbose.cv}{Default=TRUE. Boolean indicating verbosity of the cross
+\item{verbose.cv}{Default<-TRUE. Boolean indicating verbosity of the cross
 validation process.}
 
-\item{seed}{Default=NULL. Seed for the random generator number.
+\item{seed}{Default<-NULL. Seed for the random generator number.
 Parameter included for reproducibility purposes.}
 }
 \value{
@@ -76,12 +76,12 @@ Performs cross validation on alpha parameter of fqpca
 \examples{
 # Generate fake dataset with 200 observations and 144 time points
 
-Y = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 200), byrow=TRUE, nrow=200)
-Y = Y + matrix(rnorm(200*144, 0, 0.4), nrow=200)
+Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 200), byrow = TRUE, nrow = 200)
+Y <- Y + matrix(rnorm(200*144, 0, 0.4), nrow = 200)
 
 # Add missing observations
-Y[sample(200*144, as.integer(0.2*200*144))] = NA
+Y[sample(200*144, as.integer(0.2*200*144))] <- NA
 
-cv_result = cross_validation_alpha(Y, alpha.grid=c(0, 1e-15), n.folds=2)
+cv_result <- cross_validation_alpha(Y, alpha.grid = c(0, 1e-15), n.folds = 2)
 
 }

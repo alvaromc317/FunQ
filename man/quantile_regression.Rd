@@ -11,9 +11,9 @@ quantile_regression(x, y, quantile.value = 0.5, solver = "SCS")
 
 \item{y}{N times 1 vector of response.}
 
-\item{quantile.value}{The quantile considered. Default is the median 0.5.}
+\item{quantile.value}{Default<-0.5. The quantile considered.}
 
-\item{solver}{Solver to be used by the CVXR package in the resolution of the penalized quantile regression models. The speed of the methodology can vary depending on the solver used. There are free alternatives available like 'SCS', 'ECOS' or 'OSQP'. It is also possible to use licensed programs like 'MOSEK' or 'GUROBI'. Default is 'SCS'.}
+\item{solver}{Default<-'SCS'. Solver to be used by the CVXR package}
 }
 \value{
 Beta coefficients of the penalized quantile regression model.

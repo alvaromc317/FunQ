@@ -64,14 +64,14 @@ Solves the functional quantile principal component analysis methodology
 \examples{
 # Generate fake dataset with 150 observations and 144 time points
 
-Y = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
-Y = Y + matrix(rnorm(150*144, 0, 0.4), nrow=150)
+Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 150), byrow = TRUE, nrow = 150)
+Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
 
 # Add missing observations
-Y[sample(150*144, as.integer(0.2*150*144))] = NA
+Y[sample(150*144, as.integer(0.2*150*144))] <- NA
 
-results = fqpca(Y=Y, npc=2, quantile.value=0.5)
+results <- fqpca(Y = Y, npc = 2, quantile.value = 0.5)
 
-loadings = results$loadings
-scores = results$scores
+loadings <- results$loadings
+scores <- results$scores
 }

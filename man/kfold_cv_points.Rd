@@ -9,9 +9,9 @@ kfold_cv_points(x, folds = 3, seed = NULL)
 \arguments{
 \item{x}{N times p matrix of predictive variables.}
 
-\item{folds}{Integer number indicating number of folds}
+\item{folds}{Default<-3. Integer number indicating number of folds}
 
-\item{seed}{Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
+\item{seed}{Default<-NULL. Seed for the random generator number.}
 }
 \value{
 A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds

@@ -9,7 +9,7 @@ quantile_function(x, quantile.value = 0.5)
 \arguments{
 \item{x}{The vector.}
 
-\item{quantile.value}{The quantile considered. Default is the median 0.5.}
+\item{quantile.value}{Default<-0.5. The quantile considered.}
 }
 \value{
 Objective value function for a quantile regression model.

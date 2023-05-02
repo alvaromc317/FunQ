@@ -4,12 +4,12 @@
 \alias{compute_scores}
 \title{Compute scores}
 \usage{
-compute_scores(Y, Y_mask, loadings, quantile.value)
+compute_scores(Y, Y.mask, loadings, quantile.value)
 }
 \arguments{
 \item{Y}{The N by T matrix of observed time instants.}
 
-\item{Y_mask}{Mask matrix of the same dimensions as Y indicating wich observations in Y are known.}
+\item{Y.mask}{Mask matrix of the same dimensions as Y indicating wich observations in Y are known.}
 
 \item{loadings}{Matrix of loading coefficients}
 

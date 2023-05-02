@@ -12,7 +12,7 @@ proportion_under_quantile(Y, Y.pred)
 \item{Y.pred}{N by T matrix of predicted time instants}
 }
 \value{
-the proportion of points under the estimated quantile function
+The proportion of points under the estimated quantile function
 }
 \description{
 Proportion of points under quantile

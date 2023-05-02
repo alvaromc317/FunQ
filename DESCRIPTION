@@ -18,11 +18,12 @@ Imports:
     simex,
     splines2,
     tidyr,
-    dplyr, 
+    dplyr,
     tibble,
     caret,
-Suggests: 
     CVXR,
+    lifecycle
+Suggests:
     tf,
     knitr,
     rmarkdown,

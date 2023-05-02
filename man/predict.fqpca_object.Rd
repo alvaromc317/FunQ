@@ -25,13 +25,13 @@ Given a new matrix Y, predicts the value of the scores associated to the given m
 \examples{
 # Generate fake dataset with 150 observations and 144 time points
 
-Y = matrix(rep(sin(seq(0, 2*pi, length.out=144)), 150), byrow=TRUE, nrow=150)
-Y = Y + matrix(rnorm(150*144, 0, 0.4), nrow=150)
+Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 150), byrow = TRUE, nrow = 150)
+Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
 
 # Add missing observations
-Y[sample(150*144, as.integer(0.2*150*144))] = NA
+Y[sample(150*144, as.integer(0.2*150*144))] <- NA
 
-results = fqpca(Y=Y[1:100,], npc=2, quantile.value=0.5)
+results <- fqpca(Y = Y[1:100,], npc = 2, quantile.value = 0.5)
 
-predictions = predict(object=results, newdata=Y[101:150,])
+predictions <- predict(object = results, newdata = Y[101:150,])
 }

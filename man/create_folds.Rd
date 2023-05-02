@@ -4,16 +4,16 @@
 \alias{create_folds}
 \title{Split a given matrix X into k-folds}
 \usage{
-create_folds(x, criteria = "points", folds = 3, seed = NULL)
+create_folds(Y, criteria = "points", folds = 3, seed = NULL)
 }
 \arguments{
-\item{x}{N times p matrix of predictive variables.}
+\item{Y}{N times p matrix of predictive variables.}
 
-\item{criteria}{Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix.}
+\item{criteria}{Default<-'points'. Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix.}
 
-\item{folds}{Integer number indicating number of folds}
+\item{folds}{Default<-3. Integer number indicating number of folds}
 
-\item{seed}{Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
+\item{seed}{Default<-NULL. Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
 }
 \value{
 A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
@@ -25,13 +25,13 @@ data points.
 }
 \examples{
 # Generate a small matrix
-x = matrix(rnorm(50), nrow=10)
+x <- matrix(rnorm(50), nrow = 10)
 
 # Divide based on full rows
-kfolds_rows = create_folds(x, criteria='rows', folds=3, seed=1)
-x_train_list = kfolds_rows$x_train_list
-x_test_list = kfolds_rows$x_test_list
+kfolds_rows <- create_folds(x, criteria = 'rows', folds = 3, seed = 1)
+x_train_list <- kfolds_rows$x_train_list
+x_test_list <- kfolds_rows$x_test_list
 
-kfolds_points = create_folds(x, criteria='points', folds=3, seed=1)
+kfolds_points <- create_folds(x, criteria<-'points', folds<-3, seed<-1)
 
 }

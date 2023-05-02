@@ -6,20 +6,20 @@
 \usage{
 compute_spline_coefficients(
   Y,
-  Y_mask,
+  Y.mask,
   scores,
   spline.basis,
   quantile.value,
   method,
   alpha.ridge,
-  R_block,
-  valid_in_quantreg
+  R.block,
+  valid.in.quantreg
 )
 }
 \arguments{
 \item{Y}{The N by T matrix of observed time instants.}
 
-\item{Y_mask}{Mask matrix of the same dimensions as Y indicating wich observations in Y are known.}
+\item{Y.mask}{Mask matrix of the same dimensions as Y indicating wich observations in Y are known.}
 
 \item{scores}{Initial matrix of scores.}
 
@@ -34,9 +34,9 @@ package like the free 'SCS' or the commercial 'MOSEK'.}
 
 \item{alpha.ridge}{The hyper-parameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-12.}
 
-\item{R_block}{Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if parameter 'penalized' is TRUE.}
+\item{R.block}{Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if parameter 'penalized' is TRUE.}
 
-\item{valid_in_quantreg}{Array of valid quantreg methods}
+\item{valid.in.quantreg}{Array of valid quantreg methods}
 }
 \value{
 The matrix of spline coefficients splines coefficients

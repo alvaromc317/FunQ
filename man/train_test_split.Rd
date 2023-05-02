@@ -5,7 +5,7 @@
 \title{Split a given matrix X into train / test}
 \usage{
 train_test_split(
-  x,
+  Y,
   criteria = "points",
   train.pct = NULL,
   train.size = NULL,
@@ -13,15 +13,15 @@ train_test_split(
 )
 }
 \arguments{
-\item{x}{N times p matrix of predictive variables.}
+\item{Y}{N times p matrix of predictive variables.}
 
-\item{criteria}{Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix.}
+\item{criteria}{Default<-'points'. Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix.}
 
-\item{train.pct}{Float number indicating the \% of rows used for training}
+\item{train.pct}{Default<-NULL. Float number indicating the \% of rows used for training. This takes precedence over \code{train.size}.}
 
-\item{train.size}{Integer number indicating number of rows used for training. train.size is superseded by train.pct}
+\item{train.size}{Default<-NULL. Integer number indicating number of rows used for training. train.size is superseded by train.pct}
 
-\item{seed}{Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
+\item{seed}{Default<-NULL. Seed for the random generator number.}
 }
 \value{
 a list containing a matrix x_train and a matrix x_test
@@ -33,13 +33,13 @@ data points.
 }
 \examples{
 # Generate a small matrix
-x = matrix(rnorm(50), nrow=10)
+x <- matrix(rnorm(50), nrow = 10)
 
 # Divide based on full rows
-train_test_rows = train_test_split(x, criteria='rows', train.pct=0.5)
-x_train = train_test_rows$x_train
-x_test = train_test_rows$x_test
+train_test_rows <- train_test_split(x, criteria = 'rows', train.pct = 0.5)
+x_train <- train_test_rows$x_train
+x_test <- train_test_rows$x_test
 
-train_test_points = train_test_split(x, criteria='points', train.pct=0.5)
+train_test_points <- train_test_split(x, criteria = 'points', train.pct = 0.5)
 
 }

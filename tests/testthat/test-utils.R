@@ -6,18 +6,20 @@ test_that("quantile function works", {
 
 test_that("CVXR Quantile regression function works", {
   set.seed(5)
-  x = matrix(rnorm(20), nrow=10)
-  y = x %*% matrix(c(1,2), nrow=2) +  rnorm(10)
-  solution = quantile_regression(x=x, y=y, quantile.value=0.5)
-  expect_equal(round(solution, 4), round(c(1.041265, 1.301729), 4))
+  data = test_data_cvxr()
+  x = data$x
+  y = data$y
+  solution = quantile_regression(x=x, y=y, quantile.value=0.5, solver='SCS')
+  expect_equal(round(solution, 4), round(c(0.8280269, 1.8021430), 4))
 })
 
 test_that("CVXR Quantile ridge regression function works", {
   set.seed(5)
-  x = matrix(rnorm(20), nrow=10)
-  y = x %*% matrix(c(1,2), nrow=2) +  rnorm(10)
-  solution = quantile_regression_ridge(x=x, y=y, R=diag(2), quantile.value=0.5, lambda=10)
-  expect_equal(round(solution, 4), round(c(0.01354876, 0.00802739), 4))
+  data = test_data_cvxr()
+  x = data$x
+  y = data$y
+  solution = quantile_regression_ridge(x=x, y=y, R=diag(2), quantile.value=0.5, lambda=10, solver='SCS')
+  expect_equal(round(solution, 4), round(c(0.001698102, 0.027733723), 4))
 })
 
 # TRAIN TEST SPLIT TESTS ------------------------------------------------------
@@ -84,46 +86,23 @@ test_that("create_folds based on points function; train portion works", {
 
 # CROSS VALIDATION PROCESS ----------------------------------------------------
 
-test_that("cross_validation_alpha based on points function works", {
-  set.seed(5)
-  Y = matrix(rep(sin(seq(0, 2*pi, length.out=50)), 100), byrow=TRUE, nrow=100)
-  Y = Y + matrix(rnorm(100*50, 0, 0.4), nrow=100)
-
-  # Add missing observations
-  Y[sample(100*50, as.integer(0.2*100*50))] = NA
-
-  cv_result = cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=2, verbose.cv=FALSE)
-  true_result = round(cv_result$error.matrix, 4)
-  expected_result = round(matrix(c(0.1798, 0.1758, 0.1822, 0.1763), nrow=2, byrow=T), 4)
-  expect_equal(true_result, expected_result)
+test_that("cross_validation_alpha incorrect inputs detection works", {
+  Y = test_data_fqpca()
+  expect_error(cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=3, verbose.cv=FALSE, method='fn')) # method
+  expect_error(cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=2.5, verbose.cv=FALSE, method='SCS')) # method
 })
 
-# test_that("cross_validation_alpha based on points using tf object function works", {
-#   set.seed(5)
-#   Y = matrix(rep(sin(seq(0, 2*pi, length.out=50)), 100), byrow=TRUE, nrow=100)
-#   Y = Y + matrix(rnorm(100*50, 0, 0.4), nrow=100)
-#
-#   # Add missing observations
-#   Y[sample(100*50, as.integer(0.2*100*50))] = NA
-#
-#   Y = tf::tfd(Y)
-#   cv_result = cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=2, verbose.cv=FALSE)
-#   true_result = round(cv_result$error.matrix, 4)
-#   expected_result = round(matrix(c(0.1798, 0.1758, 0.1822, 0.1763), nrow=2, byrow=T), 4)
-#   expect_equal(true_result, expected_result)
-# })
+test_that("cross_validation_alpha based on points function works", {
+  Y = test_data_fqpca()
+  cv_result = cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=3, verbose.cv=FALSE, method='SCS', seed=5)
+  expected_result = readRDS(test_path("fixtures", "cv_alpha_05.rds"))
+  expect_equal(cv_result$error.matrix, expected_result$error.matrix)
+})
 
 test_that("cross_validation_df based on points function works", {
-  set.seed(5)
-  Y = matrix(rep(sin(seq(0, 2*pi, length.out=50)), 100), byrow=TRUE, nrow=100)
-  Y = Y + matrix(rnorm(100*50, 0, 0.4), nrow=100)
-
-  # Add missing observations
-  Y[sample(100*50, as.integer(0.2*100*50))] = NA
-
-  cv_result = cross_validation_df(Y=Y, splines.df.grid=c(5, 10, 15), n.folds=2, verbose.cv=FALSE)
-  true_result = round(cv_result$error.matrix, 4)
-  expected_result = round(matrix(c(0.1782, 0.1749, 0.1776, 0.1791, 0.1810, 0.1831), nrow=3, byrow=T), 4)
-  expect_equal(true_result, expected_result)
+  Y = test_data_fqpca()
+  cv_result = cross_validation_df(Y=Y, quantile.value=0.9, splines.df.grid=c(5, 10), n.folds=3, verbose.cv=FALSE, method='SCS', seed=5)
+  expected_result = readRDS(test_path("fixtures", "cv_df_09.rds"))
+  expect_equal(cv_result$error.matrix, expected_result$error.matrix)
 })
 
