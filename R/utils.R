@@ -353,6 +353,11 @@ create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 #'          data.frame or tibble of dimensions N by T, or a tf object from the
 #'          tidyfun package
 #' @param npc Default<-2. The number of estimated components.
+#' @param pve Default<-NULL. Float between 0 and 1.
+#'            Percentage of variability explained by components.
+#'            This affects the number of components used in the curve
+#'            reconstruction and error estimation. Set to NULL to avoid
+#'            this behavior.
 #' @param quantile.value Default<-0.5. The quantile considered.
 #' @param periodic Default<-TRUE. Boolean indicating if the data is expected to
 #'                  be periodic (start coincides with end) or not.
@@ -394,7 +399,7 @@ create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 #'
 #' cv_result <- cross_validation_alpha(Y, alpha.grid = c(0, 1e-15), n.folds = 2)
 #'
-cross_validation_alpha <- function(Y, npc = 2,  quantile.value = 0.5, alpha.grid  =  c(0, 1e-16, 1e-14), n.folds = 3, criteria = 'points', periodic = TRUE, splines.df = 10, tol = 1e-3, n.iters = 50, method = 'SCS', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
+cross_validation_alpha <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5, alpha.grid  =  c(0, 1e-16, 1e-14), n.folds = 3, criteria = 'points', periodic = TRUE, splines.df = 10, tol = 1e-3, n.iters = 50, method = 'SCS', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()
   if(!base::is.null(seed))
@@ -416,7 +421,7 @@ cross_validation_alpha <- function(Y, npc = 2,  quantile.value = 0.5, alpha.grid
   for(i in seq_along(alpha.grid))
   {
     start_loop_time <- Sys.time()
-    if(verbose.cv){message('alpha: ', alpha.grid[i], ' ---------------------')}
+    if(verbose.cv){message('alpha=', alpha.grid[i], ' ---------------------')}
     alpha.ridge <- alpha.grid[i]
     for(j in 1:n.folds)
     {
@@ -435,15 +440,24 @@ cross_validation_alpha <- function(Y, npc = 2,  quantile.value = 0.5, alpha.grid
 
       # Execute model
       fqpca_results <- fqpca(Y = Y_train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, alpha.ridge = alpha.ridge, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
-
+      if(is.null(pve))
+      {
+        npc.reconstruction <- fqpca_results$npc+1 # Add 1 to take the intercept into account
+      } else{
+        npc.reconstruction <- which(cumsum(fqpca_results$pve) >= pve)[1]+1
+      }
       # Obtain reconstruction
       if(criteria == 'points')
       {
-        Y_predicted <- fqpca_results$scores %*% t(fqpca_results$loadings)
+        loadings <- matrix(fqpca_results$loadings[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        scores <- matrix(fqpca_results$scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        Y_predicted <- scores %*% t(loadings)
       }else if(criteria=='rows')
       {
         test_scores <- predict.fqpca_object(fqpca_results, Y_test)
-        Y_predicted <- test_scores %*% t(fqpca_results$loadings)
+        loadings <- matrix(fqpca_results$loadings[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        scores <- matrix(test_scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        Y_predicted <- test_scores %*% t(loadings)
       }
       error.matrix[i, j] <- quantile_error(Y = Y_test, Y.pred = Y_predicted, quantile.value = quantile.value)
     }
@@ -464,6 +478,11 @@ cross_validation_alpha <- function(Y, npc = 2,  quantile.value = 0.5, alpha.grid
 #'          data.frame or tibble of dimensions N by T, or a tf object from the
 #'          tidyfun package
 #' @param npc Default<-2. The number of estimated components.
+#' @param pve Default<-NULL. Float between 0 and 1.
+#'            Percentage of variability explained by components.
+#'            This affects the number of components used in the curve
+#'            reconstruction and error estimation. Set to NULL to avoid
+#'            this behavior.
 #' @param quantile.value Default<-0.5. The quantile considered.
 #' @param periodic Default<-TRUE. Boolean indicating if the data is expected to
 #'                  be periodic (start coincides with end) or not.
@@ -509,7 +528,7 @@ cross_validation_alpha <- function(Y, npc = 2,  quantile.value = 0.5, alpha.grid
 #'
 #' cv_result <- cross_validation_df(Y, splines.df.grid = c(5, 10, 15), n.folds = 2)
 #'
-cross_validation_df <- function(Y, npc = 2,  quantile.value = 0.5,  alpha.ridge = 0, n.folds = 3, criteria = 'points', periodic = TRUE, splines.df.grid = c(5, 10, 15, 20), tol = 1e-3, n.iters = 50, method = 'fn', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
+cross_validation_df <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5,  alpha.ridge = 0, n.folds = 3, criteria = 'points', periodic = TRUE, splines.df.grid = c(5, 10, 15, 20), tol = 1e-3, n.iters = 50, method = 'fn', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
@@ -556,15 +575,24 @@ cross_validation_df <- function(Y, npc = 2,  quantile.value = 0.5,  alpha.ridge 
 
       # Execute model
       fqpca_results <- fqpca(Y = Y_train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, alpha.ridge = alpha.ridge, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
-
+      if(is.null(pve))
+      {
+        npc.reconstruction <- fqpca_results$npc+1 # Add 1 to take the intercept into account
+      } else{
+        npc.reconstruction <- which(cumsum(fqpca_results$pve) >= pve)[1]+1
+      }
       # Obtain reconstruction
       if(criteria == 'points')
       {
-        Y_predicted <- fqpca_results$scores %*% t(fqpca_results$loadings)
+        loadings <- matrix(fqpca_results$loadings[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        scores <- matrix(fqpca_results$scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        Y_predicted <- scores %*% t(loadings)
       }else if(criteria=='rows')
       {
         test_scores <- predict.fqpca_object(fqpca_results, Y_test)
-        Y_predicted <- test_scores %*% t(fqpca_results$loadings)
+        loadings <- matrix(fqpca_results$loadings[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        scores <- matrix(test_scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        Y_predicted <- test_scores %*% t(loadings)
       }
       error.matrix[i, j] <- quantile_error(Y = Y_test, Y.pred = Y_predicted, quantile.value = quantile.value)
     }

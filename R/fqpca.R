@@ -131,8 +131,6 @@ compute_scores <- function(Y, Y.mask, loadings, quantile.value)
 #' @return The rotated matrices of loadings and scores and the rotation matrix.
 rotate_scores_and_loadings <- function(loadings, scores)
 {
-  n.time <- nrow(loadings)
-  n.obs <- nrow(scores)
   npc <- ncol(loadings)-1
 
   # Remove intercept from rotation
@@ -144,19 +142,17 @@ rotate_scores_and_loadings <- function(loadings, scores)
   scores.no.intercept <- scale(scores.no.intercept, center=TRUE, scale=FALSE)
   loadings[, 1] <- loadings[, 1] + loadings.no.intercept %*% means_scores
 
-  # Make rotations to ensure identifiability
-  sigmaF <- (1/n.time) * t(loadings.no.intercept) %*% loadings.no.intercept
-  sigmaA <- (1/n.obs) * t(scores.no.intercept) %*% scores.no.intercept
-  dum1 <- expm::sqrtm(sigmaF) %*% sigmaA %*% expm::sqrtm(sigmaF)
-  svd_decomp <- base::svd(dum1)
-  R <- expm::sqrtm(base::solve(sigmaF)) %*% svd_decomp$u
-  loadings.no.intercept <- loadings.no.intercept %*% R;
-  scores.no.intercept <- scores.no.intercept %*% t(base::solve(R))
+  # Perform rotation
+  cov.score <- stats::cov(scores.no.intercept)
+  svd.decomp <- svd((chol(cov.score))  %*% t(loadings.no.intercept))
+  rotation.matrix <- solve(chol(cov.score)) %*% svd.decomp$u %*% diag(svd.decomp$d, nrow=length(svd.decomp$d))
 
-  # Add intercept
+  scores.no.intercept <- scores.no.intercept %*% rotation.matrix
+  loadings.no.intercept <- svd.decomp$v
+
   loadings <- cbind(loadings[,1], loadings.no.intercept)
   scores <- cbind(scores[,1], scores.no.intercept)
-  results <- list(loadings=loadings, scores=scores, rotation.matrix=R)
+  results <- list(loadings=loadings, scores=scores, rotation.matrix=rotation.matrix)
   return(results)
 }
 
@@ -184,7 +180,7 @@ compute_explained_variability <- function(scores)
 
 new_fqpca <- function(loadings, scores, pve, objective.function.value,
                        list.objective.function.values, execution.time, function.warnings,
-                       mean.unrotated.scores, npc, quantile.value, method,
+                       npc, quantile.value, method,
                        alpha.ridge, periodic, splines.df, tol, n.iters, verbose, seed,
                        rotation.matrix, spline.coefficients, spline.basis)
 {
@@ -196,7 +192,6 @@ new_fqpca <- function(loadings, scores, pve, objective.function.value,
     list.objective.function.values = list.objective.function.values,
     execution.time = execution.time,
     function.warnings = function.warnings,
-    mean.unrotated.scores = mean.unrotated.scores,
     npc = npc,
     quantile.value = quantile.value,
     method = method,
@@ -349,12 +344,25 @@ fqpca <- function(Y, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.d
   loadings_0 <- compute_loadings(spline.basis = spline.basis, spline.coefficients = spline_coefficients_0)
   scores_0 <- compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings_0, quantile.value = quantile.value)
 
+  # Rotate loadings and scores
+  rotation_result <- try(rotate_scores_and_loadings(loadings = loadings_0, scores = scores_0), silent = TRUE)
+  error_chr <- class(rotation_result)
+  if(error_chr=="try-error")
+  {
+    warning('Rotation step failed at iteration: ', 0, '. Skipping rotation on this iteration.')
+    function.warnings$rotation <- TRUE
+    rotation_result <- list(loadings = loadings_0, scores = scores_0, rotation.matrix = diag(npc))
+  }
+  loadings_0 <- rotation_result$loadings
+  scores_0 <- rotation_result$scores
+  rotation.matrix_0 = rotation_result$rotation.matrix
+
   # Compute objective value function
   objective_function_0 <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores_0, loadings = loadings_0)
 
   # Initialize storage of final solution
   objective_function_array <- objective_function_0
-  best_results <- list(loadings = loadings_0, scores = scores_0, objective_function = objective_function_0, spline.coefficients = spline_coefficients_0, iteration = 0)
+  best_results <- list(loadings = loadings_0, scores = scores_0, objective_function = objective_function_0, spline.coefficients = spline_coefficients_0, rotation.matrix = rotation.matrix_0, iteration = 0)
 
   # Iterate until convergence or until max_iters is reached
   convergence_criteria <- c()
@@ -387,6 +395,19 @@ fqpca <- function(Y, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.d
       break
     }
 
+    # Rotate loadings and scores
+    rotation_result <- try(rotate_scores_and_loadings(loadings = loadings_1, scores = scores_1), silent = TRUE)
+    error_chr <- class(rotation_result)
+    if(error_chr=="try-error")
+    {
+      warning('Rotation step failed at iteration: ', i, '. Skipping rotation on this iteration.')
+      function.warnings$rotation <- TRUE
+      rotation_result <- list(loadings = loadings_1, scores = scores_1, rotation.matrix = diag(npc))
+    }
+    loadings_1 <- rotation_result$loadings
+    scores_1 <- rotation_result$scores
+    rotation.matrix_1 = rotation_result$rotation.matrix
+
     # Compute objective function
     objective_function_1 <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores_1, loadings = loadings_1)
     objective_function_array <- c(objective_function_array, objective_function_1)
@@ -395,7 +416,7 @@ fqpca <- function(Y, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.d
 
     if(objective_function_1 < best_results$objective_function)
     {
-      best_results <- list(loadings = loadings_1, scores = scores_1, objective_function = objective_function_1, spline.coefficients = spline_coefficients_1, iteration = i)
+      best_results <- list(loadings = loadings_1, scores = scores_1, objective_function = objective_function_1, spline.coefficients = spline_coefficients_1, rotation.matrix = rotation.matrix_1, iteration = i)
     }
 
     convergence_criteria[i] <- base::abs(objective_function_1 - objective_function_0)
@@ -440,18 +461,6 @@ fqpca <- function(Y, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.d
   }
   if(i == n.iters){warning('Algorithm reached maximum number of iterations without convergence: ', n.iters, ' iterations')}
 
-  # ROTATION TO ENSURE IDENTIFIABILITY -----------------------------------
-
-  mean_scores <- colMeans(matrix(best_results$scores[,-1], ncol = npc)) # Required in the prediction step
-  rotation_result <- try(rotate_scores_and_loadings(loadings = best_results$loadings, scores = best_results$scores), silent = TRUE)
-  error_chr <- class(rotation_result)
-  if(error_chr=="try-error")
-  {
-    warning('Failed rotation step to ensure identifiability. Providing un-rotated results. You can try changing the method, or reducing the number of components')
-    function.warnings$rotation <- TRUE
-    rotation_result <- list(loadings = best_results$loadings, scores = best_results$scores, rotation.matrix = diag(npc))
-  }
-
   # EXPLAINED VARIABILITY -----------------------------------------------------
 
   pve <- compute_explained_variability(rotation_result$scores)
@@ -460,14 +469,13 @@ fqpca <- function(Y, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.d
   global_execution_time <- difftime(global_end_time, global_start_time, units = 'secs')
 
   results <- new_fqpca(
-    loadings = rotation_result$loadings,
-    scores = rotation_result$scores,
+    loadings = best_results$loadings,
+    scores = best_results$scores,
     pve = pve,
     objective.function.value = best_results$objective_function,
     list.objective.function.values = objective_function_array,
     execution.time = global_execution_time,
     function.warnings = function.warnings,
-    mean.unrotated.scores  =  mean_scores,
     npc = npc,
     quantile.value = quantile.value,
     method = method,
@@ -478,7 +486,7 @@ fqpca <- function(Y, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.d
     n.iters = best_results$iteration,
     verbose = verbose,
     seed = seed,
-    rotation.matrix = rotation_result$rotation.matrix,
+    rotation.matrix = best_results$rotation.matrix,
     spline.coefficients = best_results$spline.coefficients,
     spline.basis = spline.basis
   )
@@ -535,19 +543,12 @@ predict.fqpca_object <- function(object, newdata, ...)
   n.time <- base::ncol(newdata)
   if(sum(!Y.mask) == n.obs * n.time){stop('newdata contains no information. Check that there are values different from NA')}
 
-  # Estimation of un-rotated loadings
-  loadings_1 <- compute_loadings(spline.basis = object$spline.basis, spline.coefficients = object$spline.coefficients)
-
   # Estimation of scores
-  scores_1 <- try(compute_scores(Y = newdata, Y.mask = Y.mask, loadings = loadings_1, quantile.value = object$quantile.value), silent = FALSE)
+  scores_1 <- try(compute_scores(Y = newdata, Y.mask = Y.mask, loadings = object$loadings, quantile.value = object$quantile.value), silent = FALSE)
   if(!is.matrix(scores_1))
   {
     stop('Computation of scores failed.')
   }
-  scores_1 <- matrix(scores_1[,-1], ncol = object$npc) # Remove intercept column
-  scores_1 <- scores_1 - matrix(rep(object$mean.unrotated.scores, n.obs), nrow = n.obs, byrow = T)
-  scores_1 <- scores_1 %*% t(base::solve(object$rotation.matrix)) # Normalize
-  scores_1 <- base::cbind(1, scores_1) # Add intercept column
   return(scores_1)
 }
 

@@ -171,15 +171,15 @@ cv_result = cross_validation_df(tf_data, splines.df.grid=splines.df.grid, n.fold
 #> Degrees of freedom: 5 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 5 .Execution completed in: 0.38 seconds
+#> Degrees of freedom: 5 .Execution completed in: 0.55 seconds
 #> Degrees of freedom: 10 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 10 .Execution completed in: 0.6 seconds
+#> Degrees of freedom: 10 .Execution completed in: 0.9 seconds
 #> Degrees of freedom: 15 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Degrees of freedom: 15 .Execution completed in: 0.53 seconds
+#> Degrees of freedom: 15 .Execution completed in: 1.15 seconds
 
 cv_result$error.matrix
 #>           [,1]      [,2]
@@ -222,18 +222,18 @@ issues.
 
 ``` r
 cv_result = cross_validation_alpha(tf_data, alpha.grid=c(0, 1e-10, 1e-5), n.folds=2)
-#> alpha: 0 ---------------------
+#> alpha=0 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 0 execution completed in: 17.1 seconds
-#> alpha: 1e-10 ---------------------
+#> Alpha 0 execution completed in: 33.83 seconds
+#> alpha=1e-10 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 1e-10 execution completed in: 11.42 seconds
-#> alpha: 1e-05 ---------------------
+#> Alpha 1e-10 execution completed in: 46.52 seconds
+#> alpha=1e-05 ---------------------
 #> Fold: 1
 #> Fold: 2
-#> Alpha 1e-05 execution completed in: 9.44 seconds
+#> Alpha 1e-05 execution completed in: 33.19 seconds
 
 cv_result$error.matrix
 #>           [,1]      [,2]

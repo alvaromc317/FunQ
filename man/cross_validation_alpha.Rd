@@ -7,6 +7,7 @@
 cross_validation_alpha(
   Y,
   npc = 2,
+  pve = NULL,
   quantile.value = 0.5,
   alpha.grid = c(0, 1e-16, 1e-14),
   n.folds = 3,
@@ -27,6 +28,12 @@ data.frame or tibble of dimensions N by T, or a tf object from the
 tidyfun package}
 
 \item{npc}{Default<-2. The number of estimated components.}
+
+\item{pve}{Default<-NULL. Float between 0 and 1.
+Percentage of variability explained by components.
+This affects the number of components used in the curve
+reconstruction and error estimation. Set to NULL to avoid
+this behavior.}
 
 \item{quantile.value}{Default<-0.5. The quantile considered.}
 

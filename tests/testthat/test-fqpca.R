@@ -10,9 +10,9 @@ test_that('FQFA incorrect inputs detection works', {
 
 test_that('rotate_scores_and_loadings function works', {
   set.seed(5)
-  Fhat = matrix(rnorm(12), nrow=6)
-  Lhat = matrix(rnorm(10), nrow=5)
-  results = rotate_scores_and_loadings(Fhat, Lhat)
+  loadings = matrix(rnorm(18), nrow=6)
+  scores = matrix(rnorm(15), nrow=5)
+  results = rotate_scores_and_loadings(loadings, scores)
   expected_result = readRDS(test_path("fixtures", "rotation_result.rds"))
   expect_equal(round(results$loadings, 4), round(expected_result$loadings, 4))
   expect_equal(round(results$scores, 4), round(expected_result$scores, 4))
