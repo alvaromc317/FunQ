@@ -7,9 +7,9 @@
 rotate_scores_and_loadings(loadings, scores)
 }
 \arguments{
-\item{loadings}{Matrix of loadings}
+\item{loadings}{Matrix of loadings.}
 
-\item{scores}{Matrix of scores}
+\item{scores}{Matrix of scores.}
 }
 \value{
 The rotated matrices of loadings and scores and the rotation matrix.

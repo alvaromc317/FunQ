@@ -1,12 +1,13 @@
 
 test_that('FQFA incorrect inputs detection works', {
-  expect_error(fqpca(x=5, n_components=1, quantile_value=0.5)) # Check x
-  expect_error(fqpca(x='a', n_components=1, quantile_value=0.5)) # check x
-  expect_error(fqpca(x=matrix(0, 5, 5), n_components=1.5, quantile_value=0.5, verbose=FALSE)) # check n_components
-  expect_error(fqpca(x=matrix(0, 5, 5), n_components=1, quantile_value=-1, verbose=FALSE)) # check quantile_value
-  expect_error(fqpca(x=matrix(0, 5, 5), n_components=1, quantile_value=2, verbose=FALSE)) # check quantile_value
-  expect_error(fqpca(x=matrix(0, 5, 5), n_components=1, quantile_value=2, verbose=FALSE, method='AAA')) # check quantile_value
+  expect_error(fqpca(Y=5, npc=1, quantile.value=0.5)) # Check Y
+  expect_error(fqpca(Y='a', npc=1, quantile.value=0.5)) # check Y
+  expect_error(fqpca(data=5, npc=1, quantile.value=0.5)) # check data
+  expect_error(fqpca(Y=matrix(0, 5, 5), npc=1.5, quantile.value=0.5, verbose=FALSE)) # check n_components
+  expect_error(fqpca(Y=matrix(0, 5, 5), npc=1, quantile.value=-1, verbose=FALSE)) # check quantile_value
+  expect_error(fqpca(Y=matrix(0, 5, 5), npc=1, quantile.value=2, verbose=FALSE)) # check quantile_value
 })
+
 
 test_that('rotate_scores_and_loadings function works', {
   set.seed(5)

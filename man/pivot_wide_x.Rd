@@ -4,10 +4,10 @@
 \alias{pivot_wide_x}
 \title{Pivot short a matrix}
 \usage{
-pivot_wide_x(x_long, dimensions = NULL)
+pivot_wide_x(x.long, dimensions = NULL)
 }
 \arguments{
-\item{x_long}{Input matrix}
+\item{x.long}{Input matrix.}
 
 \item{dimensions}{array of two elements indicating the dimensions of the original data.}
 }

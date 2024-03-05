@@ -7,10 +7,10 @@
 pivot_long_x(x)
 }
 \arguments{
-\item{x}{Input matrix}
+\item{x}{Input matrix.}
 }
 \value{
-The pivoted matrix
+The pivoted matrix.
 }
 \description{
 Given a new matrix x of dimensions (n, m) pivot into a (n*m, 3) matrix indexing (row, column, value)

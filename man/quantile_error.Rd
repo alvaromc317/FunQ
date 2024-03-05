@@ -7,14 +7,14 @@
 quantile_error(Y, Y.pred, quantile.value)
 }
 \arguments{
-\item{Y}{The N by T matrix of observed time instants}
+\item{Y}{\eqn{(N \times T)} matrix of observed time instants.}
 
-\item{Y.pred}{N by T matrix of predicted time instants}
+\item{Y.pred}{\eqn{(N \times T)} matrix of predicted time instants.}
 
 \item{quantile.value}{The quantile considered.}
 }
 \value{
-the quantile error between the two matrices
+The quantile error between the two matrices
 }
 \description{
 Quantile error computation

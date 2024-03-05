@@ -7,9 +7,9 @@
 proportion_under_quantile(Y, Y.pred)
 }
 \arguments{
-\item{Y}{The N by T matrix of observed time instants}
+\item{Y}{\eqn{(N \times T)} matrix of observed time instants.}
 
-\item{Y.pred}{N by T matrix of predicted time instants}
+\item{Y.pred}{\eqn{(N \times T)} matrix of predicted time instants.}
 }
 \value{
 The proportion of points under the estimated quantile function

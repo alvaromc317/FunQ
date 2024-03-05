@@ -27,16 +27,16 @@ knitr::opts_chunk$set(
 
 You can install the development version of FunQuantPCA from [GitHub](https://github.com/) with:
 
-``` r
+```{r, echo=T, eval=F}
 # install.packages("devtools")
 devtools::install_github("alvaromc317/FunQuantPCA")
 ```
 
 ## Main characteristics
 
-The key methodology in the `FunQuantPCA` package is the `fqpca` function, that implements the Functional Quantile Principal COmponent Analysis methodology. 
+The key methodology in the `FunQuantPCA` package is the `fqpca` function, that implements the Functional Quantile Principal Component Analysis methodology. 
 
-* This function can receive the functional data as a `matrix`, `dataframe`, `tibble` or `tf` (from the  `tidyfun` package) objects. 
+* This function can receive the functional data as an $(N\times T)$ `matrix` (through parameter `Y`) or as a dataframe containing a column with a functional `tf` vector (through parameters `data` and `colname`).
 * It can deal with irregular time grids, which means that can deal with missing data.
 * Can control the level of smoothness of the results based on two approaches:
     * Based on the degrees of freedom of the spline basis reconstruction, using the parameter `splines.df` This is our preferred approach.
@@ -55,12 +55,14 @@ where
 * $\varepsilon_i\sim\chi^2(3)$
 
 
-```{r, fig.height = 6, fig.width = 10}
+```{r, fig.height = 4, fig.width = 10}
 set.seed(5)
 
 n = 200
 t = 144
 time.points = seq(0, 2*pi, length.out=t)
+Y = matrix(rep(sin(time.points) + sin(0.5*time.points), n), byrow=TRUE, nrow=n)
+
 Y = matrix(rep(sin(time.points) + sin(0.5*time.points), n), byrow=TRUE, nrow=n)
 Y = Y + matrix(rnorm(n*t, 0, 0.4), nrow=n) + rchisq(n, 3)
 matplot(t(Y[1:20,]), type="l")
@@ -75,6 +77,7 @@ Y[sample(n*t, as.integer(0.50*n*t))] = NA
 Now, we apply the `fqpca` methodology on this dataset and obtain the decomposition of the data in terms of the median (`quantile.value=0.5`), which is a robust alternative to the mean based predictions of traditional FPCA.
 
 ```{r}
+
 library(FunQuantPCA)
 
 Y.train = Y[1:150,]
@@ -86,7 +89,7 @@ loadings = results$loadings
 scores = results$scores
 
 # Recover x_train based on decomposition
-Y.train.estimated = scores %*% t(loadings)
+Y.train.estimated = fitted(results, pve = 0.95)
 ```
 
 Finally, given a new set of observations, it is possible to decompose the new observations using the loadings already computed.
@@ -98,8 +101,8 @@ Y.test.estimated = scores.test %*% t(loadings)
 
 You can plot the computed loadings on a somewhat not very pretty plot, but still useful plot
 
-```{r, fig.height = 6, fig.width = 10}
-plot(results)
+```{r, fig.height = 4, fig.width = 10}
+plot(results, pve=0.95)
 ```
 
 And you can also compute the quantile error between the curve reconstruction and the true data, which is the metric we recommend to use as prediction error metric.
@@ -108,7 +111,7 @@ And you can also compute the quantile error between the curve reconstruction and
 quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
 ```
 
-## Example 2: cross validating
+## Example 2: cross validating the Canadian Weather dataset
 
 The `FunQuantPCA` package implements functions that allow to perform cross validation based on both the `splines.df` or the `alpha.ridge` criterias. Let's see an example using the well known weather dataset.
 
@@ -118,22 +121,36 @@ The `FunQuantPCA` package implements functions that allow to perform cross valid
 devtools::install_github("tidyfun/tidyfun")
 ```
 
+```{r}
 
-```{r, fig.height = 6, fig.width = 10}
-data = t(fda::CanadianWeather$dailyAv[,,1])
-tf_data = tf::tfd(data, arg = 1:365)
+library(fda)
+library(tidyverse)
+library(tidyfun)
 
-plot(tf_data, col='black')
+data = tibble(temperature = tf::tfd(t(fda::CanadianWeather$dailyAv[,,1]), arg = 1:365),
+              province = CanadianWeather$province)
+
+head(data)
 ```
 
-```{r}
-splines.df.grid = c(5, 10, 15)
-cv_result = cross_validation_df(tf_data, splines.df.grid=splines.df.grid, n.folds=2)
+```{r, fig.height = 4, fig.width = 10}
 
+data %>% 
+  ggplot(aes(y=temperature, color=province)) + 
+  geom_spaghetti() + 
+  theme_light()
+
+```
+
+The `fqpca` function admits the data as a `tf` functional vector.
+
+```{r}
+splines.df.grid = c(5, 10, 15, 20)
+cv_result = cross_validation_df(data=data, colname='temperature', splines.df.grid=splines.df.grid, n.folds=3)
 cv_result$error.matrix
 ```
 
-The dimensions of the error matrix are (length(splines.df.grid), n.folds). We can find the optimal number of degrees of freedom by taking, for example, the mean of each row and picking the minimum.
+The dimensions of the error matrix are `(length(splines.df.grid), n.folds)`. We can find the optimal number of degrees of freedom by taking the mean of each row and picking the minimum.
 
 ```{r}
 optimal_df = which.min(rowMeans(cv_result$error.matrix))
@@ -144,17 +161,24 @@ paste0('Optimal number of degrees of freedom: ', splines.df.grid[optimal_df])
 Now we can build the final model using the optimal number of degrees of freedom, and check the number of components based on the percentage of explained variability.
 
 ```{r}
-results = fqpca(Y=tf_data, npc=10, quantile.value=0.5, splines.df=15, seed=5)
+results = fqpca(Y=data$temperature, npc=10, quantile.value=0.5, splines.df=15, seed=5)
 
 cumsum(results$pve)
 ```
-This shows that with 2 components we are able to explain 97% of the variability in the data. 
+This shows that with 2 components we are able to explain 97% of the variability in the data. Lets see these components.
+
+```{r, fig.height = 4, fig.width = 10}
+
+plot(results, pve = 0.95)
+
+```
 
 The package also includes a function that allows to perform cross validation on the hyper-parameter controlling the effect of a second derivative penalty on the splines. Be aware that this smoothness controlling process is experimental and may be subject to computation issues.
 
 ```{r}
-cv_result = cross_validation_alpha(tf_data, alpha.grid=c(0, 1e-10, 1e-5), n.folds=2)
+cv_result = cross_validation_alpha(data$temperature, alpha.grid=c(0, 1e-10, 1e-5), n.folds=2)
 
 cv_result$error.matrix
 ```
-The dimensions of the error matrix are (length(alpha.grid), n.folds)
+
+The dimensions of the error matrix are (length(alpha.grid), n.folds).

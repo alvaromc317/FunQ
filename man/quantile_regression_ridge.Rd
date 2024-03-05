@@ -14,17 +14,17 @@ quantile_regression_ridge(
 )
 }
 \arguments{
-\item{x}{N times p matrix of predictive variables.}
+\item{x}{\eqn{(N \times P)} matrix of predictive variables.}
 
-\item{y}{N times 1 vector of response.}
+\item{y}{\eqn{(N \times 1)} vector of response.}
 
 \item{R}{Quadratic matrix used to apply a ridge based penalty.}
 
-\item{quantile.value}{Default<-0.5. The quantile considered.}
+\item{quantile.value}{The quantile considered.}
 
-\item{lambda}{The hyperparameter controlling the penalization. Default is 1e-3.}
+\item{lambda}{The hyper-parameter controlling the penalization.}
 
-\item{solver}{Default<-'SCS'. Solver to be used by the CVXR package}
+\item{solver}{Solver to be used by the CVXR package.}
 }
 \value{
 Beta coefficients of the penalized quantile regression model.

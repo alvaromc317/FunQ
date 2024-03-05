@@ -7,13 +7,13 @@
 compute_objective_value(Y, quantile.value, scores, loadings)
 }
 \arguments{
-\item{Y}{The N by T matrix of observed time instants.}
+\item{Y}{\eqn{(N \times T)} matrix of observed time instants.}
 
 \item{quantile.value}{The quantile considered.}
 
-\item{scores}{The matrix of estimated scores}
+\item{scores}{The matrix of estimated scores.}
 
-\item{loadings}{The matrix of estimated loadings}
+\item{loadings}{The matrix of estimated loadings.}
 }
 \value{
 The objective value function

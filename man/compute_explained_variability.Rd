@@ -7,7 +7,7 @@
 compute_explained_variability(scores)
 }
 \arguments{
-\item{scores}{Matrix of scores}
+\item{scores}{Matrix of scores.}
 }
 \value{
 The percentage of variability each component is explaining.

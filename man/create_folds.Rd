@@ -2,36 +2,38 @@
 % Please edit documentation in R/utils.R
 \name{create_folds}
 \alias{create_folds}
-\title{Split a given matrix X into k-folds}
+\title{Split a given matrix Y into k-folds}
 \usage{
 create_folds(Y, criteria = "points", folds = 3, seed = NULL)
 }
 \arguments{
-\item{Y}{N times p matrix of predictive variables.}
+\item{Y}{\eqn{(N \times P)} matrix of predictive variables.}
 
-\item{criteria}{Default<-'points'. Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix.}
+\item{criteria}{Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.}
 
-\item{folds}{Default<-3. Integer number indicating number of folds}
+\item{folds}{Integer number indicating number of folds}
 
-\item{seed}{Default<-NULL. Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
+\item{seed}{Seed for the random generator number.}
 }
 \value{
 A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
 }
 \description{
-Splits a given matrix X into k-folds. based on two posible
-criterias: either based on the total number of rows or the total number of
+Splits a given matrix Y into k-folds. based on two possible
+criteria: either based on the total number of rows or the total number of
 data points.
 }
 \examples{
 # Generate a small matrix
-x <- matrix(rnorm(50), nrow = 10)
+Y <- matrix(rnorm(50), nrow = 10)
 
 # Divide based on full rows
-kfolds_rows <- create_folds(x, criteria = 'rows', folds = 3, seed = 1)
-x_train_list <- kfolds_rows$x_train_list
-x_test_list <- kfolds_rows$x_test_list
+kfolds_rows <- create_folds(Y, criteria = 'rows', folds = 3, seed = 1)
+Y.train.list <- kfolds_rows$Y.train.list
+Y.test.list <- kfolds_rows$Y.test.list
 
-kfolds_points <- create_folds(x, criteria<-'points', folds<-3, seed<-1)
+kfolds_points <- create_folds(Y, criteria<-'points', folds<-3, seed<-1)
+Y.train.list <- kfolds_rows$Y.train.list
+Y.test.list <- kfolds_rows$Y.test.list
 
 }

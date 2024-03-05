@@ -4,19 +4,30 @@
 \alias{compute_scores}
 \title{Compute scores}
 \usage{
-compute_scores(Y, Y.mask, loadings, quantile.value)
+compute_scores(
+  Y,
+  Y.mask,
+  loadings,
+  quantile.value,
+  parallelized.scores,
+  num.cores
+)
 }
 \arguments{
-\item{Y}{The N by T matrix of observed time instants.}
+\item{Y}{The \eqn{(N \times T)} matrix of observed time instants.}
 
-\item{Y.mask}{Mask matrix of the same dimensions as Y indicating wich observations in Y are known.}
+\item{Y.mask}{Mask matrix of the same dimensions as Y indicating which observations in Y are known.}
 
-\item{loadings}{Matrix of loading coefficients}
+\item{loadings}{Matrix of loading coefficients.}
 
 \item{quantile.value}{The quantile considered.}
+
+\item{parallelized.scores}{Should the scores be computed in parallel?}
+
+\item{num.cores}{Number of cores used in parallel executions.}
 }
 \value{
-The matrix of scores
+The matrix of scores.
 }
 \description{
 Inner function to compute the scores of the fqpca methodology.

@@ -17,7 +17,7 @@ compute_spline_coefficients(
 )
 }
 \arguments{
-\item{Y}{The N by T matrix of observed time instants.}
+\item{Y}{\eqn{(N \times T)} matrix of observed time instants.}
 
 \item{Y.mask}{Mask matrix of the same dimensions as Y indicating wich observations in Y are known.}
 
@@ -25,21 +25,24 @@ compute_spline_coefficients(
 
 \item{spline.basis}{The spline basis matrix.}
 
-\item{quantile.value}{The quantile considered. Default is the median 0.5.}
+\item{quantile.value}{The quantile considered.}
 
 \item{method}{Method used in the resolution of the quantile regression model.
-It currently accepts the methods c('br', 'fn', 'pfn', 'sfn')
-from quantreg package along with any available solver in CVXR
-package like the free 'SCS' or the commercial 'MOSEK'.}
+It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')}
+from \code{quantreg} package along with any available solver in \code{CVXR} package.}
 
-\item{alpha.ridge}{The hyper-parameter controlling the penalization on the splines. This parameter has no effect if parameter penalized is set to FALSE. Default is 1e-12.}
+\item{alpha.ridge}{The hyper-parameter controlling the penalization on the splines.
+This parameter has no effect if method is not a cvxr-valid
+method.}
 
-\item{R.block}{Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if parameter 'penalized' is TRUE.}
+\item{R.block}{Block diagonal matrix made of quadratic matrices used to apply
+a ridge based penalty.  This only has effect if method is a
+cvxr-valid method.}
 
-\item{valid.in.quantreg}{Array of valid quantreg methods}
+\item{valid.in.quantreg}{Array of valid \code{quantreg} methods.}
 }
 \value{
-The matrix of spline coefficients splines coefficients
+The matrix of spline coefficients splines coefficients.
 }
 \description{
 Inner function to compute the splines coefficients of the fqpca methodology.

@@ -5,17 +5,20 @@
 \title{CROSS VALIDATION OF DEGREES OF FREEDOM}
 \usage{
 cross_validation_df(
-  Y,
+  Y = NULL,
+  data = NULL,
+  colname = NULL,
   npc = 2,
   pve = NULL,
   quantile.value = 0.5,
   alpha.ridge = 0,
   n.folds = 3,
+  return.models = TRUE,
   criteria = "points",
   periodic = TRUE,
   splines.df.grid = c(5, 10, 15, 20),
   tol = 0.001,
-  n.iters = 50,
+  n.iters = 20,
   method = "fn",
   verbose.fqpca = FALSE,
   verbose.cv = TRUE,
@@ -23,59 +26,51 @@ cross_validation_df(
 )
 }
 \arguments{
-\item{Y}{The object storing the functional data. This can be either a matrix
-data.frame or tibble of dimensions N by T, or a tf object from the
-tidyfun package}
+\item{Y}{An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.}
 
-\item{npc}{Default<-2. The number of estimated components.}
+\item{data}{data.frame containing the functional data as a tf column.}
 
-\item{pve}{Default<-NULL. Float between 0 and 1.
-Percentage of variability explained by components.
-This affects the number of components used in the curve
+\item{colname}{The name of the column containing the functional data. If used, data argument must not be NULL.}
+
+\item{npc}{The number of estimated components.}
+
+\item{pve}{Float between 0 and 1. Percentage of variability explained by
+components. This affects the number of components used in the curve
 reconstruction and error estimation. Set to NULL to avoid
 this behavior.}
 
-\item{quantile.value}{Default<-0.5. The quantile considered.}
+\item{quantile.value}{The quantile considered.}
 
-\item{alpha.ridge}{Default<-0. Hyper parameter controlling the penalization
-on the second derivative of the splines. It has effect
-only with CVXR solvers. Large values are associated with
-smoother results. This component is experimental and may
-lead to computational issues.}
+\item{alpha.ridge}{An array containing the list of ossible alpha values
+(these should be always positive numbers).}
 
-\item{n.folds}{Default<-3. Number of folds to be used on cross validation.}
+\item{n.folds}{Number of folds to be used on cross validation.}
 
-\item{criteria}{Default<-'points'. Criteria used to divide the data.
-Valid values are 'rows', which considers the division based
-on full rows, or 'points', which considers the division based
-on points within the matrix. Default is points}
+\item{return.models}{Should the list of all the models built be returned?}
 
-\item{periodic}{Default<-TRUE. Boolean indicating if the data is expected to
+\item{criteria}{Criteria used to divide the data.
+Valid values are \code{'rows'}, which considers the division based
+on full rows, or \code{'points'}, which considers the division based
+on points within the matrix.}
+
+\item{periodic}{Boolean indicating if the data is expected to
 be periodic (start coincides with end) or not.}
 
-\item{splines.df.grid}{Default<-c(5, 10, 15, 20). Grid of degrees of freedom
-for the splines.}
+\item{splines.df.grid}{Grid of possible values for the degrees of freedom.}
 
-\item{tol}{Default<-1e-3. Tolerance on the convergence of the algorithm.
-Smaller values can speed up computation but may affect the
-quality of the estimations.}
+\item{tol}{Tolerance on the convergence of the algorithm.}
 
-\item{n.iters}{Default<-30. Maximum number of iterations.}
+\item{n.iters}{Maximum number of iterations.}
 
-\item{method}{Default<-'fn'. Method used in the resolution of the quantile
-regression model. It currently accepts the methods
-c('br', 'fn', 'pfn', 'sfn') from quantreg package along with
-any available solver in CVXR package like the free 'SCS'
-or the commercial 'MOSEK'.}
+\item{method}{Method used in the resolution of the quantile
+regression model. This penalized version of \code{fqpca} requires
+any available solver in \code{CVXR} package.}
 
-\item{verbose.fqpca}{Default<-FALSE. Boolean indicating verbosity of the
-fqpca function.}
+\item{verbose.fqpca}{Boolean indicating verbosity of the fqpca function.}
 
-\item{verbose.cv}{Default<-TRUE. Boolean indicating verbosity of the cross
-validation process.}
+\item{verbose.cv}{Boolean indicating verbosity of the cross-validation process.}
 
-\item{seed}{Default<-NULL. Seed for the random generator number.
-Parameter included for reproducibility purposes.}
+\item{seed}{Seed for the random generator number.}
 }
 \value{
 A list containing the matrix of scores, the matrix of loadings,

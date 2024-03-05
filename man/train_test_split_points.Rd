@@ -2,25 +2,25 @@
 % Please edit documentation in R/utils.R
 \name{train_test_split_points}
 \alias{train_test_split_points}
-\title{Split points of a given matrix X into train / test}
+\title{Split points of a given matrix Y into train / test}
 \usage{
-train_test_split_points(x, train.pct = NULL, train.size = NULL, seed = NULL)
+train_test_split_points(Y, train.pct = NULL, train.size = NULL, seed = NULL)
 }
 \arguments{
-\item{x}{N times p matrix of predictive variables.}
+\item{Y}{\eqn{(N \times P)} matrix of predictive variables.}
 
-\item{train.pct}{Float number indicating the \% of rows used for training}
+\item{train.pct}{Float number indicating the \% of rows used for training.}
 
-\item{train.size}{Integer number indicating number of rows used for training. train.size is superseded by train.pct}
+\item{train.size}{Integer number indicating number of rows used for training. \code{train.size} is superseded by \code{train.pct}.}
 
-\item{seed}{Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).}
+\item{seed}{Seed for the random generator number.}
 }
 \value{
-a list containing a matrix x_train and a matrix x_test
+A list containing a matrix Y.train and a matrix Y.test
 }
 \description{
-Split points of a given matrix X into train / test based on parameters
+Split points of a given matrix Y into train / test based on parameters
 train.pct and train.size. If both are informed train.pct takes preference.
-This function keeps the dimensions of the original X in both train and test
-and substitutes the values on either division by NAs
+This function keeps the dimensions of the original Y in both train and test
+and substitutes the values in both splits by NAs
 }

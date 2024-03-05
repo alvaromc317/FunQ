@@ -1,8 +1,8 @@
 Package: FunQuantPCA
 Title: Functional Quantile Principal Component Analysis
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: 
-    person("Álvaro", "Méndez-Civieta", , "alvaro.mendez@uc3m.es", role = c("aut", "cre"),
+    person("Álvaro", "Méndez-Civieta", , "am5490@cumc.columbia.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-2044-4170"))
 Description: Estimation of functional quantile principal component models. 
     FQPCA extends the concept of functional principal component analysis (FPCA) 
@@ -22,10 +22,15 @@ Imports:
     caret,
     CVXR,
     tf,
+    foreach,
+    parallel,
+    doParallel
 Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),
+Depends:
+    R (>= 3.5.0)
 Remotes:
   tidyfun/tf,
 Config/testthat/edition: 3

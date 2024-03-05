@@ -4,10 +4,12 @@
 \alias{plot.fqpca_object}
 \title{Plot FQPCA loading functions}
 \usage{
-\method{plot}{fqpca_object}(x, ...)
+\method{plot}{fqpca_object}(x, pve = 0.99, ...)
 }
 \arguments{
 \item{x}{An object output of the fqpca function.}
+
+\item{pve}{Percentage of explained variability plotted.}
 
 \item{...}{further arguments passed to or from other methods.}
 }

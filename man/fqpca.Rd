@@ -5,7 +5,9 @@
 \title{FQPCA}
 \usage{
 fqpca(
-  Y,
+  Y = NULL,
+  data = NULL,
+  colname = NULL,
   npc = 2,
   quantile.value = 0.5,
   periodic = TRUE,
@@ -13,47 +15,49 @@ fqpca(
   method = "fn",
   alpha.ridge = 0,
   tol = 0.001,
-  n.iters = 30,
+  n.iters = 20,
   verbose = FALSE,
-  seed = NULL
+  seed = NULL,
+  parallelized.scores = FALSE,
+  num.cores = NULL
 )
 }
 \arguments{
-\item{Y}{The object storing the functional data. This can be either a matrix
-data.frame or tibble of dimensions N by T, or a tf object from the
-tidyfun package}
+\item{Y}{An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.}
 
-\item{npc}{Default=2 The number of estimated components.}
+\item{data}{data.frame containing the functional data as a tf column.}
 
-\item{quantile.value}{Default=0.5. The quantile considered.}
+\item{colname}{The name of the column containing the functional data. If used, data argument must not be NULL.}
 
-\item{periodic}{Default=TRUE. Boolean indicating if the data is expected to
+\item{npc}{The number of estimated components.}
+
+\item{quantile.value}{The quantile considered.}
+
+\item{periodic}{Boolean indicating if the data is expected to
 be periodic (start coincides with end) or not.}
 
-\item{splines.df}{Default=10. Degrees of freedom for the splines.}
+\item{splines.df}{Degrees of freedom for the splines.}
 
-\item{method}{Default='fn'. Method used in the resolution of the quantile
+\item{method}{Method used in the resolution of the quantile
 regression model. It currently accepts the methods
-c('br', 'fn', 'pfn', 'sfn') from quantreg package along with
-any available solver in CVXR package like the free 'SCS'
-or the commercial 'MOSEK'.}
+\code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with
+any available solver in \code{CVXR} package.}
 
-\item{alpha.ridge}{Default=0. Hyper parameter controlling the penalization
+\item{alpha.ridge}{Hyper parameter controlling the penalization
 on the second derivative of the splines. It has effect
-only with CVXR solvers. Large values are associated with
-smoother results. This component is experimental and may
-lead to computational issues.}
+only with \code{CVXR} methods. Experimantal component.}
 
-\item{tol}{Default=1e-3. Tolerance on the convergence of the algorithm.
-Smaller values can speed up computation but may affect the
-quality of the estimations.}
+\item{tol}{Tolerance on the convergence of the algorithm.}
 
-\item{n.iters}{Default=30. Maximum number of iterations.}
+\item{n.iters}{Maximum number of iterations.}
 
-\item{verbose}{Default=FALSE. Boolean indicating the verbosity.}
+\item{verbose}{Boolean indicating the verbosity.}
 
-\item{seed}{Default=NULL. Seed for the random generator number.
-Parameter included for reproducibility purposes.}
+\item{seed}{Seed for the random generator number.}
+
+\item{parallelized.scores}{Should the scores be computed in parallel? Experimantal component.}
+
+\item{num.cores}{Number of cores to use in parallelized executions.}
 }
 \value{
 fqpca_object

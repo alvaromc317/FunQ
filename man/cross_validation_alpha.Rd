@@ -5,17 +5,20 @@
 \title{CROSS VALIDATION OF ALPHA.RIDGE}
 \usage{
 cross_validation_alpha(
-  Y,
+  Y = NULL,
+  data = NULL,
+  colname = NULL,
   npc = 2,
   pve = NULL,
   quantile.value = 0.5,
   alpha.grid = c(0, 1e-16, 1e-14),
   n.folds = 3,
+  return.models = TRUE,
   criteria = "points",
   periodic = TRUE,
   splines.df = 10,
   tol = 0.001,
-  n.iters = 50,
+  n.iters = 20,
   method = "SCS",
   verbose.fqpca = FALSE,
   verbose.cv = TRUE,
@@ -23,62 +26,60 @@ cross_validation_alpha(
 )
 }
 \arguments{
-\item{Y}{The object storing the functional data. This can be either a matrix
-data.frame or tibble of dimensions N by T, or a tf object from the
-tidyfun package}
+\item{Y}{An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.}
 
-\item{npc}{Default<-2. The number of estimated components.}
+\item{data}{data.frame containing the functional data as a tf column.}
 
-\item{pve}{Default<-NULL. Float between 0 and 1.
-Percentage of variability explained by components.
-This affects the number of components used in the curve
+\item{colname}{The name of the column containing the functional data. If used, data argument must not be NULL.}
+
+\item{npc}{The number of estimated components.}
+
+\item{pve}{Float between 0 and 1. Percentage of variability explained by
+components. This affects the number of components used in the curve
 reconstruction and error estimation. Set to NULL to avoid
 this behavior.}
 
-\item{quantile.value}{Default<-0.5. The quantile considered.}
+\item{quantile.value}{The quantile considered.}
 
-\item{alpha.grid}{Default<-c(0, 1e-16, 1e-14). An array containing the list of
-possible alpha values  (these should be always positive
-numbers).}
+\item{alpha.grid}{An array containing the list of ossible alpha values
+(these should be always positive numbers).}
 
-\item{n.folds}{Default<-3. Number of folds to be used on cross validation.}
+\item{n.folds}{Number of folds to be used on cross validation.}
 
-\item{criteria}{Default<-'points'. Criteria used to divide the data.
-Valid values are 'rows', which considers the division based
-on full rows, or 'points', which considers the division based
-on points within the matrix. Default is points}
+\item{return.models}{Should the list of all the models built be returned?}
 
-\item{periodic}{Default<-TRUE. Boolean indicating if the data is expected to
+\item{criteria}{Criteria used to divide the data.
+Valid values are \code{'rows'}, which considers the division based
+on full rows, or \code{'points'}, which considers the division based
+on points within the matrix.}
+
+\item{periodic}{Boolean indicating if the data is expected to
 be periodic (start coincides with end) or not.}
 
-\item{splines.df}{Default<-10. Degrees of freedom for the splines.}
+\item{splines.df}{Degrees of freedom for the splines.}
 
-\item{tol}{Default<-1e-3. Tolerance on the convergence of the algorithm.
-Smaller values can speed up computation but may affect the
-quality of the estimations.}
+\item{tol}{Tolerance on the convergence of the algorithm.}
 
-\item{n.iters}{Default<-30. Maximum number of iterations.}
+\item{n.iters}{Maximum number of iterations.}
 
-\item{method}{Default<-'SCS'. Method used in the resolution of the quantile
-regression model. This penalized version of fqpca requires
-any available solver in CVXR package like the free 'SCS'
-or the commercial 'MOSEK'.}
+\item{method}{Method used in the resolution of the quantile
+regression model. This penalized version of \code{fqpca} requires
+any available solver in \code{CVXR} package.}
 
-\item{verbose.fqpca}{Default<-FALSE. Boolean indicating verbosity of the
-fqpca function.}
+\item{verbose.fqpca}{Boolean indicating verbosity of the fqpca function.}
 
-\item{verbose.cv}{Default<-TRUE. Boolean indicating verbosity of the cross
-validation process.}
+\item{verbose.cv}{Boolean indicating verbosity of the cross-validation process.}
 
-\item{seed}{Default<-NULL. Seed for the random generator number.
-Parameter included for reproducibility purposes.}
+\item{seed}{Seed for the random generator number.}
 }
 \value{
 A list containing the matrix of scores, the matrix of loadings,
+a list with all the trained models (if the return_models param is TRUE)
 and a secondary list with extra information.
 }
 \description{
-Performs cross validation on alpha parameter of fqpca
+Performs cross validation on alpha parameter of fqpca. Only valid if method
+is set to one of the valid options in \code{CVXR}.
 }
 \examples{
 # Generate fake dataset with 200 observations and 144 time points

@@ -7,16 +7,16 @@
 quantile_regression(x, y, quantile.value = 0.5, solver = "SCS")
 }
 \arguments{
-\item{x}{N times p matrix of predictive variables.}
+\item{x}{\eqn{(N \times P)} matrix of predictive variables.}
 
-\item{y}{N times 1 vector of response.}
+\item{y}{\eqn{(N \times 1)} vector of response.}
 
-\item{quantile.value}{Default<-0.5. The quantile considered.}
+\item{quantile.value}{The quantile considered.}
 
-\item{solver}{Default<-'SCS'. Solver to be used by the CVXR package}
+\item{solver}{Solver to be used by the \code{CVXR} package}
 }
 \value{
-Beta coefficients of the penalized quantile regression model.
+Beta coefficients of the quantile regression model.
 }
 \description{
 Uses the CVXR library to solve a quantile regression model

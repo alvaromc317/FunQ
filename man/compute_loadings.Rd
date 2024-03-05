@@ -9,7 +9,7 @@ compute_loadings(spline.basis, spline.coefficients)
 \arguments{
 \item{spline.basis}{The spline basis matrix.}
 
-\item{spline.coefficients}{the matrix of spline coefficients}
+\item{spline.coefficients}{the matrix of spline coefficients.}
 }
 \value{
 The matrix of loadings

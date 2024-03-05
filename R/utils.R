@@ -3,41 +3,39 @@
 #'
 #' Given a new matrix x of dimensions (n, m) pivot into a (n*m, 3) matrix indexing (row, column, value)
 #'
-#' @param x Input matrix
-#' @return The pivoted matrix
-#'
+#' @param x Input matrix.
+#' @return The pivoted matrix.
 pivot_long_x <- function(x)
 {
   rowid <- column <- NULL # Required to avoid warning when compiling package
-  x_df <- data.frame(x)
-  colnames(x_df) <- seq_len(ncol(x_df))
-  x_df <- tibble::rowid_to_column(x_df)
-  x_df <- tidyr::pivot_longer(data = x_df, cols = -rowid, names_to = 'column')
-  x_df <- dplyr::mutate(.data = x_df, column = as.integer(column))
-  x_df <- dplyr::rename(.data = x_df, row = rowid)
-  x_df <- as.matrix(x_df)
-  return(x_df)
+  x.df <- data.frame(x)
+  colnames(x.df) <- seq_len(ncol(x.df))
+  x.df <- tibble::rowid_to_column(x.df)
+  x.df <- tidyr::pivot_longer(data = x.df, cols = -rowid, names_to = 'column')
+  x.df <- dplyr::mutate(.data = x.df, column = as.integer(column))
+  x.df <- dplyr::rename(.data = x.df, row = rowid)
+  x.df <- as.matrix(x.df)
+  return(x.df)
 }
 
 #' Pivot short a matrix
 #'
 #' Given a (n*m, 3) matrix indexing (row, column, value) pivots it into an (n, m) matrix.
 #'
-#' @param x_long Input matrix
+#' @param x.long Input matrix.
 #' @param dimensions array of two elements indicating the dimensions of the original data.
 #' @return The pivoted matrix as a tibble
-#'
-pivot_wide_x <- function(x_long, dimensions = NULL)
+pivot_wide_x <- function(x.long, dimensions = NULL)
 {
-  x_long <- as.matrix(x_long)
+  x.long <- as.matrix(x.long)
   if(!is.null(dimensions))
   {
-    dimensions <- c(max(x_long[, 1], dimensions[1]), max(x_long[, 2], dimensions[2]))
+    dimensions <- c(max(x.long[, 1], dimensions[1]), max(x.long[, 2], dimensions[2]))
   } else {
-    dimensions <- c(max(x_long[, 1]), max(x_long[, 2]))
+    dimensions <- c(max(x.long[, 1]), max(x.long[, 2]))
   }
   x <- matrix(NA, nrow = dimensions[1], ncol = dimensions[2])
-  x <- base::replace(x, x_long[,c(1,2)], x_long[, 3])
+  x <- base::replace(x, x.long[,c(1,2)], x.long[, 3])
   return(x)
 }
 
@@ -63,15 +61,14 @@ quantile_function <- function(x, quantile.value = 0.5)
 #'
 #' Uses the CVXR library to solve a quantile regression model
 #'
-#' @param x N times p matrix of predictive variables.
-#' @param y N times 1 vector of response.
-#' @param quantile.value Default<-0.5. The quantile considered.
-#' @param solver Default<-'SCS'. Solver to be used by the CVXR package
+#' @param x \eqn{(N \times P)} matrix of predictive variables.
+#' @param y \eqn{(N \times 1)} vector of response.
+#' @param quantile.value The quantile considered.
+#' @param solver Solver to be used by the \code{CVXR} package
 #'
-#' @return Beta coefficients of the penalized quantile regression model.
+#' @return Beta coefficients of the quantile regression model.
 quantile_regression <- function(x, y, quantile.value = 0.5, solver = 'SCS')
 {
-  # Solve a quantile regression model with a ridge type penalty
   n <- dim(x)[1]
   m <- dim(x)[2]
   beta_var <- CVXR::Variable(m)
@@ -89,17 +86,16 @@ quantile_regression <- function(x, y, quantile.value = 0.5, solver = 'SCS')
 #'
 #' Uses the CVXR library to solve a penalized quantile regression model
 #'
-#' @param x N times p matrix of predictive variables.
-#' @param y N times 1 vector of response.
+#' @param x \eqn{(N \times P)} matrix of predictive variables.
+#' @param y \eqn{(N \times 1)} vector of response.
 #' @param R Quadratic matrix used to apply a ridge based penalty.
-#' @param quantile.value Default<-0.5. The quantile considered.
-#' @param lambda The hyperparameter controlling the penalization. Default is 1e-3.
-#' @param solver Default<-'SCS'. Solver to be used by the CVXR package
+#' @param quantile.value The quantile considered.
+#' @param lambda The hyper-parameter controlling the penalization.
+#' @param solver Solver to be used by the CVXR package.
 #'
 #' @return Beta coefficients of the penalized quantile regression model.
 quantile_regression_ridge <- function(x, y, R, quantile.value = 0.5, lambda = 1e-3, solver = 'SCS')
 {
-  # Solve a quantile regression model with a ridge type penalty
   n <- dim(x)[1]
   m <- dim(x)[2]
   beta_var <- CVXR::Variable(m)
@@ -116,11 +112,11 @@ quantile_regression_ridge <- function(x, y, R, quantile.value = 0.5, lambda = 1e
 
 #' Quantile error computation
 #'
-#' @param Y The N by T matrix of observed time instants
-#' @param Y.pred N by T matrix of predicted time instants
+#' @param Y \eqn{(N \times T)} matrix of observed time instants.
+#' @param Y.pred \eqn{(N \times T)} matrix of predicted time instants.
 #' @param quantile.value The quantile considered.
 #'
-#' @return the quantile error between the two matrices
+#' @return The quantile error between the two matrices
 #'
 #' @export
 quantile_error <- function(Y, Y.pred, quantile.value)
@@ -131,8 +127,8 @@ quantile_error <- function(Y, Y.pred, quantile.value)
 
 #' Proportion of points under quantile
 #'
-#' @param Y The N by T matrix of observed time instants
-#' @param Y.pred N by T matrix of predicted time instants
+#' @param Y \eqn{(N \times T)} matrix of observed time instants.
+#' @param Y.pred \eqn{(N \times T)} matrix of predicted time instants.
 #'
 #' @return The proportion of points under the estimated quantile function
 #'
@@ -144,202 +140,205 @@ proportion_under_quantile <- function(Y, Y.pred)
 
 # TRAIN TEST SPLIT ------------------------------------------------------------
 
-#' Split rows of a given matrix X into train / test
+#' Split rows of a given matrix Y into train / test
 #'
-#' Split rows of a given matrix X into train / test based on parameters
+#' Split rows of a given matrix Y into train / test based on parameters
 #' train.pct and train.size. If both are informed train.pct takes preference
 #'
-#' @param x N times p matrix of predictive variables.
-#' @param train.pct Float number indicating the % of rows used for training
-#' @param train.size Integer number indicating number of rows used for training. train.size is superseded by train.pct
-#' @param seed Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).
+#' @param Y \eqn{(N \times P)} matrix of predictive variables.
+#' @param train.pct Float number indicating the % of rows used for training.
+#' @param train.size Integer number indicating number of rows used for training. \code{train.size} is superseded by \code{train.pct}.
+#' @param seed Seed for the random generator number.
 #'
-#' @return a list containing a matrix x_train and a matrix x_test
-train_test_split_rows <- function(x, train.pct = NULL, train.size = NULL, seed = NULL)
+#' @return A list containing a matrix Y.train and a matrix Y.test
+train_test_split_rows <- function(Y, train.pct = NULL, train.size = NULL, seed = NULL)
 {
   # train.pct takes preference over train.size
   if(is.null(train.pct) && is.null(train.size)){stop('Either train.pct or train.size must be filled.')}
   if(!is.null(seed)){set.seed(seed)}
-  if(is.null(train.pct)){train.pct <- train.size / nrow(x) }
-  x <- as.matrix(x)
-  mask_x <- base::is.na(x)
-  curve_NAs <- base::rowSums(mask_x) == ncol(x)
+  if(is.null(train.pct)){train.pct <- train.size / nrow(Y) }
+  Y <- as.matrix(Y)
+  Y.mask <- base::is.na(Y)
+  curve_NAs <- base::rowSums(Y.mask) == ncol(Y)
   train_idx <- caret::createDataPartition(curve_NAs, p = train.pct, list = FALSE)
-  x_train <- x[train_idx, ]
-  x_test <- x[-train_idx,]
-  results <- list(x_train = x_train, x_test = x_test)
+  Y.train <- Y[train_idx, ]
+  Y.test <- Y[-train_idx,]
+  results <- list(Y.train = Y.train, Y.test = Y.test)
   return(results)
 }
 
-#' Split points of a given matrix X into train / test
+#' Split points of a given matrix Y into train / test
 #'
-#' Split points of a given matrix X into train / test based on parameters
+#' Split points of a given matrix Y into train / test based on parameters
 #' train.pct and train.size. If both are informed train.pct takes preference.
-#' This function keeps the dimensions of the original X in both train and test
-#' and substitutes the values on either division by NAs
+#' This function keeps the dimensions of the original Y in both train and test
+#' and substitutes the values in both splits by NAs
 #'
-#' @param x N times p matrix of predictive variables.
-#' @param train.pct Float number indicating the % of rows used for training
-#' @param train.size Integer number indicating number of rows used for training. train.size is superseded by train.pct
-#' @param seed Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).
+#' @param Y \eqn{(N \times P)} matrix of predictive variables.
+#' @param train.pct Float number indicating the % of rows used for training.
+#' @param train.size Integer number indicating number of rows used for training. \code{train.size} is superseded by \code{train.pct}.
+#' @param seed Seed for the random generator number.
 #'
-#' @return a list containing a matrix x_train and a matrix x_test
-train_test_split_points <- function(x, train.pct = NULL, train.size = NULL, seed = NULL)
+#' @return A list containing a matrix Y.train and a matrix Y.test
+train_test_split_points <- function(Y, train.pct = NULL, train.size = NULL, seed = NULL)
 {
   value <- NULL
   if(is.null(train.pct) && is.null(train.size)){stop('Either train.pct or train.size must be filled.')}
   if(!is.null(seed)){set.seed(seed)}
-  if(is.null(train.pct)){train.pct <- train.size / length(x) }
-  x_long <- pivot_long_x(x)
-  x_long <- tibble::as_tibble(x_long)
-  x_long <- dplyr::mutate(.data = x_long, is_na = is.na(value))
-  train_idx <- caret::createDataPartition(x_long$is_na, p = train.pct, list = FALSE)
+  if(is.null(train.pct)){train.pct <- train.size / length(Y) }
+  Y.long <- pivot_long_x(Y)
+  Y.long <- tibble::as_tibble(Y.long)
+  Y.long <- dplyr::mutate(.data = Y.long, is_na = is.na(value))
+  train_idx <- caret::createDataPartition(Y.long$is_na, p = train.pct, list = FALSE)
   train_idx <- as.vector(train_idx)
-  x_train <- x_long[train_idx, c('row', 'column', 'value')]
-  x_train <- pivot_wide_x(x_long = x_train, dimensions = c(nrow(x), ncol(x)))
-  x_test <- x_long[-train_idx, c('row', 'column', 'value')]
-  x_test <- pivot_wide_x(x_long = x_test, dimensions = c(nrow(x), ncol(x)))
-  results <- list(x_train = x_train, x_test = x_test)
+  Y.train <- Y.long[train_idx, c('row', 'column', 'value')]
+  Y.train <- pivot_wide_x(x.long = Y.train, dimensions = c(nrow(Y), ncol(Y)))
+  Y.test <- Y.long[-train_idx, c('row', 'column', 'value')]
+  Y.test <- pivot_wide_x(x.long = Y.test, dimensions = c(nrow(Y), ncol(Y)))
+  results <- list(Y.train = Y.train, Y.test = Y.test)
   return(results)
 }
 
 
-#' Split a given matrix X into train / test
+#' Split a given matrix Y into train / test
 #'
-#' Splits a given matrix into a train / test split based on two posible
-#' criterias: either based on the total number of rows or the total number of
+#' Splits a given matrix into a train / test split based on two possible
+#' criteria: either based on the total number of rows or the total number of
 #' data points.
 #'
-#' @param Y N times p matrix of predictive variables.
-#' @param criteria Default<-'points'. Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix.
-#' @param train.pct Default<-NULL. Float number indicating the % of rows used for training. This takes precedence over `train.size`.
-#' @param train.size Default<-NULL. Integer number indicating number of rows used for training. train.size is superseded by train.pct
-#' @param seed Default<-NULL. Seed for the random generator number.
+#' @param Y \eqn{(N \times P)} matrix of predictive variables.
+#' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
+#' @param train.pct Float number indicating the % of rows used for training. This takes precedence over \code{train.size}.
+#' @param train.size Integer number indicating number of rows used for training. \code{train.size} is superseded by \code{train.pct}.
+#' @param seed Seed for the random generator number.
 #'
-#' @return a list containing a matrix x_train and a matrix x_test
+#' @return A list containing a matrix Y.train and a matrix Y.test
 #' @export
 #'
 #' @examples
 #' # Generate a small matrix
-#' x <- matrix(rnorm(50), nrow = 10)
+#' Y <- matrix(rnorm(50), nrow = 10)
 #'
 #' # Divide based on full rows
-#' train_test_rows <- train_test_split(x, criteria = 'rows', train.pct = 0.5)
-#' x_train <- train_test_rows$x_train
-#' x_test <- train_test_rows$x_test
+#' train_test_rows <- train_test_split(Y, criteria = 'rows', train.pct = 0.5)
+#' Y.train <- train_test_rows$Y.train
+#' Y.test <- train_test_rows$Y.test
 #'
-#' train_test_points <- train_test_split(x, criteria = 'points', train.pct = 0.5)
-#'
+#' train_test_points <- train_test_split(Y, criteria = 'points', train.pct = 0.5)
+#' Y.train <- train_test_points$Y.train
+#' Y.test <- train_test_points$Y.test
 train_test_split <- function(Y, criteria = 'points', train.pct = NULL, train.size = NULL, seed = NULL)
 {
   Y <- base::unname(base::as.matrix(Y))
   if(criteria == 'points')
   {
-    return(train_test_split_points(x = Y, train.pct = train.pct, train.size = train.size, seed = seed))
+    return(train_test_split_points(Y = Y, train.pct = train.pct, train.size = train.size, seed = seed))
   } else if(criteria == 'rows')
   {
-    return(train_test_split_rows(x = Y, train.pct = train.pct, train.size = train.size, seed = seed))
+    return(train_test_split_rows(Y = Y, train.pct = train.pct, train.size = train.size, seed = seed))
   } else{stop('Invalid criteria')}
 }
 
 # K-FOLD DIVISION -------------------------------------------------------------
 
-#' Split a given matrix X into k-folds
+#' Split a given matrix Y into k-folds
 #'
-#' Splits full rows of a given matrix X into k-folds
+#' Splits full rows of a given matrix Y into k-folds
 #'
-#' @param x N times p matrix of predictive variables.
-#' @param folds Default<-3. Integer number indicating number of folds
-#' @param seed Default<-NULL. Seed for the random generator number.
+#' @param Y \eqn{(N \times P)} matrix of predictive variables.
+#' @param folds Integer number indicating number of folds.
+#' @param seed Seed for the random generator number.
 #'
 #' @return A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
 #'
-kfold_cv_rows <- function(x, folds = 3, seed = NULL)
+kfold_cv_rows <- function(Y, folds = 3, seed = NULL)
 {
   if(!is.null(seed)){set.seed(seed)}
-  x <- as.matrix(x)
-  mask_x <- base::is.na(x)
-  curve_NAs <- base::rowSums(mask_x) == ncol(x)
+  Y <- as.matrix(Y)
+  Y.mask <- base::is.na(Y)
+  curve_NAs <- base::rowSums(Y.mask) == ncol(Y)
   test_idx <- caret::createFolds(curve_NAs, k = folds, list = FALSE)
-  x_train_list <- list()
-  x_test_list <- list()
+  Y.train.list <- list()
+  Y.test.list <- list()
   for(idx in 1:folds)
   {
-    x_train_list[[idx]] <- x[test_idx != idx,]
-    x_test_list[[idx]] <- x[test_idx == idx,]
+    Y.train.list[[idx]] <- Y[test_idx != idx,]
+    Y.test.list[[idx]] <- Y[test_idx == idx,]
   }
-  results <- list(x_train_list = x_train_list, x_test_list = x_test_list)
+  results <- list(Y.train.list = Y.train.list, Y.test.list = Y.test.list)
   return(results)
 }
 
-#' Split a given matrix X into k-folds
+#' Split a given matrix Y into k-folds
 #'
-#' Splits a given matrix X into k-folds. This function keeps the dimensions of
-#' the original X in both train and test and substitutes the values on either
-#' division by NAs
+#' Splits a given matrix Y into k-folds. This function keeps the dimensions of
+#' the original Y in both train and test and substitutes the values in both
+#' split by NAs
 #'
-#' @param x N times p matrix of predictive variables.
-#' @param folds Default<-3. Integer number indicating number of folds
-#' @param seed Default<-NULL. Seed for the random generator number.
+#' @param Y \eqn{(N \times P)} matrix of predictive variables.
+#' @param folds Integer number indicating number of folds.
+#' @param seed Seed for the random generator number.
 #'
 #' @return A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
 #'
-kfold_cv_points <- function(x, folds = 3, seed = NULL)
+kfold_cv_points <- function(Y, folds = 3, seed = NULL)
 {
   value <- NULL # Required to avoid warning when compiling package
   if(!is.null(seed)){set.seed(seed)}
-  x_long <- pivot_long_x(x)
-  x_long <- tibble::as_tibble(x_long)
-  x_long <- dplyr::mutate(.data = x_long, is_na = is.na(value))
-  test_idx <- caret::createFolds(x_long$is_na, k = folds, list = FALSE)
-  x_train_list <- list()
-  x_test_list <- list()
+  Y.long <- pivot_long_x(Y)
+  Y.long <- tibble::as_tibble(Y.long)
+  Y.long <- dplyr::mutate(.data = Y.long, is_na = is.na(value))
+  test_idx <- caret::createFolds(Y.long$is_na, k = folds, list = FALSE)
+  Y.train.list <- list()
+  Y.test.list <- list()
   for(idx in 1:folds)
   {
-    x_train_list[[idx]] <- x_long[test_idx != idx, c('row', 'column', 'value')]
-    x_train_list[[idx]] <- pivot_wide_x(x_long = x_train_list[[idx]], dimensions = c(nrow(x), ncol(x)))
+    Y.train.list[[idx]] <- Y.long[test_idx != idx, c('row', 'column', 'value')]
+    Y.train.list[[idx]] <- pivot_wide_x(x.long = Y.train.list[[idx]], dimensions = c(nrow(Y), ncol(Y)))
 
-    x_test_list[[idx]] <- x_long[test_idx == idx, c('row', 'column', 'value')]
-    x_test_list[[idx]] <- pivot_wide_x(x_long = x_test_list[[idx]], dimensions = c(nrow(x), ncol(x)))
+    Y.test.list[[idx]] <- Y.long[test_idx == idx, c('row', 'column', 'value')]
+    Y.test.list[[idx]] <- pivot_wide_x(x.long = Y.test.list[[idx]], dimensions = c(nrow(Y), ncol(Y)))
   }
-  results <- list(x_train_list = x_train_list, x_test_list = x_test_list)
+  results <- list(Y.train.list = Y.train.list, Y.test.list = Y.test.list)
   return(results)
 }
 
-#' Split a given matrix X into k-folds
+#' Split a given matrix Y into k-folds
 #'
-#' Splits a given matrix X into k-folds. based on two posible
-#' criterias: either based on the total number of rows or the total number of
+#' Splits a given matrix Y into k-folds. based on two possible
+#' criteria: either based on the total number of rows or the total number of
 #' data points.
 #'
-#' @param Y N times p matrix of predictive variables.
-#' @param criteria Default<-'points'. Criteria used to divide the data. Valid values are 'rows', which considers the division based on full rows, or 'points', which considers the division based on points within the matrix.
-#' @param folds Default<-3. Integer number indicating number of folds
-#' @param seed Default<-NULL. Seed for the random generator number. Parameter included for reproducibility purposes. Default is NULL (meaning no seed is assigned).
+#' @param Y \eqn{(N \times P)} matrix of predictive variables.
+#' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
+#' @param folds Integer number indicating number of folds
+#' @param seed Seed for the random generator number.
 #'
 #' @return A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
 #' @export
 #'
 #' @examples
 #' # Generate a small matrix
-#' x <- matrix(rnorm(50), nrow = 10)
+#' Y <- matrix(rnorm(50), nrow = 10)
 #'
 #' # Divide based on full rows
-#' kfolds_rows <- create_folds(x, criteria = 'rows', folds = 3, seed = 1)
-#' x_train_list <- kfolds_rows$x_train_list
-#' x_test_list <- kfolds_rows$x_test_list
+#' kfolds_rows <- create_folds(Y, criteria = 'rows', folds = 3, seed = 1)
+#' Y.train.list <- kfolds_rows$Y.train.list
+#' Y.test.list <- kfolds_rows$Y.test.list
 #'
-#' kfolds_points <- create_folds(x, criteria<-'points', folds<-3, seed<-1)
+#' kfolds_points <- create_folds(Y, criteria<-'points', folds<-3, seed<-1)
+#' Y.train.list <- kfolds_rows$Y.train.list
+#' Y.test.list <- kfolds_rows$Y.test.list
 #'
 create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 {
   Y <- base::unname(base::as.matrix(Y))
   if(criteria == 'points')
   {
-    return(kfold_cv_points(x = Y, folds = folds, seed = seed))
+    return(kfold_cv_points(Y = Y, folds = folds, seed = seed))
   } else if(criteria == 'rows')
   {
-    return(kfold_cv_rows(x = Y, folds = folds, seed = seed))
+    return(kfold_cv_rows(Y = Y, folds = folds, seed = seed))
   } else{stop('Invalid criteria')}
 }
 
@@ -347,44 +346,39 @@ create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 
 #' CROSS VALIDATION OF ALPHA.RIDGE
 #'
-#' Performs cross validation on alpha parameter of fqpca
+#' Performs cross validation on alpha parameter of fqpca. Only valid if method
+#' is set to one of the valid options in \code{CVXR}.
 #
-#' @param Y The object storing the functional data. This can be either a matrix
-#'          data.frame or tibble of dimensions N by T, or a tf object from the
-#'          tidyfun package
-#' @param npc Default<-2. The number of estimated components.
-#' @param pve Default<-NULL. Float between 0 and 1.
-#'            Percentage of variability explained by components.
-#'            This affects the number of components used in the curve
+#' @param Y An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.
+#' @param data data.frame containing the functional data as a tf column.
+#' @param colname The name of the column containing the functional data. If used, data argument must not be NULL.
+#' @param npc The number of estimated components.
+#' @param pve Float between 0 and 1. Percentage of variability explained by
+#'            components. This affects the number of components used in the curve
 #'            reconstruction and error estimation. Set to NULL to avoid
 #'            this behavior.
-#' @param quantile.value Default<-0.5. The quantile considered.
-#' @param periodic Default<-TRUE. Boolean indicating if the data is expected to
+#' @param quantile.value The quantile considered.
+#' @param periodic Boolean indicating if the data is expected to
 #'                  be periodic (start coincides with end) or not.
-#' @param splines.df Default<-10. Degrees of freedom for the splines.
-#' @param method Default<-'SCS'. Method used in the resolution of the quantile
-#'                regression model. This penalized version of fqpca requires
-#'                any available solver in CVXR package like the free 'SCS'
-#'                or the commercial 'MOSEK'.
-#' @param alpha.grid Default<-c(0, 1e-16, 1e-14). An array containing the list of
-#'                    possible alpha values  (these should be always positive
-#'                    numbers).
-#' @param n.folds Default<-3. Number of folds to be used on cross validation.
-#' @param criteria Default<-'points'. Criteria used to divide the data.
-#'                 Valid values are 'rows', which considers the division based
-#'                 on full rows, or 'points', which considers the division based
-#'                 on points within the matrix. Default is points
-#' @param tol Default<-1e-3. Tolerance on the convergence of the algorithm.
-#'             Smaller values can speed up computation but may affect the
-#'             quality of the estimations.
-#' @param n.iters Default<-30. Maximum number of iterations.
-#' @param verbose.fqpca Default<-FALSE. Boolean indicating verbosity of the
-#'                       fqpca function.
-#' @param verbose.cv Default<-TRUE. Boolean indicating verbosity of the cross
-#'                    validation process.
-#' @param seed Default<-NULL. Seed for the random generator number.
-#'              Parameter included for reproducibility purposes.
+#' @param splines.df Degrees of freedom for the splines.
+#' @param method Method used in the resolution of the quantile
+#'                regression model. This penalized version of \code{fqpca} requires
+#'                any available solver in \code{CVXR} package.
+#' @param alpha.grid An array containing the list of ossible alpha values
+#'                    (these should be always positive numbers).
+#' @param n.folds Number of folds to be used on cross validation.
+#' @param return.models Should the list of all the models built be returned?
+#' @param criteria Criteria used to divide the data.
+#'                 Valid values are \code{'rows'}, which considers the division based
+#'                 on full rows, or \code{'points'}, which considers the division based
+#'                 on points within the matrix.
+#' @param tol Tolerance on the convergence of the algorithm.
+#' @param n.iters Maximum number of iterations.
+#' @param verbose.fqpca Boolean indicating verbosity of the fqpca function.
+#' @param verbose.cv Boolean indicating verbosity of the cross-validation process.
+#' @param seed Seed for the random generator number.
 #' @return A list containing the matrix of scores, the matrix of loadings,
+#'          a list with all the trained models (if the return_models param is TRUE)
 #'         and a secondary list with extra information.
 #' @export
 #'
@@ -399,7 +393,7 @@ create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 #'
 #' cv_result <- cross_validation_alpha(Y, alpha.grid = c(0, 1e-15), n.folds = 2)
 #'
-cross_validation_alpha <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5, alpha.grid  =  c(0, 1e-16, 1e-14), n.folds = 3, criteria = 'points', periodic = TRUE, splines.df = 10, tol = 1e-3, n.iters = 50, method = 'SCS', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
+cross_validation_alpha <- function(Y=NULL, data=NULL, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5, alpha.grid  =  c(0, 1e-16, 1e-14), n.folds = 3, return.models=TRUE, criteria = 'points', periodic = TRUE, splines.df = 10, tol = 1e-3, n.iters = 20, method = 'SCS', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()
   if(!base::is.null(seed))
@@ -407,15 +401,50 @@ cross_validation_alpha <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5, 
     base::set.seed(seed)
   } else{seed <- sample(1e9, 1)}
 
-  valid_in_quantreg <- c('br', 'fn', 'sfn', 'pfn')
-  if((method %in% valid_in_quantreg)){stop('Invalid method. This function requires a CVXR-compatible solver defined as method.')}
+  valid.in.cvxr <- CVXR::installed_solvers()
+  if(!(method %in% valid.in.cvxr)){stop('Invalid method. This function requires a CVXR-compatible solver defined as method.')}
   if(!n.folds == floor(n.folds)){stop('n.folds must be an integer number. Value provided: ', n.folds)}
 
+  if(!is.null(Y))
+  {
+    if(!is.matrix(Y))
+    {
+      # This structure allows tf to be a suggested package rather than mandatory
+      if(!tf::is_tf(Y))
+      {
+        stop('Y is not of a valid type. Object provided: ', class(Y))
+      }
+      Y <- base::unname(base::as.matrix(Y))
+      colname <- NULL
+    }
+  }else{
+    if(!is.null(data) && !is.null(colname))
+    {
+      if(!is.data.frame(data))
+      {
+        stop('data is not of a valid type. Object provided: ', class(data))
+      }
+      if(!is.character(colname))
+      {
+        stop('colname is not of a valid type. Object provided: ', class(colname))
+      }
+      Y <- dplyr::pull(data[colname])
+      if(!tf::is_tf(Y))
+      {
+        stop('The colname indicated by parameter colname in the dataframe data must be a tidyfun vector')
+      }
+      Y <- base::unname(base::as.matrix(Y))
+    }else{
+      stop('Either parameter Y or parameters data and colname must be informed.')
+    }
+  }
+
   # KFOLDS
-  Y_folds <- create_folds(Y, criteria = criteria, folds = n.folds, seed = seed)
+  Y.folds <- create_folds(Y, criteria = criteria, folds = n.folds, seed = seed)
 
   # Initialize error storage
   error.matrix <- matrix(-1, nrow = length(alpha.grid), ncol = n.folds)
+  list.models = list()
 
   # CROSS VALIDATION
   for(i in seq_along(alpha.grid))
@@ -430,16 +459,21 @@ cross_validation_alpha <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5, 
       # Access data depending on criteria
       if(criteria=='rows')
       {
-        Y_train <- Y_folds$x_train_list[[j]]
-        Y_test <- Y_folds$x_test_list[[j]]
+        Y.train <- Y.folds$Y.train.list[[j]]
+        Y.test <- Y.folds$Y.test.list[[j]]
       } else if(criteria == 'points')
       {
-        Y_train <- Y_folds$x_train_list[[j]]
-        Y_test <-  Y_folds$x_test_list[[j]]
+        Y.train <- Y.folds$Y.train.list[[j]]
+        Y.test <-  Y.folds$Y.test.list[[j]]
       } else{stop('Invalid value for criteria. Valid values are observations or curves')}
 
       # Execute model
-      fqpca_results <- fqpca(Y = Y_train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, alpha.ridge = alpha.ridge, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
+      fqpca_results <- fqpca(Y = Y.train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, alpha.ridge = alpha.ridge, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
+      if(return.models)
+      {
+        name.model <- paste0('alpha_idx=', i, '.fold=', j)
+        list.models[[name.model]] <- fqpca_results
+      }
       if(is.null(pve))
       {
         npc.reconstruction <- fqpca_results$npc+1 # Add 1 to take the intercept into account
@@ -451,22 +485,22 @@ cross_validation_alpha <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5, 
       {
         loadings <- matrix(fqpca_results$loadings[, 1:npc.reconstruction], ncol=npc.reconstruction)
         scores <- matrix(fqpca_results$scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
-        Y_predicted <- scores %*% t(loadings)
+        Y.predicted <- scores %*% t(loadings)
       }else if(criteria=='rows')
       {
-        test_scores <- predict.fqpca_object(fqpca_results, Y_test)
+        test.scores <- predict.fqpca_object(fqpca_results, Y.test)
         loadings <- matrix(fqpca_results$loadings[, 1:npc.reconstruction], ncol=npc.reconstruction)
-        scores <- matrix(test_scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
-        Y_predicted <- test_scores %*% t(loadings)
+        scores <- matrix(test.scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        Y.predicted <- scores %*% t(loadings)
       }
-      error.matrix[i, j] <- quantile_error(Y = Y_test, Y.pred = Y_predicted, quantile.value = quantile.value)
+      error.matrix[i, j] <- quantile_error(Y = Y.test, Y.pred = Y.predicted, quantile.value = quantile.value)
     }
     end_loop_time <-  Sys.time()
-    if(verbose.cv){message('Alpha ', alpha.ridge, ' execution completed in: ', round(difftime(end_loop_time, start_loop_time, units = "secs"), 2), ' seconds')}
+    if(verbose.cv){message('alpha: ', alpha.ridge, '. Execution completed in: ', round(difftime(end_loop_time, start_loop_time, units = "secs"), 2), ' seconds.')}
   }
   end_time <- Sys.time()
   execution.time <- difftime(end_time, start_time, units = "secs")
-  return(list(error.matrix = error.matrix, execution.time = execution.time, alpha.grid = alpha.grid, criteria = criteria))
+  return(list(error.matrix = error.matrix, execution.time = execution.time, alpha.grid = alpha.grid, criteria = criteria, list.models = list.models))
 }
 
 
@@ -474,45 +508,34 @@ cross_validation_alpha <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5, 
 #'
 #' Performs cross validation on degrees of freedom parameter of fqpca
 #
-#' @param Y The object storing the functional data. This can be either a matrix
-#'          data.frame or tibble of dimensions N by T, or a tf object from the
-#'          tidyfun package
-#' @param npc Default<-2. The number of estimated components.
-#' @param pve Default<-NULL. Float between 0 and 1.
-#'            Percentage of variability explained by components.
-#'            This affects the number of components used in the curve
+#' @param Y An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.
+#' @param data data.frame containing the functional data as a tf column.
+#' @param colname The name of the column containing the functional data. If used, data argument must not be NULL.
+#' @param npc The number of estimated components.
+#' @param pve Float between 0 and 1. Percentage of variability explained by
+#'            components. This affects the number of components used in the curve
 #'            reconstruction and error estimation. Set to NULL to avoid
 #'            this behavior.
-#' @param quantile.value Default<-0.5. The quantile considered.
-#' @param periodic Default<-TRUE. Boolean indicating if the data is expected to
+#' @param quantile.value The quantile considered.
+#' @param periodic Boolean indicating if the data is expected to
 #'                  be periodic (start coincides with end) or not.
-#' @param splines.df.grid Default<-c(5, 10, 15, 20). Grid of degrees of freedom
-#'                        for the splines.
-#' @param method Default<-'fn'. Method used in the resolution of the quantile
-#'                regression model. It currently accepts the methods
-#'                c('br', 'fn', 'pfn', 'sfn') from quantreg package along with
-#'                any available solver in CVXR package like the free 'SCS'
-#'                or the commercial 'MOSEK'.
-#' @param alpha.ridge  Default<-0. Hyper parameter controlling the penalization
-#'                      on the second derivative of the splines. It has effect
-#'                      only with CVXR solvers. Large values are associated with
-#'                      smoother results. This component is experimental and may
-#'                      lead to computational issues.
-#' @param n.folds Default<-3. Number of folds to be used on cross validation.
-#' @param criteria Default<-'points'. Criteria used to divide the data.
-#'                 Valid values are 'rows', which considers the division based
-#'                 on full rows, or 'points', which considers the division based
-#'                 on points within the matrix. Default is points
-#' @param tol Default<-1e-3. Tolerance on the convergence of the algorithm.
-#'             Smaller values can speed up computation but may affect the
-#'             quality of the estimations.
-#' @param n.iters Default<-30. Maximum number of iterations.
-#' @param verbose.fqpca Default<-FALSE. Boolean indicating verbosity of the
-#'                       fqpca function.
-#' @param verbose.cv Default<-TRUE. Boolean indicating verbosity of the cross
-#'                    validation process.
-#' @param seed Default<-NULL. Seed for the random generator number.
-#'              Parameter included for reproducibility purposes.
+#' @param splines.df.grid Grid of possible values for the degrees of freedom.
+#' @param method Method used in the resolution of the quantile
+#'                regression model. This penalized version of \code{fqpca} requires
+#'                any available solver in \code{CVXR} package.
+#' @param alpha.ridge An array containing the list of ossible alpha values
+#'                    (these should be always positive numbers).
+#' @param n.folds Number of folds to be used on cross validation.
+#' @param return.models Should the list of all the models built be returned?
+#' @param criteria Criteria used to divide the data.
+#'                 Valid values are \code{'rows'}, which considers the division based
+#'                 on full rows, or \code{'points'}, which considers the division based
+#'                 on points within the matrix.
+#' @param tol Tolerance on the convergence of the algorithm.
+#' @param n.iters Maximum number of iterations.
+#' @param verbose.fqpca Boolean indicating verbosity of the fqpca function.
+#' @param verbose.cv Boolean indicating verbosity of the cross-validation process.
+#' @param seed Seed for the random generator number.
 #' @return A list containing the matrix of scores, the matrix of loadings,
 #'         and a secondary list with extra information.
 #' @export
@@ -528,19 +551,53 @@ cross_validation_alpha <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5, 
 #'
 #' cv_result <- cross_validation_df(Y, splines.df.grid = c(5, 10, 15), n.folds = 2)
 #'
-cross_validation_df <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5,  alpha.ridge = 0, n.folds = 3, criteria = 'points', periodic = TRUE, splines.df.grid = c(5, 10, 15, 20), tol = 1e-3, n.iters = 50, method = 'fn', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
+cross_validation_df <- function(Y=NULL, data=NULL, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5,  alpha.ridge = 0, n.folds = 3, return.models = TRUE, criteria = 'points', periodic = TRUE, splines.df.grid = c(5, 10, 15, 20), tol = 1e-3, n.iters = 20, method = 'fn', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
 
   if(!n.folds == floor(n.folds)){stop('n.folds must be an integer number. Value provided: ', n.folds)}
 
+  if(!is.null(Y))
+  {
+    if(!is.matrix(Y))
+    {
+      # This structure allows tf to be a suggested package rather than mandatory
+      if(!tf::is_tf(Y))
+      {
+        stop('Y is not of a valid type. Object provided: ', class(Y))
+      }
+      Y <- base::unname(base::as.matrix(Y))
+      colname <- NULL
+    }
+  }else{
+    if(!is.null(data) && !is.null(colname))
+    {
+      if(!is.data.frame(data))
+      {
+        stop('data is not of a valid type. Object provided: ', class(data))
+      }
+      if(!is.character(colname))
+      {
+        stop('colname is not of a valid type. Object provided: ', class(colname))
+      }
+      Y <- dplyr::pull(data[colname])
+      if(!tf::is_tf(Y))
+      {
+        stop('The colname indicated by parameter colname in the dataframe data must be a tidyfun vector')
+      }
+      Y <- base::unname(base::as.matrix(Y))
+    }else{
+      stop('Either parameter Y or parameters data and colname must be informed.')
+    }
+  }
+
   # KFOLDS
-  Y_folds <- create_folds(Y, criteria = criteria, folds = n.folds, seed = seed)
+  Y.folds <- create_folds(Y, criteria = criteria, folds = n.folds, seed = seed)
 
   # Initialize error storage
   error.matrix <- matrix(-1, nrow = length(splines.df.grid), ncol = n.folds)
-
+  list.models <- list()
   # CROSS VALIDATION
   for(i in seq_along(splines.df.grid))
   {
@@ -553,7 +610,7 @@ cross_validation_df <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5,  al
     if(npc > splines.df)
     {
       npc_splines_warning <- TRUE
-      warning('The npc is larger than splines.df\n  Current splines.df value: ', splines.df, '\n  Taking npc=splines.df for this iteration of the Cross-Validation process')
+      warning('The npc is larger than splines.df\nCurrent splines.df value: ', splines.df, '\nTaking npc=splines.df for this iteration of the Cross-Validation process.')
       npc_original <- npc
       npc <- splines.df
     }
@@ -565,16 +622,21 @@ cross_validation_df <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5,  al
       # Access data depending on criteria
       if(criteria=='rows')
       {
-        Y_train <- Y_folds$x_train_list[[j]]
-        Y_test <- Y_folds$x_test_list[[j]]
+        Y.train <- Y.folds$Y.train.list[[j]]
+        Y.test <- Y.folds$Y.test.list[[j]]
       } else if(criteria == 'points')
       {
-        Y_train <- Y_folds$x_train_list[[j]]
-        Y_test <-  Y_folds$x_test_list[[j]]
-      } else{stop('Invalid value for criteria. Valid values are observations or curves')}
+        Y.train <- Y.folds$Y.train.list[[j]]
+        Y.test <-  Y.folds$Y.test.list[[j]]
+      } else{stop('Invalid value for criteria. Valid values are observations or curves.')}
 
       # Execute model
-      fqpca_results <- fqpca(Y = Y_train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, alpha.ridge = alpha.ridge, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
+      fqpca_results <- fqpca(Y = Y.train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, alpha.ridge = alpha.ridge, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
+      if(return.models)
+      {
+        name.model <- paste0('df_idx=', i, '.fold=', j)
+        list.models[[name.model]] <- fqpca_results
+      }
       if(is.null(pve))
       {
         npc.reconstruction <- fqpca_results$npc+1 # Add 1 to take the intercept into account
@@ -586,19 +648,19 @@ cross_validation_df <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5,  al
       {
         loadings <- matrix(fqpca_results$loadings[, 1:npc.reconstruction], ncol=npc.reconstruction)
         scores <- matrix(fqpca_results$scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
-        Y_predicted <- scores %*% t(loadings)
+        Y.predicted <- scores %*% t(loadings)
       }else if(criteria=='rows')
       {
-        test_scores <- predict.fqpca_object(fqpca_results, Y_test)
+        test.scores <- predict.fqpca_object(fqpca_results, Y.test)
         loadings <- matrix(fqpca_results$loadings[, 1:npc.reconstruction], ncol=npc.reconstruction)
-        scores <- matrix(test_scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
-        Y_predicted <- test_scores %*% t(loadings)
+        scores <- matrix(test.scores[, 1:npc.reconstruction], ncol=npc.reconstruction)
+        Y.predicted <- scores %*% t(loadings)
       }
-      error.matrix[i, j] <- quantile_error(Y = Y_test, Y.pred = Y_predicted, quantile.value = quantile.value)
+      error.matrix[i, j] <- quantile_error(Y = Y.test, Y.pred = Y.predicted, quantile.value = quantile.value)
     }
 
     end_loop_time <-  Sys.time()
-    if(verbose.cv){message('Degrees of freedom: ', splines.df, ' .Execution completed in: ', round(difftime(end_loop_time, start_loop_time, units = "secs"), 2), ' seconds')}
+    if(verbose.cv){message('Degrees of freedom: ', splines.df, '. Execution completed in: ', round(difftime(end_loop_time, start_loop_time, units = "secs"), 2), ' seconds.')}
   }
 
   # Recover the original npc value
@@ -609,5 +671,5 @@ cross_validation_df <- function(Y, npc = 2,  pve=NULL, quantile.value = 0.5,  al
 
   end_time <- Sys.time()
   execution.time <- difftime(end_time, start_time, units = "secs")
-  return(list(error.matrix = error.matrix, execution.time = execution.time, splines.df.grid = splines.df.grid, criteria = criteria))
+  return(list(error.matrix = error.matrix, execution.time = execution.time, splines.df.grid = splines.df.grid, criteria = criteria, list.models = list.models))
 }

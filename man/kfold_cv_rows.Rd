@@ -2,20 +2,20 @@
 % Please edit documentation in R/utils.R
 \name{kfold_cv_rows}
 \alias{kfold_cv_rows}
-\title{Split a given matrix X into k-folds}
+\title{Split a given matrix Y into k-folds}
 \usage{
-kfold_cv_rows(x, folds = 3, seed = NULL)
+kfold_cv_rows(Y, folds = 3, seed = NULL)
 }
 \arguments{
-\item{x}{N times p matrix of predictive variables.}
+\item{Y}{\eqn{(N \times P)} matrix of predictive variables.}
 
-\item{folds}{Default<-3. Integer number indicating number of folds}
+\item{folds}{Integer number indicating number of folds.}
 
-\item{seed}{Default<-NULL. Seed for the random generator number.}
+\item{seed}{Seed for the random generator number.}
 }
 \value{
 A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
 }
 \description{
-Splits full rows of a given matrix X into k-folds
+Splits full rows of a given matrix Y into k-folds
 }
