@@ -303,11 +303,4 @@ Y09 = fitted(m09, pve = 0.99)
 Now given an observation we can visualize it’s quantile curves along
 with the raw data
 
-    #> Warning: The `x` argument of `as_tibble.matrix()` must have unique column names if
-    #> `.name_repair` is omitted as of tibble 2.0.0.
-    #> ℹ Using compatibility `.name_repair`.
-    #> This warning is displayed once every 8 hours.
-    #> Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    #> generated.
-
 <img src="man/figures/README-unnamed-chunk-21-1.png" width="100%" />
