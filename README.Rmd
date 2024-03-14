@@ -42,11 +42,28 @@ The key methodology in the `FunQuantPCA` package is the `fqpca` function, that i
     * Based on the degrees of freedom of the spline basis reconstruction, using the parameter `splines.df` This is our preferred approach.
     * Based on the inclusion of a second derivative penalty on the splines coefficients, changing the `method` parameter to use a valid `CVXR` solver (for example, setting `method='SCS'`) and then selecting the desired hyper-parameter value (for example `alpha.ridge=1e-7`). This approach is experimental and is prone to show computational issues for large values of the hyper-parameter. 
     
-The `FunQuantPCA` also implements functions to perform cross validation on either the `splines.df` parameter (`cross_validation_df`) or the `alpha.ridge` parameter (`cross_validation_alpha`). These cross validation functions consider the quantile error as the reference prediction error. This error is available using the function `quantile_error`.
+The `FunQuantPCA` also implements functions to perform cross validation on either the `splines.df` parameter (`cross_validation_df`) or the `alpha.ridge` parameter (`cross_validation_alpha`). These cross validation functions consider the quantile error as the reference prediction error. This error metric is available using the function `quantile_error`.
 
 ## Example 1: setting the basics
 
-`fqpca` is mainly designed to deal with functional data. The following example generates a fake dataset with 200 observations taken every 10 minutes during one day. This defines a data matrix with 200 rows and 144 columns following the formula:
+Lets us start by loading some libraries that will be used along this example:
+
+```{r, message=FALSE, warning=F}
+library(FunQuantPCA)
+library(fda)
+library(tidyverse)
+```
+
+```{r, echo=T, eval=F}
+# We use the tidy structure of the tidyfun package to deal with the functional data
+devtools::install_github("tidyfun/tidyfun")
+```
+
+```{r, message=FALSE, warning=F}
+library(tidyfun)
+```
+
+`fqpca` is designed to deal with functional data. The following example generates a fake dataset with 200 observations taken every 10 minutes during one day. This defines a data matrix with 200 rows and 144 columns following the formula:
 
 $$x_i = \lambda_1(sin(t)+sin(0.5t))+\varepsilon_i$$
 where
@@ -55,17 +72,16 @@ where
 * $\varepsilon_i\sim\chi^2(3)$
 
 
-```{r, fig.height = 4, fig.width = 10}
+```{r, fig.height = 5, fig.width = 10}
 set.seed(5)
 
 n = 200
 t = 144
 time.points = seq(0, 2*pi, length.out=t)
 Y = matrix(rep(sin(time.points) + sin(0.5*time.points), n), byrow=TRUE, nrow=n)
-
-Y = matrix(rep(sin(time.points) + sin(0.5*time.points), n), byrow=TRUE, nrow=n)
 Y = Y + matrix(rnorm(n*t, 0, 0.4), nrow=n) + rchisq(n, 3)
-matplot(t(Y[1:20,]), type="l")
+
+Y[1:50,] %>% tf::tfd() %>% plot(alpha=0.2)
 ```
 
 The above plot visualizes a subset of the data generated this way. Since the fqpca methodology can deal with sparse and irregular time measurements, we will include 50% of missing observations in the data matrix. 
@@ -76,10 +92,9 @@ Y[sample(n*t, as.integer(0.50*n*t))] = NA
 
 Now, we apply the `fqpca` methodology on this dataset and obtain the decomposition of the data in terms of the median (`quantile.value=0.5`), which is a robust alternative to the mean based predictions of traditional FPCA.
 
+### The `fqpca` function
+
 ```{r}
-
-library(FunQuantPCA)
-
 Y.train = Y[1:150,]
 Y.test = Y[151:n,]
 
@@ -105,80 +120,165 @@ You can plot the computed loadings on a somewhat not very pretty plot, but still
 plot(results, pve=0.95)
 ```
 
-And you can also compute the quantile error between the curve reconstruction and the true data, which is the metric we recommend to use as prediction error metric.
+And you can also compute the quantile error between the curve reconstruction and the true data, which is the metric we recommend to use as prediction error metric. Observe that the metric is dependent on the quantile of interest, which should be adjusted accordingly.
 
 ```{r}
 quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
 ```
 
-## Example 2: cross validating the Canadian Weather dataset
+### Cross validating 
 
-The `FunQuantPCA` package implements functions that allow to perform cross validation based on both the `splines.df` or the `alpha.ridge` criterias. Let's see an example using the well known weather dataset.
-
-
-```{r, echo=T, eval=F}
-# We use the tidy structure of the tidyfun package to deal with the functional data
-devtools::install_github("tidyfun/tidyfun")
-```
-
-```{r}
-
-library(fda)
-library(tidyverse)
-library(tidyfun)
-
-data = tibble(temperature = tf::tfd(t(fda::CanadianWeather$dailyAv[,,1]), arg = 1:365),
-              province = CanadianWeather$province)
-
-head(data)
-```
-
-```{r, fig.height = 4, fig.width = 10}
-
-data %>% 
-  ggplot(aes(y=temperature, color=province)) + 
-  geom_spaghetti() + 
-  theme_light()
-
-```
-
-The `fqpca` function admits the data as a `tf` functional vector.
+The `FunQuantPCA` package implements functions that allow to perform cross validation based on both the `splines.df` or the `alpha.ridge` criterias.
 
 ```{r}
 splines.df.grid = c(5, 10, 15, 20)
-cv_result = cross_validation_df(data=data, colname='temperature', splines.df.grid=splines.df.grid, n.folds=3)
+cv_result = cross_validation_df(Y, splines.df.grid=splines.df.grid, n.folds=3, verbose.cv=F)
 cv_result$error.matrix
 ```
-
 The dimensions of the error matrix are `(length(splines.df.grid), n.folds)`. We can find the optimal number of degrees of freedom by taking the mean of each row and picking the minimum.
 
 ```{r}
 optimal_df = which.min(rowMeans(cv_result$error.matrix))
-
 paste0('Optimal number of degrees of freedom: ', splines.df.grid[optimal_df])
-```
-
-Now we can build the final model using the optimal number of degrees of freedom, and check the number of components based on the percentage of explained variability.
-
-```{r}
-results = fqpca(Y=data$temperature, npc=10, quantile.value=0.5, splines.df=15, seed=5)
-
-cumsum(results$pve)
-```
-This shows that with 2 components we are able to explain 97% of the variability in the data. Lets see these components.
-
-```{r, fig.height = 4, fig.width = 10}
-
-plot(results, pve = 0.95)
-
 ```
 
 The package also includes a function that allows to perform cross validation on the hyper-parameter controlling the effect of a second derivative penalty on the splines. Be aware that this smoothness controlling process is experimental and may be subject to computation issues.
 
 ```{r}
-cv_result = cross_validation_alpha(data$temperature, alpha.grid=c(0, 1e-10, 1e-5), n.folds=2)
-
+cv_result = cross_validation_alpha(Y, alpha.grid=c(0, 1e-10, 1e-5), n.folds=2, verbose.cv=F)
 cv_result$error.matrix
 ```
 
-The dimensions of the error matrix are (length(alpha.grid), n.folds).
+The dimensions of the error matrix are `(length(alpha.grid), n.folds)`.
+
+## Example 2: The Canadian Weather dataset
+
+ Let's see an example using the well known weather dataset. The `FQPCA` package can work with:
+ 
+ * data matrices (as shown above, using the parameter `Y` when calling the function)
+ * Tidyfun `tf` vectors (using the parameter `Y` when calling the function)
+ * Dataframes containing tidyfun vectors (using the `data` and `colname` additional parameters)
+ 
+ Let us load and visualize the data.
+
+```{r}
+matrix.data = t(fda::CanadianWeather$dailyAv[,,1])
+data = tibble(temperature = tf::tfd(matrix.data, arg = 1:365),
+              province = CanadianWeather$province)
+head(data)
+```
+
+```{r, fig.height = 4, fig.width = 10}
+data %>% 
+  ggplot(aes(y=temperature, color=province)) + 
+  geom_spaghetti() + 
+  theme_light()
+```
+
+Now we perform cross validation on the degrees of freedom and find the optimal value.
+
+```{r}
+splines.df.grid = c(5, 10, 15, 20)
+cv_result = cross_validation_df(data=data, colname='temperature', splines.df.grid=splines.df.grid, n.folds=3, verbose.cv=F)
+optimal_df = splines.df.grid[which.min(rowMeans(cv_result$error.matrix))]
+paste0('Optimal number of degrees of freedom: ', optimal_df)
+```
+
+We can build the final model using the optimal number of degrees of freedom, and check the number of components based on the percentage of explained variability.
+
+```{r}
+results = fqpca(Y=data$temperature, npc=10, quantile.value=0.5, splines.df=optimal_df, seed=5)
+cumsum(results$pve)
+```
+
+This shows that with 3 components we are able to explain 99.1% of the variability in the data. Lets see these components.
+
+```{r, fig.height = 4, fig.width = 10}
+plot(results, pve = 0.99)
+```
+
+### Computing various quantile levels
+
+One great benefit of `fqpca` is the possibility to obtain the distribution of the data at different quantile levels, effectively treating each observation as a draw from it's own distribution that we are now able to recover. We can do this by running `fqpca` at different quantile levels, say 10%, 50% and 90%.
+
+```{r}
+m01 = fqpca(Y=data$temperature, npc=10, quantile.value=0.1, splines.df=15, seed=5)
+m05 = fqpca(Y=data$temperature, npc=10, quantile.value=0.5, splines.df=15, seed=5)
+m09 = fqpca(Y=data$temperature, npc=10, quantile.value=0.9, splines.df=15, seed=5)
+
+Y01 = fitted(m01, pve = 0.99)
+Y05 = fitted(m05, pve = 0.99)
+Y09 = fitted(m09, pve = 0.99)
+```
+
+Now given an observation we can visualize it's quantile curves along with the raw data
+
+```{r, echo=F, fig.height = 5, fig.width = 10}
+idx_curves = c(5, 10, 15)
+idx_curves_named = rownames(matrix.data)[idx_curves]
+
+tmpy = matrix.data %>% 
+  unname() %>% 
+  as_tibble() %>% 
+  slice(idx_curves) %>% 
+  mutate(Quantile='Original data',
+         Source='Original data',
+         link_curve = idx_curves_named)
+
+tmpy_01 = Y01 %>% 
+  as_tibble() %>% 
+  slice(idx_curves) %>% 
+  mutate(Quantile='10%',
+         Source='FQPCA',
+         link_curve = idx_curves_named)
+
+tmpy_05 = Y05 %>% 
+  as_tibble() %>% 
+  slice(idx_curves) %>% 
+  mutate(Quantile='50%',
+         Source='FQPCA',
+         link_curve = idx_curves_named)
+
+tmpy_09 = Y09 %>% 
+  as_tibble() %>% 
+  slice(idx_curves) %>% 
+  mutate(Quantile='90%',
+         Source='FQPCA',
+         link_curve = idx_curves_named)
+
+selected_curves = tmpy %>% 
+  bind_rows(tmpy_01) %>% 
+  bind_rows(tmpy_05) %>% 
+  bind_rows(tmpy_09)
+colnames(selected_curves) = c(1:365, c('Quantile', 'Source', 'link_curve'))
+ 
+selected_curves_long = selected_curves %>% 
+  pivot_longer(all_of(1:365), names_to='Time', values_to='Accelerometer') %>% 
+  mutate(identifier = paste0(link_curve, Quantile),
+         Quantile = factor(Quantile, levels=c('10%', '50%', '90%', 'Original data')),
+         link_curve = factor(link_curve, levels=idx_curves_named),
+         Time = as.integer(Time))
+
+colors = c(
+  rgb(241, 99, 101, maxColorValue = 255),   # red
+  rgb(96, 195, 200, maxColorValue = 255),   # blue
+  rgb(81, 172, 85, maxColorValue = 255),    # green
+  rgb(0, 0, 0, maxColorValue = 255)         # black
+)
+
+fqpca_reconstruction = selected_curves_long %>% 
+  ggplot(aes(x=Time, y=Accelerometer)) + 
+  geom_line(aes(group=identifier, color=Quantile, alpha=Quantile)) +
+  facet_wrap(~link_curve) +
+  ggtitle('FQPCA reconstruction') +
+  xlab('Time') +
+  ylab('Accelerometer') +
+  theme_light() + 
+  scale_color_manual(values = colors) + 
+  scale_alpha_manual(values=c(1, 1, 1, 0.4)) +
+  scale_size_manual(values = c(1, 1, 1, 0.5)) + 
+  theme(legend.position = "bottom")
+
+fqpca_reconstruction
+
+```
