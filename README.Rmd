@@ -4,7 +4,7 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# `FunQuantPCA` package
+# FunQ <img src="man/figures/logo.png" align="right" height="150" alt="funq website" /></a>
 
 <!-- badges: start -->
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -21,20 +21,20 @@ knitr::opts_chunk$set(
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-brightgreen.svg)](https://www.tidyverse.org/lifecycle/)
 <!-- badges: end -->
 
-`FunQuantPCA` is an R package that solves the functional quantile principal component analysis (fqpca) methodology. FQPCA extends the concept of functional principal component analysis (FPCA) to the quantile regression framework. The goal of many methods in FDA is to recover the curve-specific mean by leveraging information across time points, subjects, or both. Our goal is broader: we seek to describe the full curve and time-specific probability distribution that underlies individual measurements. Although only one draw from the curve-and time-specific distribution of each individual is available, we will leverage information across time points and curves to estimate smooth, curve-specific quantile functions. This approach allows a richer understanding of functional data than considering only the expected value, and may be particularly useful when distributions are skewed, vary across subjects or present outliers.
+The goal of `FunQ` is to provide well-developed and documented methodologies for working with functional data analysis from a quantile perspective. Right now, the package implements functions solving the functional quantile principal component analysis (fqpca) methodology. FQPCA extends the concept of functional principal component analysis (FPCA) to the quantile regression framework. The goal of many methods in FDA is to recover the curve-specific mean by leveraging information across time points, subjects, or both. Our goal is broader: we seek to describe the full curve and time-specific probability distribution that underlies individual measurements. Although only one draw from the curve-and time-specific distribution of each individual is available, we will leverage information across time points and curves to estimate smooth, curve-specific quantile functions. This approach allows a richer understanding of functional data than considering only the expected value, and may be particularly useful when distributions are skewed, vary across subjects or present outliers.
 
 ## Installation
 
-You can install the development version of FunQuantPCA from [GitHub](https://github.com/) with:
+You can install the development version of FunQ from [GitHub](https://github.com/) with:
 
 ```{r, echo=T, eval=F}
 # install.packages("devtools")
-devtools::install_github("alvaromc317/FunQuantPCA")
+devtools::install_github("alvaromc317/FunQ")
 ```
 
-## Main characteristics
+## Overview
 
-The key methodology in the `FunQuantPCA` package is the `fqpca` function, that implements the Functional Quantile Principal Component Analysis methodology. 
+`FunQ` provides functions for the implementation of the Functional Quantile Principal Component Analysis methodology. 
 
 * This function can receive the functional data as an $(N\times T)$ `matrix` (through parameter `Y`) or as a dataframe containing a column with a functional `tf` vector (through parameters `data` and `colname`).
 * It can deal with irregular time grids, which means that can deal with missing data.
@@ -42,14 +42,14 @@ The key methodology in the `FunQuantPCA` package is the `fqpca` function, that i
     * Based on the degrees of freedom of the spline basis reconstruction, using the parameter `splines.df` This is our preferred approach.
     * Based on the inclusion of a second derivative penalty on the splines coefficients, changing the `method` parameter to use a valid `CVXR` solver (for example, setting `method='SCS'`) and then selecting the desired hyper-parameter value (for example `alpha.ridge=1e-7`). This approach is experimental and is prone to show computational issues for large values of the hyper-parameter. 
     
-The `FunQuantPCA` also implements functions to perform cross validation on either the `splines.df` parameter (`cross_validation_df`) or the `alpha.ridge` parameter (`cross_validation_alpha`). These cross validation functions consider the quantile error as the reference prediction error. This error metric is available using the function `quantile_error`.
+The package also implements functions to perform cross validation on either the `splines.df` parameter (`cross_validation_df`) or the `alpha.ridge` parameter (`cross_validation_alpha`). These cross validation functions consider the quantile error as the reference prediction error. This error metric is available using the function `quantile_error`.
 
 ## Example 1: setting the basics
 
 Lets us start by loading some libraries that will be used along this example:
 
 ```{r, message=FALSE, warning=F}
-library(FunQuantPCA)
+library(FunQ)
 library(fda)
 library(tidyverse)
 ```
@@ -128,7 +128,7 @@ quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
 
 ### Cross validating 
 
-The `FunQuantPCA` package implements functions that allow to perform cross validation based on both the `splines.df` or the `alpha.ridge` criterias.
+The `FunQ` package implements functions that allow to perform cross validation based on both the `splines.df` or the `alpha.ridge` criterias.
 
 ```{r}
 splines.df.grid = c(5, 10, 15, 20)

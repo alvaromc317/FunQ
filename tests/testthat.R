@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/reference/test_package.html#special-files
 
 library(testthat)
-library(FunQuantPCA)
+library(FunQ)
 
-test_check("FunQuantPCA")
+test_check("FunQ")

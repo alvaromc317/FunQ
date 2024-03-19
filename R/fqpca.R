@@ -15,7 +15,7 @@
 compute_objective_value <- function(Y, quantile.value, scores, loadings)
 {
   Y.pred <- scores %*% t(loadings)
-  objective.value <- FunQuantPCA::quantile_error(Y=Y, Y.pred=Y.pred, quantile.value=quantile.value)
+  objective.value <- FunQ::quantile_error(Y=Y, Y.pred=Y.pred, quantile.value=quantile.value)
   return(objective.value)
 }
 

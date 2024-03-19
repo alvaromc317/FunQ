@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# `FunQuantPCA` package
+# FunQ <img src="man/figures/logo.png" align="right" height="150" alt="funq website" /></a>
 
 <!-- badges: start -->
 
@@ -12,36 +12,37 @@ Version](https://img.shields.io/badge/version-0.1.1-blue.svg)](https://cran.r-pr
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-brightgreen.svg)](https://www.tidyverse.org/lifecycle/)
 <!-- badges: end -->
 
-`FunQuantPCA` is an R package that solves the functional quantile
-principal component analysis (fqpca) methodology. FQPCA extends the
-concept of functional principal component analysis (FPCA) to the
-quantile regression framework. The goal of many methods in FDA is to
-recover the curve-specific mean by leveraging information across time
-points, subjects, or both. Our goal is broader: we seek to describe the
-full curve and time-specific probability distribution that underlies
-individual measurements. Although only one draw from the curve-and
-time-specific distribution of each individual is available, we will
-leverage information across time points and curves to estimate smooth,
-curve-specific quantile functions. This approach allows a richer
+The goal of `FunQ` is to provide well-developed and documented
+methodologies for working with functional data analysis from a quantile
+perspective. Right now, the package implements functions solving the
+functional quantile principal component analysis (fqpca) methodology.
+FQPCA extends the concept of functional principal component analysis
+(FPCA) to the quantile regression framework. The goal of many methods in
+FDA is to recover the curve-specific mean by leveraging information
+across time points, subjects, or both. Our goal is broader: we seek to
+describe the full curve and time-specific probability distribution that
+underlies individual measurements. Although only one draw from the
+curve-and time-specific distribution of each individual is available, we
+will leverage information across time points and curves to estimate
+smooth, curve-specific quantile functions. This approach allows a richer
 understanding of functional data than considering only the expected
 value, and may be particularly useful when distributions are skewed,
 vary across subjects or present outliers.
 
 ## Installation
 
-You can install the development version of FunQuantPCA from
+You can install the development version of FunQ from
 [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("devtools")
-devtools::install_github("alvaromc317/FunQuantPCA")
+devtools::install_github("alvaromc317/FunQ")
 ```
 
-## Main characteristics
+## Overview
 
-The key methodology in the `FunQuantPCA` package is the `fqpca`
-function, that implements the Functional Quantile Principal Component
-Analysis methodology.
+`FunQ` provides functions for the implementation of the Functional
+Quantile Principal Component Analysis methodology.
 
 - This function can receive the functional data as an $(N\times T)$
   `matrix` (through parameter `Y`) or as a dataframe containing a column
@@ -60,8 +61,8 @@ Analysis methodology.
     approach is experimental and is prone to show computational issues
     for large values of the hyper-parameter.
 
-The `FunQuantPCA` also implements functions to perform cross validation
-on either the `splines.df` parameter (`cross_validation_df`) or the
+The package also implements functions to perform cross validation on
+either the `splines.df` parameter (`cross_validation_df`) or the
 `alpha.ridge` parameter (`cross_validation_alpha`). These cross
 validation functions consider the quantile error as the reference
 prediction error. This error metric is available using the function
@@ -73,7 +74,7 @@ Lets us start by loading some libraries that will be used along this
 example:
 
 ``` r
-library(FunQuantPCA)
+library(FunQ)
 library(fda)
 library(tidyverse)
 ```
@@ -109,7 +110,7 @@ Y = Y + matrix(rnorm(n*t, 0, 0.4), nrow=n) + rchisq(n, 3)
 Y[1:50,] %>% tf::tfd() %>% plot(alpha=0.2)
 ```
 
-<img src="man/figures/README-unnamed-chunk-6-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-5-1.png" width="100%" />
 
 The above plot visualizes a subset of the data generated this way. Since
 the fqpca methodology can deal with sparse and irregular time
@@ -132,6 +133,8 @@ Y.train = Y[1:150,]
 Y.test = Y[151:n,]
 
 results = fqpca(Y=Y.train, npc=2, quantile.value=0.5)
+#> Warning in .recacheSubclasses(def@className, def, env): undefined subclass
+#> "ndiMatrix" of class "replValueSp"; definition not updated
 
 loadings = results$loadings
 scores = results$scores
@@ -155,7 +158,7 @@ but still useful plot
 plot(results, pve=0.95)
 ```
 
-<img src="man/figures/README-unnamed-chunk-10-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-9-1.png" width="100%" />
 
 And you can also compute the quantile error between the curve
 reconstruction and the true data, which is the metric we recommend to
@@ -169,8 +172,8 @@ quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
 
 ### Cross validating
 
-The `FunQuantPCA` package implements functions that allow to perform
-cross validation based on both the `splines.df` or the `alpha.ridge`
+The `FunQ` package implements functions that allow to perform cross
+validation based on both the `splines.df` or the `alpha.ridge`
 criterias.
 
 ``` r
@@ -249,7 +252,7 @@ data %>%
   theme_light()
 ```
 
-<img src="man/figures/README-unnamed-chunk-16-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-15-1.png" width="100%" />
 
 Now we perform cross validation on the degrees of freedom and find the
 optimal value.
@@ -280,7 +283,7 @@ variability in the data. Lets see these components.
 plot(results, pve = 0.99)
 ```
 
-<img src="man/figures/README-unnamed-chunk-19-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-18-1.png" width="100%" />
 
 ### Computing various quantile levels
 
@@ -303,4 +306,4 @@ Y09 = fitted(m09, pve = 0.99)
 Now given an observation we can visualize it’s quantile curves along
 with the raw data
 
-<img src="man/figures/README-unnamed-chunk-21-1.png" width="100%" />
+<img src="man/figures/README-unnamed-chunk-20-1.png" width="100%" />
