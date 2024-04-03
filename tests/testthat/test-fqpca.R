@@ -20,7 +20,7 @@ test_that('rotate_scores_and_loadings function works', {
   expect_equal(round(results$rotation.matrix, 4), round(expected_result$rotation.matrix, 4))
 })
 
-test_that('FQPCA algorithm works for quantile.value=0.1', {
+test_that('FQPCA algorithm for quantile.value=0.1 works', {
   Y = test_data_fqpca()
   results = fqpca(Y=Y, npc=1, quantile.value=0.1, seed=5, verbose=FALSE)
   expected_result = readRDS(test_path("fixtures", "fqpca_01.rds"))
@@ -29,7 +29,7 @@ test_that('FQPCA algorithm works for quantile.value=0.1', {
   expect_equal(results$n.iters, expected_result$n.iters)
 })
 
-test_that('FQPCA algorithm works for quantile.value=0.5', {
+test_that('FQPCA algorithm for quantile.value=0.5 works', {
   Y = test_data_fqpca()
   results = fqpca(Y=Y, npc=1, quantile.value=0.5, seed=5, verbose=FALSE)
   expected_result = readRDS(test_path("fixtures", "fqpca_05.rds"))
@@ -38,12 +38,12 @@ test_that('FQPCA algorithm works for quantile.value=0.5', {
   expect_equal(results$n.iters, expected_result$n.iters)
 })
 
-test_that('FQPCA Predictions works', {
+test_that('FQPCA Fitted values works', {
   Y = test_data_fqpca()
   results = fqpca(Y=Y, npc=1, quantile.value=0.5, seed=5, verbose=FALSE)
-  expected_result = readRDS(test_path("fixtures", "fqpca_05.rds"))
-  newdata = Y[5:9, ]
-  predictions = predict(results, newdata=newdata)
-  expected_predictions = expected_result$scores[5:9,]
-  expect_equal(round(predictions, 4), round(expected_predictions, 4))
+  fitted.values = fitted(results)
+  fitted2 = results$scores %*% t(results$loadings)
+  expect_equal(round(fitted.values, 4), round(fitted2, 4))
 })
+
+

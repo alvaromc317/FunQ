@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Package Version](https://img.shields.io/badge/version-0.1.1-blue.svg)](https://cran.r-project.org/package=yourPackageName)
+[![Package Version](https://img.shields.io/badge/version-0.1.4-blue.svg)](https://cran.r-project.org/package=yourPackageName)
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-brightgreen.svg)](https://www.tidyverse.org/lifecycle/)
 <!-- badges: end -->
 
@@ -72,7 +72,7 @@ where
 * $\varepsilon_i\sim\chi^2(3)$
 
 
-```{r, fig.height = 5, fig.width = 10}
+```{r, fig.height = 4, fig.width = 10}
 set.seed(5)
 
 n = 200
@@ -213,7 +213,7 @@ Y09 = fitted(m09, pve = 0.99)
 
 Now given an observation we can visualize it's quantile curves along with the raw data
 
-```{r, echo=F, warning=F, fig.height = 5, fig.width = 10}
+```{r, echo=F, warning=F, fig.height = 4, fig.width = 10}
 idx_curves = c(5, 10, 15)
 idx_curves_named = rownames(matrix.data)[idx_curves]
 

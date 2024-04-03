@@ -288,8 +288,8 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
   if(quantile.value<0 || quantile.value>1){stop('quantile.value must be a value between 0 and 1. Value provided: ', quantile.value)}
   if(!splines.df == base::floor(splines.df)){stop('splines.df must be an integer number. Value provided: ', splines.df)}
   if(!n.iters == base::floor(n.iters)){stop('n.iters must be an integer number. Value provided: ', n.iters)}
-  if(alpha.ridge<0){stop('alpha.ridge must be greater or equal than 0')}
-  if(tol<0){stop('tol must be greater or equal than 0')}
+  if(alpha.ridge<0){stop('alpha.ridge must be greater or equal than 0. Value provided: ', alpha.ridge)}
+  if(tol<0){stop('tol must be greater or equal than 0. Value provided: ', tol)}
   if(!n.iters == base::floor(n.iters)){stop('n.iters must be an integer number. Value provided: ', n.iters)}
   if(npc > splines.df){stop('The number of componets cannot be larger than the degrees of freedom.')}
 
@@ -388,7 +388,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
       if(all(base::eigen(R.block)$values > 0)){break}
     }
     if(!all(base::eigen(R.block)$values > 0)) {stop('Splines penalization matrix is not positive definite')}
-  } else{R.block <- NULL}
+  }else{R.block <- NULL}
 
   # INITIALIZATION OF SCORES AND LOADINGS -------------------------------------
 
@@ -401,7 +401,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
   scores_0 <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings_0, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
   if(!is.matrix(scores_0))
   {
-    stop('Computation of scores failed at iteration ', 0)
+    stop('Iteration: 0. Failed computation of scores')
   }
 
   # Rotate loadings and scores
@@ -409,7 +409,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
   error_chr <- class(rotation_result)
   if(error_chr=="try-error")
   {
-    warning('Rotation step failed at iteration: ', 0, '. Skipping rotation on this iteration.')
+    warning('Iteration: 0. Failed rotation process. Skipping rotation on this iteration.')
     function.warnings$rotation <- TRUE
     rotation_result <- list(loadings = loadings_0, scores = scores_0, rotation.matrix = diag(npc))
   }
@@ -437,7 +437,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
     spline_coefficients_1 <- try(compute_spline_coefficients(Y = Y, Y.mask = Y.mask, scores = scores_0, spline.basis = spline.basis, quantile.value = quantile.value, method = method, alpha.ridge = alpha.ridge, R.block = R.block, valid.in.quantreg = valid.in.quantreg), silent = TRUE)
     if(!is.matrix(spline_coefficients_1))
     {
-      warning('Computation of spline coefficients failed at iteration ', i, '. Providing results from previous iteration.')
+      warning('Iteration: ', i, '. Failed computation of spline coefficients. Providing results from previous iteration.')
       function.warnings$splines <- TRUE
       break
     }
@@ -449,7 +449,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
     scores_1 <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings_1, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
     if(!is.matrix(scores_1))
     {
-      warning('Computation of scores failed at iteration ', i, '. Providing results from previous iteration.')
+      warning('Iteration: ', i, '. Failed computation of scores. Providing results from previous iteration.')
       function.warnings$scores <- TRUE
       break
     }
@@ -459,7 +459,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
     error_chr <- class(rotation_result)
     if(error_chr=="try-error")
     {
-      warning('Rotation step failed at iteration: ', i, '. Skipping rotation on this iteration.')
+      warning('Iteration: ', i, '. Failed rotation process. Skipping rotation on this iteration.')
       function.warnings$rotation <- TRUE
       rotation_result <- list(loadings = loadings_1, scores = scores_1, rotation.matrix = diag(npc))
     }
@@ -473,7 +473,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
 
     # COMPROBATION OF CONVERGENCE ---------------------------------------------
 
-    if(objective_function_1 < best_results$objective_function)
+    if(objective_function_1 <= best_results$objective_function)
     {
       best_results <- list(loadings = loadings_1, scores = scores_1, objective_function = objective_function_1, spline.coefficients = spline_coefficients_1, rotation.matrix = rotation.matrix_1, iteration = i)
     }
@@ -486,7 +486,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
 
     if(verbose)
     {
-      message('Iteration ', i, ' completed in ', base::round(loop_execution_time, 3), ' seconds',
+      message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration: ', i, ' completed in ', base::round(loop_execution_time, 3), ' seconds',
               '\n', 'Convergence criteria value: ', base::round(convergence_criteria[i], 4),
               '\n', 'Objective function (i-1) value: ', base::round(objective_function_0, 4), ' Objective function i value: ', round(objective_function_1, 4))
       message('___________________________________________________')
@@ -494,7 +494,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
 
     if(convergence_criteria[i] < tol)
     {
-      if(verbose){message('Algorithm converged with value: ', base::round(convergence_criteria[i], 4))}
+      if(verbose){message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Algorithm converged with value: ', base::round(convergence_criteria[i], 4))}
       break
     }
 
@@ -518,11 +518,11 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
     objective_function_0 <- objective_function_1
     scores_0 <- scores_1
   }
-  if(i == n.iters){warning('Algorithm reached maximum number of iterations without convergence: ', n.iters, ' iterations')}
+  if(i == n.iters){warning('Iteration: ', n.iters, '. Algorithm reached maximum number of iterations without convergence. Consider increasing the value of parameter n.iters')}
 
   # EXPLAINED VARIABILITY -----------------------------------------------------
 
-  pve <- compute_explained_variability(rotation_result$scores)
+  pve <- compute_explained_variability(best_results$scores)
 
   global_end_time <- base::Sys.time()
   global_execution_time <- difftime(global_end_time, global_start_time, units = 'secs')
