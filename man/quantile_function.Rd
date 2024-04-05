@@ -2,7 +2,7 @@
 % Please edit documentation in R/fqpca-utils.R
 \name{quantile_function}
 \alias{quantile_function}
-\title{quantile_regression objective value}
+\title{Quantile regression objective value}
 \usage{
 quantile_function(x, quantile.value = 0.5)
 }
@@ -15,5 +15,7 @@ quantile_function(x, quantile.value = 0.5)
 Objective value function for a quantile regression model.
 }
 \description{
+Quantile regression objective value
+
 Objective value function of a quantile regression model
 }

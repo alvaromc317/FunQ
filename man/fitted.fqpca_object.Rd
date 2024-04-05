@@ -17,10 +17,7 @@
 The normalized matrix of scores.
 }
 \description{
-\subsection{S3 method for class 'fqpca_object'}{
-
-Given an fqpca_object model, estimates Yhat for different pve values.
-}
+S3 method for class 'fqpca_object'. Given an fqpca_object model, estimates Yhat for different pve values.
 }
 \examples{
 # Generate fake dataset with 150 observations and 144 time points

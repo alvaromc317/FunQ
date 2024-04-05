@@ -17,5 +17,5 @@ quantile_error(Y, Y.pred, quantile.value)
 The quantile error between the two matrices
 }
 \description{
-Quantile error computation
+Quantile error metric computation
 }

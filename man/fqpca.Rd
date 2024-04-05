@@ -2,7 +2,7 @@
 % Please edit documentation in R/fqpca.R
 \name{fqpca}
 \alias{fqpca}
-\title{FQPCA}
+\title{FQPCA (Functional Quantile Principal Component Analysis)}
 \usage{
 fqpca(
   Y = NULL,
@@ -33,19 +33,13 @@ fqpca(
 
 \item{quantile.value}{The quantile considered.}
 
-\item{periodic}{Boolean indicating if the data is expected to
-be periodic (start coincides with end) or not.}
+\item{periodic}{Boolean indicating if the data is expected to be periodic (start coincides with end) or not.}
 
 \item{splines.df}{Degrees of freedom for the splines.}
 
-\item{method}{Method used in the resolution of the quantile
-regression model. It currently accepts the methods
-\code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with
-any available solver in \code{CVXR} package.}
+\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.}
 
-\item{alpha.ridge}{Hyper parameter controlling the penalization
-on the second derivative of the splines. It has effect
-only with \code{CVXR} methods. Experimantal component.}
+\item{alpha.ridge}{Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{CVXR} methods. Experimantal component.}
 
 \item{tol}{Tolerance on the convergence of the algorithm.}
 

@@ -34,27 +34,19 @@ cross_validation_df(
 
 \item{npc}{The number of estimated components.}
 
-\item{pve}{Float between 0 and 1. Percentage of variability explained by
-components. This affects the number of components used in the curve
-reconstruction and error estimation. Set to NULL to avoid
-this behavior.}
+\item{pve}{Float between 0 and 1. Percentage of variability explained by components. This affects the number of components used in the curve reconstruction and error estimation. Set to NULL to avoid this behavior.}
 
 \item{quantile.value}{The quantile considered.}
 
-\item{alpha.ridge}{An array containing the list of ossible alpha values
-(these should be always positive numbers).}
+\item{alpha.ridge}{An array containing the list of ossible alpha values (these should be always positive numbers).}
 
 \item{n.folds}{Number of folds to be used on cross validation.}
 
 \item{return.models}{Should the list of all the models built be returned?}
 
-\item{criteria}{Criteria used to divide the data.
-Valid values are \code{'rows'}, which considers the division based
-on full rows, or \code{'points'}, which considers the division based
-on points within the matrix.}
+\item{criteria}{Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.}
 
-\item{periodic}{Boolean indicating if the data is expected to
-be periodic (start coincides with end) or not.}
+\item{periodic}{Boolean indicating if the data is expected to be periodic (start coincides with end) or not.}
 
 \item{splines.df.grid}{Grid of possible values for the degrees of freedom.}
 
@@ -62,9 +54,7 @@ be periodic (start coincides with end) or not.}
 
 \item{n.iters}{Maximum number of iterations.}
 
-\item{method}{Method used in the resolution of the quantile
-regression model. This penalized version of \code{fqpca} requires
-any available solver in \code{CVXR} package.}
+\item{method}{Method used in the resolution of the quantile regression model. This penalized version of \code{fqpca} requires any available solver in \code{CVXR} package.}
 
 \item{verbose.fqpca}{Boolean indicating verbosity of the fqpca function.}
 
@@ -73,8 +63,7 @@ any available solver in \code{CVXR} package.}
 \item{seed}{Seed for the random generator number.}
 }
 \value{
-A list containing the matrix of scores, the matrix of loadings,
-and a secondary list with extra information.
+A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
 }
 \description{
 Performs cross validation on degrees of freedom parameter of fqpca
@@ -89,5 +78,4 @@ Y <- Y + matrix(rnorm(200*144, 0, 0.4), nrow = 200)
 Y[sample(200*144, as.integer(0.2*200*144))] <- NA
 
 cv_result <- cross_validation_df(Y, splines.df.grid = c(5, 10, 15), n.folds = 2)
-
 }

@@ -2,14 +2,14 @@
 % Please edit documentation in R/fqpca.R
 \name{predict.fqpca_object}
 \alias{predict.fqpca_object}
-\title{Predict FQPCA}
+\title{Predict fqpca scores}
 \usage{
 \method{predict}{fqpca_object}(object, newdata, ...)
 }
 \arguments{
 \item{object}{An object output of the fqpca function.}
 
-\item{newdata}{The N by T matrix of observed time instants to be tested.}
+\item{newdata}{The N by T matrix of observed time instants to be tested, or the dataframe storing the tf functional vector using the same colname as the one used in the fqpca function.}
 
 \item{...}{further arguments passed to or from other methods.}
 }
@@ -17,10 +17,7 @@
 The normalized matrix of scores.
 }
 \description{
-\subsection{S3 method for class 'fqpca_object'}{
-
-Given a new matrix Y, predicts the value of the scores associated to the given matrix
-}
+S3 method for class 'fqpca_object' Given a new matrix Y, predicts the value of the scores associated to the given matrix.
 }
 \examples{
 # Generate fake dataset with 150 observations and 144 time points

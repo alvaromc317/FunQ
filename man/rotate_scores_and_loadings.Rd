@@ -2,7 +2,7 @@
 % Please edit documentation in R/fqpca.R
 \name{rotate_scores_and_loadings}
 \alias{rotate_scores_and_loadings}
-\title{FQPCA rotation}
+\title{Rotation of fqpca loadings and scores}
 \usage{
 rotate_scores_and_loadings(loadings, scores)
 }
@@ -15,5 +15,5 @@ rotate_scores_and_loadings(loadings, scores)
 The rotated matrices of loadings and scores and the rotation matrix.
 }
 \description{
-Performs the rotation of matrices of loadings and scores in order to ensure the solution is unique.
+Performs the rotation of loadings and scores in order to ensure the solution is unique.
 }

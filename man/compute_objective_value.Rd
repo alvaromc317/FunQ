@@ -2,7 +2,7 @@
 % Please edit documentation in R/fqpca.R
 \name{compute_objective_value}
 \alias{compute_objective_value}
-\title{Compute objective value function}
+\title{Compute objective value function.}
 \usage{
 compute_objective_value(Y, quantile.value, scores, loadings)
 }
@@ -16,8 +16,8 @@ compute_objective_value(Y, quantile.value, scores, loadings)
 \item{loadings}{The matrix of estimated loadings.}
 }
 \value{
-The objective value function
+The objective value function.
 }
 \description{
-Inner function to compute the objective value
+Inner function to compute the objective value of the fqpca methodology at each iteration.
 }

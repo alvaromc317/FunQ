@@ -19,9 +19,7 @@ create_folds(Y, criteria = "points", folds = 3, seed = NULL)
 A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
 }
 \description{
-Splits a given matrix Y into k-folds. based on two possible
-criteria: either based on the total number of rows or the total number of
-data points.
+Splits a given matrix Y into k-folds. based on two possible criteria: either based on the total number of rows or the total number of data points.
 }
 \examples{
 # Generate a small matrix

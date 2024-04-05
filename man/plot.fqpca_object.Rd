@@ -2,7 +2,7 @@
 % Please edit documentation in R/fqpca.R
 \name{plot.fqpca_object}
 \alias{plot.fqpca_object}
-\title{Plot FQPCA loading functions}
+\title{Plot fqpca loading functions}
 \usage{
 \method{plot}{fqpca_object}(x, pve = 0.99, ...)
 }
@@ -17,10 +17,7 @@
 The plot of loadings
 }
 \description{
-\subsection{S3 method for class 'fqpca'}{
-
-Given a fqpca object, plot the loading functions
-}
+S3 method for class 'fqpca_object'. Given a fqpca object, plot the loading functions
 }
 \examples{
 # Generate fake dataset with 150 observations and 144 time points

@@ -1,8 +1,7 @@
 # MATRIX OPERATIONS -----------------------------------------------------------
-#' Pivot long a matrix
-#'
-#' Given a new matrix x of dimensions (n, m) pivot into a (n*m, 3) matrix indexing (row, column, value)
-#'
+
+#' @title Pivot long a matrix
+#' @description Given a new matrix x of dimensions (n, m) pivot into a (n*m, 3) matrix indexing (row, column, value)
 #' @param x Input matrix.
 #' @return The pivoted matrix.
 pivot_long_x <- function(x)
@@ -18,10 +17,8 @@ pivot_long_x <- function(x)
   return(x.df)
 }
 
-#' Pivot short a matrix
-#'
-#' Given a (n*m, 3) matrix indexing (row, column, value) pivots it into an (n, m) matrix.
-#'
+#' @title Pivot short a matrix
+#' @description Given a (n*m, 3) matrix indexing (row, column, value) pivots it into an (n, m) matrix.
 #' @param x.long Input matrix.
 #' @param dimensions array of two elements indicating the dimensions of the original data.
 #' @return The pivoted matrix as a tibble
@@ -39,16 +36,12 @@ pivot_wide_x <- function(x.long, dimensions = NULL)
   return(x)
 }
 
-
 # QUANTILE BASED FUNCTIONS ----------------------------------------------------
 
-#' quantile_regression objective value
-#'
-#' Objective value function of a quantile regression model
-#'
+#' @title Quantile regression objective value
+#' @title Objective value function of a quantile regression model
 #' @param quantile.value Default<-0.5. The quantile considered.
 #' @param x The vector.
-#'
 #' @return Objective value function for a quantile regression model.
 quantile_function <- function(x, quantile.value = 0.5)
 {
@@ -56,16 +49,12 @@ quantile_function <- function(x, quantile.value = 0.5)
   return(0.5 * base::abs(x) + (quantile.value - 0.5) * x)
 }
 
-
-#' Quantile regression model
-#'
-#' Uses the CVXR library to solve a quantile regression model
-#'
+#' @title Quantile regression model
+#' @description Uses the CVXR library to solve a quantile regression model
 #' @param x \eqn{(N \times P)} matrix of predictive variables.
 #' @param y \eqn{(N \times 1)} vector of response.
 #' @param quantile.value The quantile considered.
 #' @param solver Solver to be used by the \code{CVXR} package
-#'
 #' @return Beta coefficients of the quantile regression model.
 quantile_regression <- function(x, y, quantile.value = 0.5, solver = 'SCS')
 {
@@ -81,18 +70,14 @@ quantile_regression <- function(x, y, quantile.value = 0.5, solver = 'SCS')
   return(results)
 }
 
-
-#' Penalized quantile regression
-#'
-#' Uses the CVXR library to solve a penalized quantile regression model
-#'
+#' @title Penalized quantile regression
+#' @description Uses the CVXR library to solve a penalized quantile regression model
 #' @param x \eqn{(N \times P)} matrix of predictive variables.
 #' @param y \eqn{(N \times 1)} vector of response.
 #' @param R Quadratic matrix used to apply a ridge based penalty.
 #' @param quantile.value The quantile considered.
 #' @param lambda The hyper-parameter controlling the penalization.
 #' @param solver Solver to be used by the CVXR package.
-#'
 #' @return Beta coefficients of the penalized quantile regression model.
 quantile_regression_ridge <- function(x, y, R, quantile.value = 0.5, lambda = 1e-3, solver = 'SCS')
 {
@@ -109,29 +94,23 @@ quantile_regression_ridge <- function(x, y, R, quantile.value = 0.5, lambda = 1e
   return(results)
 }
 
-
-#' Quantile error computation
-#'
+#' @title Quantile error computation
+#' @description Quantile error metric computation
 #' @param Y \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.pred \eqn{(N \times T)} matrix of predicted time instants.
 #' @param quantile.value The quantile considered.
-#'
 #' @return The quantile error between the two matrices
-#'
 #' @export
 quantile_error <- function(Y, Y.pred, quantile.value)
 {
   mean(quantile_function(quantile.value = quantile.value, x = (Y - Y.pred)), na.rm = TRUE)
 }
 
-
-#' Proportion of points under quantile
-#'
+#' @title Proportion of points under quantile
+#' @description Proportion of points under quantile.
 #' @param Y \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.pred \eqn{(N \times T)} matrix of predicted time instants.
-#'
 #' @return The proportion of points under the estimated quantile function
-#'
 #' @export
 proportion_under_quantile <- function(Y, Y.pred)
 {
@@ -140,16 +119,12 @@ proportion_under_quantile <- function(Y, Y.pred)
 
 # TRAIN TEST SPLIT ------------------------------------------------------------
 
-#' Split rows of a given matrix Y into train / test
-#'
-#' Split rows of a given matrix Y into train / test based on parameters
-#' train.pct and train.size. If both are informed train.pct takes preference
-#'
+#' @title Split rows of a given matrix Y into train / test
+#' @description Split rows of a given matrix Y into train / test based on parameters train.pct and train.size. If both are informed train.pct takes preference
 #' @param Y \eqn{(N \times P)} matrix of predictive variables.
 #' @param train.pct Float number indicating the % of rows used for training.
 #' @param train.size Integer number indicating number of rows used for training. \code{train.size} is superseded by \code{train.pct}.
 #' @param seed Seed for the random generator number.
-#'
 #' @return A list containing a matrix Y.train and a matrix Y.test
 train_test_split_rows <- function(Y, train.pct = NULL, train.size = NULL, seed = NULL)
 {
@@ -167,18 +142,12 @@ train_test_split_rows <- function(Y, train.pct = NULL, train.size = NULL, seed =
   return(results)
 }
 
-#' Split points of a given matrix Y into train / test
-#'
-#' Split points of a given matrix Y into train / test based on parameters
-#' train.pct and train.size. If both are informed train.pct takes preference.
-#' This function keeps the dimensions of the original Y in both train and test
-#' and substitutes the values in both splits by NAs
-#'
+#' @title Split points of a given matrix Y into train / test
+#' @description Split points of a given matrix Y into train / test based on parameters train.pct and train.size. If both are informed train.pct takes preference. This function keeps the dimensions of the original Y in both train and test and substitutes the values in both splits by NAs
 #' @param Y \eqn{(N \times P)} matrix of predictive variables.
 #' @param train.pct Float number indicating the % of rows used for training.
 #' @param train.size Integer number indicating number of rows used for training. \code{train.size} is superseded by \code{train.pct}.
 #' @param seed Seed for the random generator number.
-#'
 #' @return A list containing a matrix Y.train and a matrix Y.test
 train_test_split_points <- function(Y, train.pct = NULL, train.size = NULL, seed = NULL)
 {
@@ -199,22 +168,15 @@ train_test_split_points <- function(Y, train.pct = NULL, train.size = NULL, seed
   return(results)
 }
 
-
-#' Split a given matrix Y into train / test
-#'
-#' Splits a given matrix into a train / test split based on two possible
-#' criteria: either based on the total number of rows or the total number of
-#' data points.
-#'
+#' @title Split a given matrix Y into train / test
+#' @description Splits a given matrix into a train / test split based on two possible criteria: either based on the total number of rows or the total number of data points.
 #' @param Y \eqn{(N \times P)} matrix of predictive variables.
 #' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
 #' @param train.pct Float number indicating the % of rows used for training. This takes precedence over \code{train.size}.
 #' @param train.size Integer number indicating number of rows used for training. \code{train.size} is superseded by \code{train.pct}.
 #' @param seed Seed for the random generator number.
-#'
 #' @return A list containing a matrix Y.train and a matrix Y.test
 #' @export
-#'
 #' @examples
 #' # Generate a small matrix
 #' Y <- matrix(rnorm(50), nrow = 10)
@@ -241,16 +203,12 @@ train_test_split <- function(Y, criteria = 'points', train.pct = NULL, train.siz
 
 # K-FOLD DIVISION -------------------------------------------------------------
 
-#' Split a given matrix Y into k-folds
-#'
-#' Splits full rows of a given matrix Y into k-folds
-#'
+#' @title Split a given matrix Y into k-folds
+#' @description Splits full rows of a given matrix Y into k-folds
 #' @param Y \eqn{(N \times P)} matrix of predictive variables.
 #' @param folds Integer number indicating number of folds.
 #' @param seed Seed for the random generator number.
-#'
 #' @return A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
-#'
 kfold_cv_rows <- function(Y, folds = 3, seed = NULL)
 {
   if(!is.null(seed)){set.seed(seed)}
@@ -269,18 +227,12 @@ kfold_cv_rows <- function(Y, folds = 3, seed = NULL)
   return(results)
 }
 
-#' Split a given matrix Y into k-folds
-#'
-#' Splits a given matrix Y into k-folds. This function keeps the dimensions of
-#' the original Y in both train and test and substitutes the values in both
-#' split by NAs
-#'
+#' @title Split a given matrix Y into k-folds
+#' @description Splits a given matrix Y into k-folds. This function keeps the dimensions of the original Y in both train and test and substitutes the values in both split by NAs
 #' @param Y \eqn{(N \times P)} matrix of predictive variables.
 #' @param folds Integer number indicating number of folds.
 #' @param seed Seed for the random generator number.
-#'
 #' @return A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
-#'
 kfold_cv_points <- function(Y, folds = 3, seed = NULL)
 {
   value <- NULL # Required to avoid warning when compiling package
@@ -303,20 +255,14 @@ kfold_cv_points <- function(Y, folds = 3, seed = NULL)
   return(results)
 }
 
-#' Split a given matrix Y into k-folds
-#'
-#' Splits a given matrix Y into k-folds. based on two possible
-#' criteria: either based on the total number of rows or the total number of
-#' data points.
-#'
+#' @title Split a given matrix Y into k-folds
+#' @description Splits a given matrix Y into k-folds. based on two possible criteria: either based on the total number of rows or the total number of data points.
 #' @param Y \eqn{(N \times P)} matrix of predictive variables.
 #' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
 #' @param folds Integer number indicating number of folds
 #' @param seed Seed for the random generator number.
-#'
 #' @return A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
 #' @export
-#'
 #' @examples
 #' # Generate a small matrix
 #' Y <- matrix(rnorm(50), nrow = 10)
@@ -344,44 +290,28 @@ create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 
 # CROSS VALIDATION ------------------------------------------------------------
 
-#' CROSS VALIDATION OF ALPHA.RIDGE
-#'
-#' Performs cross validation on alpha parameter of fqpca. Only valid if method
-#' is set to one of the valid options in \code{CVXR}.
-#
+#' @title CROSS VALIDATION OF ALPHA.RIDGE
+#' @description Performs cross validation on alpha parameter of fqpca. Only valid if method is set to one of the valid options in \code{CVXR}
 #' @param Y An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.
 #' @param data data.frame containing the functional data as a tf column.
 #' @param colname The name of the column containing the functional data. If used, data argument must not be NULL.
 #' @param npc The number of estimated components.
-#' @param pve Float between 0 and 1. Percentage of variability explained by
-#'            components. This affects the number of components used in the curve
-#'            reconstruction and error estimation. Set to NULL to avoid
-#'            this behavior.
+#' @param pve Float between 0 and 1. Percentage of variability explained by components. This affects the number of components used in the curve reconstruction and error estimation. Set to NULL to avoid this behavior.
 #' @param quantile.value The quantile considered.
-#' @param periodic Boolean indicating if the data is expected to
-#'                  be periodic (start coincides with end) or not.
+#' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df Degrees of freedom for the splines.
-#' @param method Method used in the resolution of the quantile
-#'                regression model. This penalized version of \code{fqpca} requires
-#'                any available solver in \code{CVXR} package.
-#' @param alpha.grid An array containing the list of ossible alpha values
-#'                    (these should be always positive numbers).
+#' @param method Method used in the resolution of the quantile regression model. This penalized version of \code{fqpca} requires any available solver in \code{CVXR} package.
+#' @param alpha.grid An array containing the list of possible alpha values (these should be always positive numbers).
 #' @param n.folds Number of folds to be used on cross validation.
 #' @param return.models Should the list of all the models built be returned?
-#' @param criteria Criteria used to divide the data.
-#'                 Valid values are \code{'rows'}, which considers the division based
-#'                 on full rows, or \code{'points'}, which considers the division based
-#'                 on points within the matrix.
+#' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
 #' @param tol Tolerance on the convergence of the algorithm.
 #' @param n.iters Maximum number of iterations.
 #' @param verbose.fqpca Boolean indicating verbosity of the fqpca function.
 #' @param verbose.cv Boolean indicating verbosity of the cross-validation process.
 #' @param seed Seed for the random generator number.
-#' @return A list containing the matrix of scores, the matrix of loadings,
-#'          a list with all the trained models (if the return_models param is TRUE)
-#'         and a secondary list with extra information.
+#' @return A list containing the matrix of scores, the matrix of loadings, a list with all the trained models (if the return_models param is TRUE) and a secondary list with extra information.
 #' @export
-#'
 #' @examples
 #' # Generate fake dataset with 200 observations and 144 time points
 #'
@@ -392,7 +322,6 @@ create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 #' Y[sample(200*144, as.integer(0.2*200*144))] <- NA
 #'
 #' cv_result <- cross_validation_alpha(Y, alpha.grid = c(0, 1e-15), n.folds = 2)
-#'
 cross_validation_alpha <- function(Y=NULL, data=NULL, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5, alpha.grid  =  c(0, 1e-16, 1e-14), n.folds = 3, return.models=TRUE, criteria = 'points', periodic = TRUE, splines.df = 10, tol = 1e-3, n.iters = 20, method = 'SCS', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()
@@ -504,42 +433,28 @@ cross_validation_alpha <- function(Y=NULL, data=NULL, colname=NULL, npc = 2,  pv
 }
 
 
-#' CROSS VALIDATION OF DEGREES OF FREEDOM
-#'
-#' Performs cross validation on degrees of freedom parameter of fqpca
-#
+#' @title CROSS VALIDATION OF DEGREES OF FREEDOM
+#' @description Performs cross validation on degrees of freedom parameter of fqpca
 #' @param Y An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.
 #' @param data data.frame containing the functional data as a tf column.
 #' @param colname The name of the column containing the functional data. If used, data argument must not be NULL.
 #' @param npc The number of estimated components.
-#' @param pve Float between 0 and 1. Percentage of variability explained by
-#'            components. This affects the number of components used in the curve
-#'            reconstruction and error estimation. Set to NULL to avoid
-#'            this behavior.
+#' @param pve Float between 0 and 1. Percentage of variability explained by components. This affects the number of components used in the curve reconstruction and error estimation. Set to NULL to avoid this behavior.
 #' @param quantile.value The quantile considered.
-#' @param periodic Boolean indicating if the data is expected to
-#'                  be periodic (start coincides with end) or not.
+#' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df.grid Grid of possible values for the degrees of freedom.
-#' @param method Method used in the resolution of the quantile
-#'                regression model. This penalized version of \code{fqpca} requires
-#'                any available solver in \code{CVXR} package.
-#' @param alpha.ridge An array containing the list of ossible alpha values
-#'                    (these should be always positive numbers).
+#' @param method Method used in the resolution of the quantile regression model. This penalized version of \code{fqpca} requires any available solver in \code{CVXR} package.
+#' @param alpha.ridge An array containing the list of ossible alpha values (these should be always positive numbers).
 #' @param n.folds Number of folds to be used on cross validation.
 #' @param return.models Should the list of all the models built be returned?
-#' @param criteria Criteria used to divide the data.
-#'                 Valid values are \code{'rows'}, which considers the division based
-#'                 on full rows, or \code{'points'}, which considers the division based
-#'                 on points within the matrix.
+#' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
 #' @param tol Tolerance on the convergence of the algorithm.
 #' @param n.iters Maximum number of iterations.
 #' @param verbose.fqpca Boolean indicating verbosity of the fqpca function.
 #' @param verbose.cv Boolean indicating verbosity of the cross-validation process.
 #' @param seed Seed for the random generator number.
-#' @return A list containing the matrix of scores, the matrix of loadings,
-#'         and a secondary list with extra information.
+#' @return A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
 #' @export
-#'
 #' @examples
 #' # Generate fake dataset with 200 observations and 144 time points
 #'
@@ -550,7 +465,6 @@ cross_validation_alpha <- function(Y=NULL, data=NULL, colname=NULL, npc = 2,  pv
 #' Y[sample(200*144, as.integer(0.2*200*144))] <- NA
 #'
 #' cv_result <- cross_validation_df(Y, splines.df.grid = c(5, 10, 15), n.folds = 2)
-#'
 cross_validation_df <- function(Y=NULL, data=NULL, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5,  alpha.ridge = 0, n.folds = 3, return.models = TRUE, criteria = 'points', periodic = TRUE, splines.df.grid = c(5, 10, 15, 20), tol = 1e-3, n.iters = 20, method = 'fn', verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()

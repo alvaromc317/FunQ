@@ -27,9 +27,7 @@ train_test_split(
 A list containing a matrix Y.train and a matrix Y.test
 }
 \description{
-Splits a given matrix into a train / test split based on two possible
-criteria: either based on the total number of rows or the total number of
-data points.
+Splits a given matrix into a train / test split based on two possible criteria: either based on the total number of rows or the total number of data points.
 }
 \examples{
 # Generate a small matrix

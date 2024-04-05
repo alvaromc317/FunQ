@@ -1,17 +1,12 @@
 # FUNCTIONAL QUANTILE PCA ALGORITHM -------------------------------------------
 
-# INNER LOOP FUNCTIONS --------------------------------------------------------
-
-#' Compute objective value function
-#'
-#' Inner function to compute the objective value
-#'
+#' @title Compute objective value function.
+#' @description Inner function to compute the objective value of the fqpca methodology at each iteration.
 #' @param Y \eqn{(N \times T)} matrix of observed time instants.
 #' @param quantile.value The quantile considered.
 #' @param scores The matrix of estimated scores.
 #' @param loadings The matrix of estimated loadings.
-#'
-#' @return The objective value function
+#' @return The objective value function.
 compute_objective_value <- function(Y, quantile.value, scores, loadings)
 {
   Y.pred <- scores %*% t(loadings)
@@ -19,26 +14,17 @@ compute_objective_value <- function(Y, quantile.value, scores, loadings)
   return(objective.value)
 }
 
-#' Compute splines coefficients
-#'
-#' Inner function to compute the splines coefficients of the fqpca methodology.
-#'
+#' @title Compute splines coefficients.
+#' @description Inner function to compute the splines coefficients of the fqpca methodology.
 #' @param Y \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating wich observations in Y are known.
 #' @param scores Initial matrix of scores.
 #' @param spline.basis The spline basis matrix.
 #' @param quantile.value The quantile considered.
-#' @param method Method used in the resolution of the quantile regression model.
-#'                It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')}
-#'                from \code{quantreg} package along with any available solver in \code{CVXR} package.
-#' @param alpha.ridge The hyper-parameter controlling the penalization on the splines.
-#'                    This parameter has no effect if method is not a cvxr-valid
-#'                    method.
-#' @param R.block Block diagonal matrix made of quadratic matrices used to apply
-#'                a ridge based penalty.  This only has effect if method is a
-#'                cvxr-valid method.
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.
+#' @param alpha.ridge The hyper-parameter controlling the penalization on the splines. This parameter has no effect if method is not a cvxr-valid method.
+#' @param R.block Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if method is a cvxr-valid method.
 #' @param valid.in.quantreg Array of valid \code{quantreg} methods.
-#'
 #' @return The matrix of spline coefficients splines coefficients.
 compute_spline_coefficients <- function(Y, Y.mask, scores, spline.basis, quantile.value, method, alpha.ridge, R.block, valid.in.quantreg)
 {
@@ -67,6 +53,7 @@ compute_spline_coefficients <- function(Y, Y.mask, scores, spline.basis, quantil
   if(method %in% valid.in.quantreg)
   {
     B.vector <- quantreg::rq(Y.vector ~ -1+tensor.matrix, tau=quantile.value, method=method)$coefficients
+    a = 5
   } else{
     B.vector <- quantile_regression_ridge(x=tensor.matrix, y=Y.vector,  R=R.block, quantile.value=quantile.value, lambda=alpha.ridge, solver=method)
   }
@@ -74,13 +61,10 @@ compute_spline_coefficients <- function(Y, Y.mask, scores, spline.basis, quantil
   return(spline.coefficients)
 }
 
-#' Compute loadings (aka principal components)
-#'
-#' Inner function to compute the loadings of the fqpca methodology.
-#'
+#' @title Compute loadings (aka principal components)
+#' @description Inner function to compute the loadings of the fqpca methodology.
 #' @param spline.basis The spline basis matrix.
 #' @param spline.coefficients the matrix of spline coefficients.
-#'
 #' @return The matrix of loadings
 compute_loadings <- function(spline.basis, spline.coefficients)
 {
@@ -88,20 +72,16 @@ compute_loadings <- function(spline.basis, spline.coefficients)
   return(loadings)
 }
 
-#' Compute scores
-#'
-#' Inner function to compute the scores of the fqpca methodology.
-#'
+#' @title Compute scores
+#' @description Inner function to compute the scores of the fqpca methodology.
 #' @param Y The \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
 #' @param loadings Matrix of loading coefficients.
 #' @param quantile.value The quantile considered.
 #' @param parallelized.scores Should the scores be computed in parallel?
 #' @param num.cores Number of cores used in parallel executions.
-#'
 #' @return The matrix of scores.
 #' @importFrom foreach %dopar%
-#'
 compute_scores <- function(Y, Y.mask, loadings, quantile.value, parallelized.scores, num.cores)
 {
   n.obs <- base::nrow(Y)
@@ -141,15 +121,10 @@ compute_scores <- function(Y, Y.mask, loadings, quantile.value, parallelized.sco
   return(scores)
 }
 
-# OUTER LOOP FUNCTIONS --------------------------------------------------------
-
-#' FQPCA rotation
-#'
-#' Performs the rotation of matrices of loadings and scores in order to ensure the solution is unique.
-#'
+#' @title Rotation of fqpca loadings and scores
+#' @description Performs the rotation of loadings and scores in order to ensure the solution is unique.
 #' @param loadings Matrix of loadings.
 #' @param scores Matrix of scores.
-#'
 #' @return The rotated matrices of loadings and scores and the rotation matrix.
 rotate_scores_and_loadings <- function(loadings, scores)
 {
@@ -178,12 +153,9 @@ rotate_scores_and_loadings <- function(loadings, scores)
   return(results)
 }
 
-#' FQPCA explained variability
-#'
-#' Computes the percentage of explained variability based on the variance of the scores matrix
-#'
+#' @title Explained variability of the fqpca scores computation
+#' @description Computes the percentage of explained variability based on the variance of the scores matrix
 #' @param scores Matrix of scores.
-#'
 #' @return The percentage of variability each component is explaining.
 compute_explained_variability <- function(scores)
 {
@@ -200,12 +172,12 @@ compute_explained_variability <- function(scores)
 
 # MAIN ------------------------------------------------------------------------
 
-new_fqpca <- function(loadings, scores, pve, objective.function.value,
-                      list.objective.function.values, execution.time, function.warnings,
-                      colname, npc, quantile.value, method, alpha.ridge,
-                      periodic, splines.df, tol, n.iters, verbose, seed,
-                      parallelized.scores, num.cores,
-                      rotation.matrix, spline.coefficients, spline.basis)
+fqpca_structure <- function(loadings, scores, pve, objective.function.value,
+                            list.objective.function.values, execution.time, function.warnings,
+                            colname, npc, quantile.value, method, alpha.ridge,
+                            periodic, splines.df, tol, n.iters, verbose, seed,
+                            parallelized.scores, num.cores,
+                            rotation.matrix, spline.coefficients, spline.basis)
 {
   structure(list(
     loadings = loadings,
@@ -235,36 +207,25 @@ new_fqpca <- function(loadings, scores, pve, objective.function.value,
   class = "fqpca_object")
 }
 
-
-#' FQPCA
-#'
-#' Solves the functional quantile principal component analysis methodology
-#'
+#' @title FQPCA (Functional Quantile Principal Component Analysis)
+#' @description Solves the functional quantile principal component analysis methodology
 #' @param Y An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.
 #' @param data data.frame containing the functional data as a tf column.
 #' @param colname The name of the column containing the functional data. If used, data argument must not be NULL.
 #' @param npc The number of estimated components.
 #' @param quantile.value The quantile considered.
-#' @param periodic Boolean indicating if the data is expected to
-#'                  be periodic (start coincides with end) or not.
+#' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df Degrees of freedom for the splines.
-#' @param method Method used in the resolution of the quantile
-#'                regression model. It currently accepts the methods
-#'                \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with
-#'                any available solver in \code{CVXR} package.
-#' @param alpha.ridge  Hyper parameter controlling the penalization
-#'                      on the second derivative of the splines. It has effect
-#'                      only with \code{CVXR} methods. Experimantal component.
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.
+#' @param alpha.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{CVXR} methods. Experimantal component.
 #' @param tol Tolerance on the convergence of the algorithm.
 #' @param n.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
 #' @param seed Seed for the random generator number.
 #' @param parallelized.scores Should the scores be computed in parallel? Experimantal component.
 #' @param num.cores Number of cores to use in parallelized executions.
-#'
 #' @return fqpca_object
 #' @export
-#'
 #' @examples
 #' # Generate fake dataset with 150 observations and 144 time points
 #'
@@ -527,7 +488,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
   global_end_time <- base::Sys.time()
   global_execution_time <- difftime(global_end_time, global_start_time, units = 'secs')
 
-  results <- new_fqpca(
+  results <- fqpca_structure(
     loadings = best_results$loadings,
     scores = best_results$scores,
     pve = pve,
@@ -557,18 +518,13 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
 
 # PREDICTIONS -----------------------------------------------------------------
 
-#' Predict FQPCA
-#'
-#' ## S3 method for class 'fqpca_object'
-#' Given a new matrix Y, predicts the value of the scores associated to the given matrix
-#'
+#' @title Predict fqpca scores
+#' @description S3 method for class 'fqpca_object' Given a new matrix Y, predicts the value of the scores associated to the given matrix.
 #' @param object An object output of the fqpca function.
-#' @param newdata The N by T matrix of observed time instants to be tested.
+#' @param newdata The N by T matrix of observed time instants to be tested, or the dataframe storing the tf functional vector using the same colname as the one used in the fqpca function.
 #' @param ... further arguments passed to or from other methods.
-#'
 #' @return The normalized matrix of scores.
 #' @export
-#'
 #' @examples
 #' # Generate fake dataset with 150 observations and 144 time points
 #'
@@ -607,19 +563,13 @@ predict.fqpca_object <- function(object, newdata, ...)
   return(scores)
 }
 
-
-#' Fit Yhat
-#'
-#' ## S3 method for class 'fqpca_object'
-#' Given an fqpca_object model, estimates Yhat for different pve values.
-#'
+#' @title Fit Yhat
+#' @description S3 method for class 'fqpca_object'. Given an fqpca_object model, estimates Yhat for different pve values.
 #' @param object An object output of the fqpca function.
 #' @param pve Percentage of explained variability used in Yhat estimation.
 #' @param ... further arguments passed to or from other methods.
-#'
 #' @return The normalized matrix of scores.
 #' @export
-#'
 #' @examples
 #' # Generate fake dataset with 150 observations and 144 time points
 #'
@@ -643,18 +593,13 @@ fitted.fqpca_object <- function(object, pve=0.95, ...)
 
 # BASIC PLOT ------------------------------------------------------------------
 
-#' Plot FQPCA loading functions
-#'
-#' ## S3 method for class 'fqpca'
-#' Given a fqpca object, plot the loading functions
-#'
+#' @title Plot fqpca loading functions
+#' @description S3 method for class 'fqpca_object'. Given a fqpca object, plot the loading functions
 #' @param x An object output of the fqpca function.
 #' @param pve Percentage of explained variability plotted.
 #' @param ... further arguments passed to or from other methods.
-#'
 #' @return The plot of loadings
 #' @export
-#'
 #' @examples
 #' # Generate fake dataset with 150 observations and 144 time points
 #'

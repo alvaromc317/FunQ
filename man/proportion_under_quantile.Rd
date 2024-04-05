@@ -15,5 +15,5 @@ proportion_under_quantile(Y, Y.pred)
 The proportion of points under the estimated quantile function
 }
 \description{
-Proportion of points under quantile
+Proportion of points under quantile.
 }

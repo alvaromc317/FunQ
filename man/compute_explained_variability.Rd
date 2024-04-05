@@ -2,7 +2,7 @@
 % Please edit documentation in R/fqpca.R
 \name{compute_explained_variability}
 \alias{compute_explained_variability}
-\title{FQPCA explained variability}
+\title{Explained variability of the fqpca scores computation}
 \usage{
 compute_explained_variability(scores)
 }
