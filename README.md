@@ -8,7 +8,7 @@
 [![License: GPL
 v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Package
-Version](https://img.shields.io/badge/version-0.1.4-blue.svg)](https://cran.r-project.org/package=yourPackageName)
+Version](https://img.shields.io/badge/version-0.1.5-blue.svg)](https://cran.r-project.org/package=yourPackageName)
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-brightgreen.svg)](https://www.tidyverse.org/lifecycle/)
 <!-- badges: end -->
 
@@ -133,8 +133,6 @@ Y.train = Y[1:150,]
 Y.test = Y[151:n,]
 
 results = fqpca(Y=Y.train, npc=2, quantile.value=0.5)
-#> Warning in .recacheSubclasses(def@className, def, env): undefined subclass
-#> "ndiMatrix" of class "replValueSp"; definition not updated
 
 loadings = results$loadings
 scores = results$scores
@@ -167,7 +165,7 @@ the quantile of interest, which should be adjusted accordingly.
 
 ``` r
 quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
-#> [1] 0.1597887
+#> [1] 0.1597831
 ```
 
 ### Cross validating
@@ -181,10 +179,10 @@ splines.df.grid = c(5, 10, 15, 20)
 cv_result = cross_validation_df(Y, splines.df.grid=splines.df.grid, n.folds=3, verbose.cv=F)
 cv_result$error.matrix
 #>           [,1]      [,2]      [,3]
-#> [1,] 0.1624653 0.1675118 0.1686759
-#> [2,] 0.1622251 0.1686631 0.1683392
-#> [3,] 0.1645898 0.1684819 0.1684835
-#> [4,] 0.1643526 0.1695015 0.1686037
+#> [1,] 0.1625077 0.1671439 0.1682230
+#> [2,] 0.1626262 0.1690548 0.1681896
+#> [3,] 0.1649486 0.1689905 0.1683290
+#> [4,] 0.1640411 0.1688536 0.1686171
 ```
 
 The dimensions of the error matrix are
@@ -272,8 +270,8 @@ explained variability.
 ``` r
 results = fqpca(Y=data$temperature, npc=10, quantile.value=0.5, splines.df=optimal_df, seed=5)
 cumsum(results$pve)
-#>  [1] 0.8876520 0.9725248 0.9918223 0.9970402 0.9982178 0.9990845 0.9995472
-#>  [8] 0.9997868 0.9999240 1.0000000
+#>  [1] 0.8872604 0.9721988 0.9917052 0.9969639 0.9981614 0.9990531 0.9995422
+#>  [8] 0.9997888 0.9999272 1.0000000
 ```
 
 This shows that with 3 components we are able to explain 99.1% of the

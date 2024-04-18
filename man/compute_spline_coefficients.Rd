@@ -2,18 +2,18 @@
 % Please edit documentation in R/fqpca.R
 \name{compute_spline_coefficients}
 \alias{compute_spline_coefficients}
-\title{Compute splines coefficients.}
+\title{Compute spline coefficients}
 \usage{
 compute_spline_coefficients(
   Y,
   Y.mask,
   scores,
   spline.basis,
+  intercept.spline.basis,
   quantile.value,
   method,
   alpha.ridge,
-  R.block,
-  valid.in.quantreg
+  R.block
 )
 }
 \arguments{
@@ -25,19 +25,19 @@ compute_spline_coefficients(
 
 \item{spline.basis}{The spline basis matrix.}
 
+\item{intercept.spline.basis}{The spline basis matrix for the conquer intercept.}
+
 \item{quantile.value}{The quantile considered.}
 
-\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.}
+\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')} along with any available solver in \code{CVXR} package.}
 
 \item{alpha.ridge}{The hyper-parameter controlling the penalization on the splines. This parameter has no effect if method is not a cvxr-valid method.}
 
 \item{R.block}{Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if method is a cvxr-valid method.}
-
-\item{valid.in.quantreg}{Array of valid \code{quantreg} methods.}
 }
 \value{
 The matrix of spline coefficients splines coefficients.
 }
 \description{
-Inner function to compute the splines coefficients of the fqpca methodology.
+Inner function to compute the spline coefficients of the fqpca methodology.
 }

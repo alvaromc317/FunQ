@@ -20,6 +20,7 @@ cross_validation_alpha(
   tol = 0.001,
   n.iters = 20,
   method = "SCS",
+  penalized = TRUE,
   verbose.fqpca = FALSE,
   verbose.cv = TRUE,
   seed = NULL
@@ -54,7 +55,9 @@ cross_validation_alpha(
 
 \item{n.iters}{Maximum number of iterations.}
 
-\item{method}{Method used in the resolution of the quantile regression model. This penalized version of \code{fqpca} requires any available solver in \code{CVXR} package.}
+\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.}
+
+\item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.}
 
 \item{verbose.fqpca}{Boolean indicating verbosity of the fqpca function.}
 

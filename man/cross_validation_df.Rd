@@ -19,7 +19,8 @@ cross_validation_df(
   splines.df.grid = c(5, 10, 15, 20),
   tol = 0.001,
   n.iters = 20,
-  method = "fn",
+  method = "conquer",
+  penalized = FALSE,
   verbose.fqpca = FALSE,
   verbose.cv = TRUE,
   seed = NULL
@@ -38,7 +39,7 @@ cross_validation_df(
 
 \item{quantile.value}{The quantile considered.}
 
-\item{alpha.ridge}{An array containing the list of ossible alpha values (these should be always positive numbers).}
+\item{alpha.ridge}{Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}. Experimantal component.}
 
 \item{n.folds}{Number of folds to be used on cross validation.}
 
@@ -54,7 +55,9 @@ cross_validation_df(
 
 \item{n.iters}{Maximum number of iterations.}
 
-\item{method}{Method used in the resolution of the quantile regression model. This penalized version of \code{fqpca} requires any available solver in \code{CVXR} package.}
+\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.}
+
+\item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.}
 
 \item{verbose.fqpca}{Boolean indicating verbosity of the fqpca function.}
 

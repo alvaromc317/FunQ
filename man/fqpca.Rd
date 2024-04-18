@@ -12,7 +12,8 @@ fqpca(
   quantile.value = 0.5,
   periodic = TRUE,
   splines.df = 10,
-  method = "fn",
+  method = "conquer",
+  penalized = FALSE,
   alpha.ridge = 0,
   tol = 0.001,
   n.iters = 20,
@@ -39,7 +40,9 @@ fqpca(
 
 \item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.}
 
-\item{alpha.ridge}{Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{CVXR} methods. Experimantal component.}
+\item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.}
+
+\item{alpha.ridge}{Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}. Experimantal component.}
 
 \item{tol}{Tolerance on the convergence of the algorithm.}
 

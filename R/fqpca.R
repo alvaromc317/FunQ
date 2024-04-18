@@ -1,5 +1,6 @@
 # FUNCTIONAL QUANTILE PCA ALGORITHM -------------------------------------------
 
+
 #' @title Compute objective value function.
 #' @description Inner function to compute the objective value of the fqpca methodology at each iteration.
 #' @param Y \eqn{(N \times T)} matrix of observed time instants.
@@ -10,66 +11,8 @@
 compute_objective_value <- function(Y, quantile.value, scores, loadings)
 {
   Y.pred <- scores %*% t(loadings)
-  objective.value <- FunQ::quantile_error(Y=Y, Y.pred=Y.pred, quantile.value=quantile.value)
+  objective.value <- quantile_error(Y=Y, Y.pred=Y.pred, quantile.value=quantile.value)
   return(objective.value)
-}
-
-#' @title Compute splines coefficients.
-#' @description Inner function to compute the splines coefficients of the fqpca methodology.
-#' @param Y \eqn{(N \times T)} matrix of observed time instants.
-#' @param Y.mask Mask matrix of the same dimensions as Y indicating wich observations in Y are known.
-#' @param scores Initial matrix of scores.
-#' @param spline.basis The spline basis matrix.
-#' @param quantile.value The quantile considered.
-#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.
-#' @param alpha.ridge The hyper-parameter controlling the penalization on the splines. This parameter has no effect if method is not a cvxr-valid method.
-#' @param R.block Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if method is a cvxr-valid method.
-#' @param valid.in.quantreg Array of valid \code{quantreg} methods.
-#' @return The matrix of spline coefficients splines coefficients.
-compute_spline_coefficients <- function(Y, Y.mask, scores, spline.basis, quantile.value, method, alpha.ridge, R.block, valid.in.quantreg)
-{
-  # At each iteration, call this function to obtain the estimation of F and Lambda
-  n.obs <- base::nrow(Y)
-  npc <- base::ncol(scores)
-  n.basis <- base::ncol(spline.basis)
-  # vectorize Y [Y11, ..., Y1T, Y21, ..., Y2T,...YNT]
-  Y.vector <- c()
-  for(i in base::seq(n.obs))
-  {
-    Y.vector <- c(Y.vector, Y[i, Y.mask[i,]])
-  }
-  # Compute tensor product of Lambda and spline basis
-  tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=npc*n.basis)
-  row.idx <- 1
-  for(i in base::seq(n.obs))
-  {
-    lambda.i <- base::matrix(scores[i, ], nrow=1)
-    tmp.splines <- spline.basis[Y.mask[i, ], ]
-    n.time.i <- base::nrow(tmp.splines)
-    tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::kronecker(lambda.i, tmp.splines)
-    row.idx <- row.idx+n.time.i
-  }
-
-  if(method %in% valid.in.quantreg)
-  {
-    B.vector <- quantreg::rq(Y.vector ~ -1+tensor.matrix, tau=quantile.value, method=method)$coefficients
-    a = 5
-  } else{
-    B.vector <- quantile_regression_ridge(x=tensor.matrix, y=Y.vector,  R=R.block, quantile.value=quantile.value, lambda=alpha.ridge, solver=method)
-  }
-  spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=npc)
-  return(spline.coefficients)
-}
-
-#' @title Compute loadings (aka principal components)
-#' @description Inner function to compute the loadings of the fqpca methodology.
-#' @param spline.basis The spline basis matrix.
-#' @param spline.coefficients the matrix of spline coefficients.
-#' @return The matrix of loadings
-compute_loadings <- function(spline.basis, spline.coefficients)
-{
-  loadings <- spline.basis %*% spline.coefficients
-  return(loadings)
 }
 
 #' @title Compute scores
@@ -84,22 +27,22 @@ compute_loadings <- function(spline.basis, spline.coefficients)
 #' @importFrom foreach %dopar%
 compute_scores <- function(Y, Y.mask, loadings, quantile.value, parallelized.scores, num.cores)
 {
+  # Initialize the matrix of scores
   n.obs <- base::nrow(Y)
   npc <- base::ncol(loadings)
-  # Initialize the matrix of scores
   scores <-  base::matrix(0, n.obs, npc-1)
 
   if(parallelized.scores)
   {
+    # Initialize the cluster each time the scores are computed
     cl = parallel::makeCluster(num.cores)
     doParallel::registerDoParallel(cl)
     scores <-
       foreach::foreach(i = base::seq(n.obs), .combine='rbind') %dopar%
       {
         loadings.obs <- loadings[Y.mask[i, ], ]
-        Yi <- Y[i, Y.mask[i, ]]
-        Yi <- Yi - loadings.obs[,1]
-        quantreg::rq(Yi ~ -1 + loadings.obs[,2:npc], tau=quantile.value)$coefficients
+        Yi <- Y[i, Y.mask[i, ]] - loadings.obs[,1]
+        quantreg::rq.fit.br(y=Yi, x=loadings.obs[,2:npc], tau=quantile.value)$coefficients
       }
     parallel::stopCluster(cl)
     foreach::registerDoSEQ()
@@ -109,16 +52,95 @@ compute_scores <- function(Y, Y.mask, loadings, quantile.value, parallelized.sco
     {
       # Obtain the loadings associated to observation i with a specific time grid
       loadings.obs <- loadings[Y.mask[i, ], ]
-      # Obtain the observation removing missing data
-      Yi <- Y[i, Y.mask[i, ]]
-      # Substract intercept
-      Yi <- Yi - loadings.obs[,1]
-      scores[i,] <-  quantreg::rq(Yi ~ -1 + loadings.obs[,2:npc], tau=quantile.value)$coefficients
+      # Obtain the observation removing missing data and substract intercept
+      Yi <- Y[i, Y.mask[i, ]] - loadings.obs[,1]
+      scores[i,] <-  quantreg::rq.fit.br(y=Yi, x=loadings.obs[,2:npc], tau=quantile.value)$coefficients
     }
   }
   # Add intercept column
   scores <- base::cbind(1, scores)
   return(scores)
+}
+
+#' @title Compute spline coefficients
+#' @description Inner function to compute the spline coefficients of the fqpca methodology.
+#' @param Y \eqn{(N \times T)} matrix of observed time instants.
+#' @param Y.mask Mask matrix of the same dimensions as Y indicating wich observations in Y are known.
+#' @param scores Initial matrix of scores.
+#' @param spline.basis The spline basis matrix.
+#' @param intercept.spline.basis The spline basis matrix for the conquer intercept.
+#' @param quantile.value The quantile considered.
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')} along with any available solver in \code{CVXR} package.
+#' @param alpha.ridge The hyper-parameter controlling the penalization on the splines. This parameter has no effect if method is not a cvxr-valid method.
+#' @param R.block Block diagonal matrix made of quadratic matrices used to apply a ridge based penalty.  This only has effect if method is a cvxr-valid method.
+#' @return The matrix of spline coefficients splines coefficients.
+compute_spline_coefficients <- function(Y, Y.mask, scores, spline.basis, intercept.spline.basis, quantile.value, method, alpha.ridge, R.block)
+{
+  n.obs <- base::nrow(Y)
+  npc <- base::ncol(scores)
+  n.basis <- base::ncol(spline.basis)
+  # vectorize Y [Y11, ..., Y1T, Y21, ..., Y2T,...YNT]
+  Y.vector <- c()
+  for(i in base::seq(n.obs)){Y.vector <- c(Y.vector, Y[i, Y.mask[i,]])}
+
+  # Compute tensor product of scores and spline basis
+  # Solve the large quantile regression model
+  if(method == 'conquer')
+  {
+    tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=npc*n.basis-1)
+    row.idx <- 1
+    for(i in base::seq(n.obs))
+    {
+      scores.i <- base::matrix(scores[i, -1], nrow=1)
+      tmp.splines <- spline.basis[Y.mask[i, ], ]
+      tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], ]
+      n.time.i <- base::nrow(tmp.splines)
+      tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::cbind(tmp.intercept.splines, base::kronecker(scores.i, tmp.splines))
+      row.idx <- row.idx+n.time.i
+    }
+    B.vector <- conquer::conquer(Y=Y.vector, X=tensor.matrix, tau=quantile.value)$coeff
+    spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=npc)
+  }else{
+    tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=npc*n.basis)
+    row.idx <- 1
+    for(i in base::seq(n.obs))
+    {
+      scores.i <- base::matrix(scores[i, ], nrow=1)
+      tmp.splines <- spline.basis[Y.mask[i, ], ]
+      n.time.i <- base::nrow(tmp.splines)
+      tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::kronecker(scores.i, tmp.splines)
+      row.idx <- row.idx+n.time.i
+    }
+    if(method == 'quantreg')
+    {
+      B.vector <- quantreg::rq.fit.fnb(y=Y.vector, x=tensor.matrix, tau=quantile.value)$coefficients
+    }else if(method %in% CVXR::installed_solvers())
+    {
+      B.vector <- quantile_regression_ridge(x=tensor.matrix, y=Y.vector,  R=R.block, quantile.value=quantile.value, lambda=alpha.ridge, solver=method)
+    }
+    spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=npc)
+  }
+  return(spline.coefficients)
+}
+
+#' @title Compute loadings (aka principal components)
+#' @description Inner function to compute the loadings of the fqpca methodology.
+#' @param spline.basis The spline basis matrix.
+#' @param intercept.spline.basis The spline basis matrix for the conquer intercept.
+#' @param spline.coefficients the matrix of spline coefficients.
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')} along with any available solver in \code{CVXR} package.
+#' @return The matrix of loadings
+compute_loadings <- function(spline.basis, intercept.spline.basis, spline.coefficients, method)
+{
+  if(method == 'conquer')
+  {
+    intercept.part <- cbind(1, intercept.spline.basis) %*% matrix(spline.coefficients[,1], ncol=1)
+    fqpc.part <- spline.basis %*% spline.coefficients[,-1]
+    loadings <- cbind(intercept.part, fqpc.part)
+  }else{
+    loadings <- spline.basis %*% spline.coefficients
+  }
+  return(loadings)
 }
 
 #' @title Rotation of fqpca loadings and scores
@@ -135,9 +157,9 @@ rotate_scores_and_loadings <- function(loadings, scores)
   scores.no.intercept <- base::matrix(scores[, 2:ncol(scores)], ncol=npc)
 
   # Ensure scores are mean-centered and move the effect of the mean scores to the intercept
-  means_scores <- base::matrix(colMeans(scores.no.intercept), ncol=1)
+  means.scores <- base::matrix(colMeans(scores.no.intercept), ncol=1)
   scores.no.intercept <- base::scale(scores.no.intercept, center=TRUE, scale=FALSE)
-  loadings[, 1] <- loadings[, 1] + loadings.no.intercept %*% means_scores
+  loadings[, 1] <- loadings[, 1] + loadings.no.intercept %*% means.scores
 
   # Perform rotation
   cov.score <- stats::cov(scores.no.intercept)
@@ -173,24 +195,25 @@ compute_explained_variability <- function(scores)
 # MAIN ------------------------------------------------------------------------
 
 fqpca_structure <- function(loadings, scores, pve, objective.function.value,
-                            list.objective.function.values, execution.time, function.warnings,
-                            colname, npc, quantile.value, method, alpha.ridge,
-                            periodic, splines.df, tol, n.iters, verbose, seed,
-                            parallelized.scores, num.cores,
-                            rotation.matrix, spline.coefficients, spline.basis)
+                            objective.function.array, function.warnings,
+                            execution.time, colname, npc, quantile.value, method,
+                            penalized, alpha.ridge, periodic, splines.df, tol, n.iters, verbose,
+                            seed, parallelized.scores, num.cores, rotation.matrix,
+                            spline.coefficients, spline.basis, intercept.conquer.basis)
 {
   structure(list(
     loadings = loadings,
     scores = scores,
     pve = pve,
     objective.function.value = objective.function.value,
-    list.objective.function.values = list.objective.function.values,
-    execution.time = execution.time,
+    objective.function.array = objective.function.array,
     function.warnings = function.warnings,
+    execution.time = execution.time,
     colname = colname,
     npc = npc,
     quantile.value = quantile.value,
     method = method,
+    penalized = penalized,
     alpha.ridge = alpha.ridge,
     periodic = periodic,
     splines.df = splines.df,
@@ -202,7 +225,8 @@ fqpca_structure <- function(loadings, scores, pve, objective.function.value,
     num.cores = num.cores,
     rotation.matrix = rotation.matrix,
     spline.coefficients = spline.coefficients,
-    spline.basis = spline.basis
+    spline.basis = spline.basis,
+    intercept.conquer.basis = intercept.conquer.basis
   ),
   class = "fqpca_object")
 }
@@ -217,7 +241,8 @@ fqpca_structure <- function(loadings, scores, pve, objective.function.value,
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df Degrees of freedom for the splines.
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.
-#' @param alpha.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{CVXR} methods. Experimantal component.
+#' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.
+#' @param alpha.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}. Experimantal component.
 #' @param tol Tolerance on the convergence of the algorithm.
 #' @param n.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
@@ -239,9 +264,9 @@ fqpca_structure <- function(loadings, scores, pve, objective.function.value,
 #'
 #' loadings <- results$loadings
 #' scores <- results$scores
-fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.df = 10, method = 'fn', alpha.ridge = 0, tol = 1e-3, n.iters = 20, verbose = FALSE, seed = NULL, parallelized.scores=FALSE, num.cores=NULL)
+fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.df = 10, method = 'conquer', penalized = FALSE, alpha.ridge = 0, tol = 1e-3, n.iters = 20, verbose = FALSE, seed = NULL, parallelized.scores=FALSE, num.cores=NULL)
 {
-  global_start_time <- base::Sys.time()
+  global.start.time <- base::Sys.time()
 
   # BASIC COMPROBATIONS -------------------------------------------------------
 
@@ -251,7 +276,6 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
   if(!n.iters == base::floor(n.iters)){stop('n.iters must be an integer number. Value provided: ', n.iters)}
   if(alpha.ridge<0){stop('alpha.ridge must be greater or equal than 0. Value provided: ', alpha.ridge)}
   if(tol<0){stop('tol must be greater or equal than 0. Value provided: ', tol)}
-  if(!n.iters == base::floor(n.iters)){stop('n.iters must be an integer number. Value provided: ', n.iters)}
   if(npc > splines.df){stop('The number of componets cannot be larger than the degrees of freedom.')}
 
   # DETERMINE IF THE DATA PROVIDED IS A MATRIX OR FUNCTIONAL VECTOR Y, OR IF IT IS A DATAFRAME-COLUMN PAIR
@@ -289,41 +313,30 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
     }
   }
 
-  # DETERMINE IF THE ALGORITHM RUNS USING PENALIZED OR UNPENALIZED SPLINES ----
-
-  valid.in.quantreg <- c('br', 'fn', 'sfn', 'pfn')
-  if(method %in% valid.in.quantreg)
+  # CHECK IF THE METHOD IS VALID
+  if(penalized)
   {
-    penalized <- FALSE
-  } else{
-    # Check available solvers in CVXR
     valid.in.cvxr <- CVXR::installed_solvers()
-    if(method %in% valid.in.cvxr)
+    if(!(method %in% valid.in.cvxr))
     {
-      penalized <- TRUE
-    } else{
-      stop('Invalid method provided. Valid methods include the quantreg methods
-         c("br", "fn", "sfn", "pfn") and any installed solver for CVXR.
-         Value provided: ', method)
+      stop('The penalized parameter requires the method parameter to be a cvxr-compatible method. The method provided was: ', method, '. The available cvxr-compatible methods are: ', paste0(valid.in.cvxr, ', '))
     }
+  }else if(!(method %in% c('conquer', 'quantreg')))
+  {
+    stop('Invalid method provided. Valid methods are: conquer, to use the conquer library for quantile regression, quantreg, to use the quantreg library or any available method for CVXR if the penalized parameter is set to TRUE. The method provided was: ', method)
   }
 
+  # INITIALISE NUMBER OF CORES FOR PARALLELIZED COMPUTATION
   if(!base::is.null(seed)){base::set.seed(seed)}
 
-  if(parallelized.scores)
-  {
-    if(is.null(num.cores))
-    {
-      num.cores <- parallel::detectCores() - 1
-    }
-  }
+  if(parallelized.scores && is.null(num.cores)){num.cores <- parallel::detectCores() - 1}
 
   # Step 1: Initialize values
   Y <- base::unname(base::as.matrix(Y))
   n.time <- base::dim(Y)[2]
   Y.axis <- base::seq(0, 1, length.out = n.time)
   Y.mask <- !base::is.na(Y)
-  function.warnings <- list(splines = FALSE, scores = FALSE, diverging.loop = FALSE, rotation = FALSE)
+  function.warnings <- list(splines = FALSE, scores = FALSE, rotation = FALSE, diverging.loop = FALSE)
 
   # INITIALIZATION OF SPLINE BASIS --------------------------------------------
 
@@ -335,7 +348,9 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
     knots <- base::seq(0, 1, length.out = 2 + splines.df - 3 - 1) # 2 boundary knots + df - degree - intercept
   }
   knots <- knots[2:(base::length(knots)-1)]
-  spline.basis <-  splines2::mSpline(Y.axis, degree = 3, intercept = TRUE, knots = knots, periodic = periodic, Boundary.knots = c(min(Y.axis), max(Y.axis)))
+
+  spline.basis <-  splines2::mSpline(Y.axis, degree = 3, intercept = T, knots = knots, periodic = periodic, Boundary.knots = c(min(Y.axis), max(Y.axis)))
+  intercept.conquer.basis <-  splines2::mSpline(Y.axis, degree = 3, intercept = F, knots = knots, periodic = periodic, Boundary.knots = c(min(Y.axis), max(Y.axis)))
 
   if(penalized)
   {
@@ -354,61 +369,59 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
   # INITIALIZATION OF SCORES AND LOADINGS -------------------------------------
 
   # Generate initial splines basis coefficients
-  spline_coefficients_0 <- base::matrix(stats::rnorm(base::dim(spline.basis)[2] * (npc+1), mean = 0, sd = 1),
+  spline.coefficients.0 <- base::matrix(stats::rnorm(base::dim(spline.basis)[2] * (npc+1), mean = 0, sd = 1),
                                         nrow = base::dim(spline.basis)[2], ncol = npc+1)
 
   # Initialize scores and loadings with these spline coefficients
-  loadings_0 <- compute_loadings(spline.basis = spline.basis, spline.coefficients = spline_coefficients_0)
-  scores_0 <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings_0, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
-  if(!is.matrix(scores_0))
+  loadings.0 <- spline.basis %*% spline.coefficients.0
+
+  scores.0 <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings.0, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
+  if(!is.matrix(scores.0))
   {
     stop('Iteration: 0. Failed computation of scores')
   }
 
   # Rotate loadings and scores
-  rotation_result <- try(rotate_scores_and_loadings(loadings = loadings_0, scores = scores_0), silent = TRUE)
-  error_chr <- class(rotation_result)
-  if(error_chr=="try-error")
+  rotation.result <- try(rotate_scores_and_loadings(loadings = loadings.0, scores = scores.0), silent = FALSE)
+  error.chr <- class(rotation.result)
+  if(error.chr=="try-error")
   {
     warning('Iteration: 0. Failed rotation process. Skipping rotation on this iteration.')
     function.warnings$rotation <- TRUE
-    rotation_result <- list(loadings = loadings_0, scores = scores_0, rotation.matrix = diag(npc))
+    rotation.result <- list(loadings = loadings.0, scores = scores.0, rotation.matrix = diag(npc))
   }
-  loadings_0 <- rotation_result$loadings
-  scores_0 <- rotation_result$scores
-  rotation.matrix_0 = rotation_result$rotation.matrix
+  loadings.0 <- rotation.result$loadings
+  scores.0 <- rotation.result$scores
+  rotation.matrix.0 = rotation.result$rotation.matrix
 
   # Compute objective value function
-  objective_function_0 <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores_0, loadings = loadings_0)
+  objective.function.0 <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores.0, loadings = loadings.0)
 
   # Initialize storage of final solution
-  objective_function_array <- objective_function_0
-  best_results <- list(loadings = loadings_0, scores = scores_0, objective_function = objective_function_0, spline.coefficients = spline_coefficients_0, rotation.matrix = rotation.matrix_0, iteration = 0)
+  objective.function.array <- objective.function.0
+  best.results <- list(loadings = loadings.0, scores = scores.0, spline.coefficients = spline.coefficients.0, objective.function = objective.function.0, rotation.matrix = rotation.matrix.0, iteration = 0)
 
-  # Iterate until convergence or until max_iters is reached
-  convergence_criteria <- c()
+  # Iterate until convergence or until n.iters is reached
+  convergence.criteria <- c()
 
   for(i in 1:n.iters)
   {
-    loop_start_time <- base::Sys.time()
+    loop.start.time <- base::Sys.time()
 
-    # COMPUTATION OF LOADINGS AND SCORES ---------------------------
-
-    # Obtain splines coefficients
-    spline_coefficients_1 <- try(compute_spline_coefficients(Y = Y, Y.mask = Y.mask, scores = scores_0, spline.basis = spline.basis, quantile.value = quantile.value, method = method, alpha.ridge = alpha.ridge, R.block = R.block, valid.in.quantreg = valid.in.quantreg), silent = TRUE)
-    if(!is.matrix(spline_coefficients_1))
+    # OBTAIN SPLINE COEFFICIENTS
+    spline.coefficients.1 <- try(compute_spline_coefficients(Y = Y, Y.mask = Y.mask, scores = scores.0, spline.basis = spline.basis, intercept.spline.basis = intercept.conquer.basis, quantile.value = quantile.value, method = method, alpha.ridge = alpha.ridge, R.block = R.block), silent = FALSE)
+    if(!is.matrix(spline.coefficients.1))
     {
-      warning('Iteration: ', i, '. Failed computation of spline coefficients. Providing results from previous iteration.')
+      warning('Iteration: ', i, '. Failed computation of spline coefficients Providing results from previous iteration.')
       function.warnings$splines <- TRUE
       break
     }
 
-    # Compute loadings
-    loadings_1 <- compute_loadings(spline.basis = spline.basis, spline.coefficients = spline_coefficients_1)
+    loadings.1 <- compute_loadings(spline.basis=spline.basis, intercept.spline.basis=intercept.conquer.basis, spline.coefficients=spline.coefficients.1, method=method)
 
-    # Compute scores
-    scores_1 <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings_1, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
-    if(!is.matrix(scores_1))
+    # OBTAIN SCORES
+    scores.1 <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings.1, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
+    if(!is.matrix(scores.1))
     {
       warning('Iteration: ', i, '. Failed computation of scores. Providing results from previous iteration.')
       function.warnings$scores <- TRUE
@@ -416,102 +429,103 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
     }
 
     # Rotate loadings and scores
-    rotation_result <- try(rotate_scores_and_loadings(loadings = loadings_1, scores = scores_1), silent = TRUE)
-    error_chr <- class(rotation_result)
-    if(error_chr=="try-error")
+    rotation.result <- try(rotate_scores_and_loadings(loadings = loadings.1, scores = scores.1), silent = FALSE)
+    error.chr <- class(rotation.result)
+    if(error.chr=="try-error")
     {
       warning('Iteration: ', i, '. Failed rotation process. Skipping rotation on this iteration.')
       function.warnings$rotation <- TRUE
-      rotation_result <- list(loadings = loadings_1, scores = scores_1, rotation.matrix = diag(npc))
+      rotation.result <- list(loadings = loadings.1, scores = scores.1, rotation.matrix = diag(npc))
     }
-    loadings_1 <- rotation_result$loadings
-    scores_1 <- rotation_result$scores
-    rotation.matrix_1 = rotation_result$rotation.matrix
+    loadings.1 <- rotation.result$loadings
+    scores.1 <- rotation.result$scores
+    rotation.matrix.1 = rotation.result$rotation.matrix
 
     # Compute objective function
-    objective_function_1 <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores_1, loadings = loadings_1)
-    objective_function_array <- c(objective_function_array, objective_function_1)
+    objective.function.1 <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores.1, loadings = loadings.1)
+    objective.function.array <- c(objective.function.array, objective.function.1)
 
     # COMPROBATION OF CONVERGENCE ---------------------------------------------
 
-    if(objective_function_1 <= best_results$objective_function)
+    if(objective.function.1 <= best.results$objective.function)
     {
-      best_results <- list(loadings = loadings_1, scores = scores_1, objective_function = objective_function_1, spline.coefficients = spline_coefficients_1, rotation.matrix = rotation.matrix_1, iteration = i)
+      best.results <- list(loadings = loadings.1, scores = scores.1, spline.coefficients = spline.coefficients.1, objective.function = objective.function.1, rotation.matrix = rotation.matrix.1, iteration = i)
     }
 
-    convergence_criteria[i] <- base::abs(objective_function_1 - objective_function_0)
+    convergence.criteria[i] <- base::abs(objective.function.1 - objective.function.0)
 
     # Measure computation time
-    loop_end_time <- base::Sys.time()
-    loop_execution_time <- difftime(loop_end_time, loop_start_time, units = 'secs')
+    loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
 
     if(verbose)
     {
-      message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration: ', i, ' completed in ', base::round(loop_execution_time, 3), ' seconds',
-              '\n', 'Convergence criteria value: ', base::round(convergence_criteria[i], 4),
-              '\n', 'Objective function (i-1) value: ', base::round(objective_function_0, 4), ' Objective function i value: ', round(objective_function_1, 4))
-      message('___________________________________________________')
+      message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration: ', i, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
+              '\n', 'Objective function (i-1) value: ', base::round(objective.function.0, 4),
+              '\n', 'Objective function   i   value: ', round(objective.function.1, 4),
+              '\n', 'Convergence criteria value: ', base::round(convergence.criteria[i], 4),
+              '\n', '____________________________________________________________')
     }
 
-    if(convergence_criteria[i] < tol)
+    if(convergence.criteria[i] < tol)
     {
-      if(verbose){message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Algorithm converged with value: ', base::round(convergence_criteria[i], 4))}
+      if(verbose){message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Algorithm converged with value: ', base::round(convergence.criteria[i], 4))}
       break
     }
 
     # If the objective value function (that should be decreasing) is
     # 100 times larger than the original objective value function, break
-    if( objective_function_array[i+1] > 100 * objective_function_array[2])
+    if( objective.function.array[i+1] > 50 * objective.function.array[2])
     {
       function.warnings$diverging.loop <- TRUE
       if(verbose)
       {
-        message('Breaking diverging loop at iteration ', i,
-                '\n', 'Objective function value: ', base::round(objective_function_array[i+1], 4),
-                '\n', 'Initial objective value function: ', base::round(objective_function_array[2], 4))
-        message('Results of the iteration with the smallest objective value: ', base::round(best_results$objective_function, 4), ' will be provided')
+        message('Iteration: ', i, '. Breaking diverging loop',
+                '\n', 'Objective value function:         ', base::round(objective.function.array[i+1], 4),
+                '\n', 'Initial objective value function: ', base::round(objective.function.array[2], 4),
+                '\n', 'Smallest objective value:         ', base::round(best.results$objective.function, 4), ' at iteration: ', best.results$iteration, ' will be provided')
       }
       break
     }
 
     # UPDATE VALUES -----------------------------------------------------------
 
-    objective_function_0 <- objective_function_1
-    scores_0 <- scores_1
+    objective.function.0 <- objective.function.1
+    scores.0 <- scores.1
   }
   if(i == n.iters){warning('Iteration: ', n.iters, '. Algorithm reached maximum number of iterations without convergence. Consider increasing the value of parameter n.iters')}
 
   # EXPLAINED VARIABILITY -----------------------------------------------------
 
-  pve <- compute_explained_variability(best_results$scores)
+  pve <- compute_explained_variability(best.results$scores)
 
-  global_end_time <- base::Sys.time()
-  global_execution_time <- difftime(global_end_time, global_start_time, units = 'secs')
+  global.execution.time <- difftime(base::Sys.time(), global.start.time, units = 'secs')
 
   results <- fqpca_structure(
-    loadings = best_results$loadings,
-    scores = best_results$scores,
+    loadings = best.results$loadings,
+    scores = best.results$scores,
     pve = pve,
-    objective.function.value = best_results$objective_function,
-    list.objective.function.values = objective_function_array,
-    execution.time = global_execution_time,
+    objective.function.value = best.results$objective.function,
+    objective.function.array = objective.function.array,
     function.warnings = function.warnings,
+    execution.time = global.execution.time,
     npc = npc,
     colname = colname,
     quantile.value = quantile.value,
     method = method,
+    penalized = penalized,
     alpha.ridge = alpha.ridge,
     periodic = periodic,
     splines.df = splines.df,
     tol = tol,
-    n.iters = best_results$iteration,
+    n.iters = best.results$iteration,
     verbose = verbose,
     seed = seed,
     parallelized.scores = parallelized.scores,
     num.cores = num.cores,
-    rotation.matrix = best_results$rotation.matrix,
-    spline.coefficients = best_results$spline.coefficients,
-    spline.basis = spline.basis
+    rotation.matrix = best.results$rotation.matrix,
+    spline.coefficients = best.results$spline.coefficients,
+    spline.basis = spline.basis,
+    intercept.conquer.basis = intercept.conquer.basis
   )
   return(results)
 }
@@ -585,6 +599,8 @@ predict.fqpca_object <- function(object, newdata, ...)
 #'
 fitted.fqpca_object <- function(object, pve=0.95, ...)
 {
+  if (!base::inherits(object, "fqpca_object")){stop('The object must be of class fqpca_object')}
+
   score.variance = cumsum(object$pve)
   n.components = min(which(score.variance > pve))
   Y.reconstruction = object$scores[, 1:(n.components+1)] %*% t(object$loadings[, 1:(n.components+1)])
@@ -614,10 +630,7 @@ fitted.fqpca_object <- function(object, pve=0.95, ...)
 #' plot(results)
 plot.fqpca_object <- function(x, pve=0.99, ...)
 {
-  if (!base::inherits(x, "fqpca_object"))
-  {
-    stop('The object must be of class fqpca_object')
-  }
+  if (!base::inherits(x, "fqpca_object")){stop('The x must be of class fqpca_object')}
 
   score.variance = cumsum(x$pve)
   n.components = min(which(score.variance > pve))
@@ -633,5 +646,5 @@ plot.fqpca_object <- function(x, pve=0.99, ...)
     no_intercept_loadings <- base::matrix(no_intercept_loadings, ncol = 1)
   }
   graphics::matplot(no_intercept_loadings, type =  "l", lty = 1, lwd = 2, xlab = '', ylab = '')
-  graphics::title('Principal components functions')
+  graphics::title('FQPCs ')
 }

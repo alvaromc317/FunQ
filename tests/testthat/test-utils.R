@@ -101,7 +101,7 @@ test_that("cross_validation_alpha based on points function works", {
 
 test_that("cross_validation_df based on points function works", {
   Y = test_data_fqpca()
-  cv_result = cross_validation_df(Y=Y, quantile.value=0.9, splines.df.grid=c(5, 10), n.folds=3, verbose.cv=FALSE, method='SCS', seed=5)
+  cv_result = cross_validation_df(Y=Y, quantile.value=0.9, splines.df.grid=c(5, 10), n.folds=3, verbose.cv=FALSE, method='conquer', seed=5)
   expected_result = readRDS(test_path("fixtures", "cv_df_09.rds"))
   expect_equal(cv_result$error.matrix, expected_result$error.matrix, tolerance=0.01)
 })
