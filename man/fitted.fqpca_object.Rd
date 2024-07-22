@@ -9,7 +9,7 @@
 \arguments{
 \item{object}{An object output of the fqpca function.}
 
-\item{pve}{Percentage of explained variability used in Yhat estimation.}
+\item{pve}{If smaller than 1, taken as percentage of explained variability used in Yhat estimation. If greater than 1, taken as number of components  used in Yhat estimation.}
 
 \item{...}{further arguments passed to or from other methods.}
 }

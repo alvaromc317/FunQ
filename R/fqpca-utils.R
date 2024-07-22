@@ -591,3 +591,135 @@ cross_validation_df <- function(Y=NULL, data=NULL, colname=NULL, npc = 2,  pve=N
   execution.time <- difftime(end_time, start_time, units = "secs")
   return(list(error.matrix = error.matrix, execution.time = execution.time, splines.df.grid = splines.df.grid, criteria = criteria, list.models = list.models))
 }
+
+
+#' @title CROSS VALIDATION OF NUMBER OF COMPONENTS
+#' @description Performs cross validation on the number of components of fqpca
+#' @param Y An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.
+#' @param data data.frame containing the functional data as a tf column.
+#' @param colname The name of the column containing the functional data. If used, data argument must not be NULL.
+#' @param npc The number of estimated components.
+#' @param pve Float between 0 and 1. Percentage of variability explained by components. This affects the number of components used in the curve reconstruction and error estimation. Set to NULL to avoid this behavior.
+#' @param quantile.value The quantile considered.
+#' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
+#' @param splines.df Degrees of freedom for the splines.
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.
+#' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.
+#' @param alpha.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}. Experimantal component.
+#' @param n.folds Number of folds to be used on cross validation.
+#' @param return.models Should the list of all the models built be returned?
+#' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
+#' @param tol Tolerance on the convergence of the algorithm.
+#' @param n.iters Maximum number of iterations.
+#' @param verbose.fqpca Boolean indicating verbosity of the fqpca function.
+#' @param verbose.cv Boolean indicating verbosity of the cross-validation process.
+#' @param seed Seed for the random generator number.
+#' @return A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
+#' @export
+#' @examples
+#' # Generate fake dataset with 200 observations and 144 time points
+#'
+#' Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 200), byrow = TRUE, nrow = 200)
+#' Y <- Y + matrix(rnorm(200*144, 0, 0.4), nrow = 200)
+#'
+#' # Add missing observations
+#' Y[sample(200*144, as.integer(0.2*200*144))] <- NA
+#'
+#' cv_result <- cross_validation_npc(Y, npc=10, n.folds = 2)
+cross_validation_npc <- function(Y=NULL, data=NULL, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5,  alpha.ridge = 0, n.folds = 3, return.models = TRUE, criteria = 'points', periodic = TRUE, splines.df=10, tol = 1e-3, n.iters = 20, method = 'conquer', penalized=FALSE, verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
+{
+  start_time <- Sys.time()
+  if(!base::is.null(seed)){base::set.seed(seed)}
+
+  if(!n.folds == floor(n.folds)){stop('n.folds must be an integer number. Value provided: ', n.folds)}
+  if(!(criteria %in% c('rows', 'points'))){stop('Invalid criteria. Valid criterias are c("rows", "points". Value provided: ', criteria)}
+
+  if(!is.null(Y))
+  {
+    if(!is.matrix(Y))
+    {
+      # This structure allows tf to be a suggested package rather than mandatory
+      if(!tf::is_tf(Y))
+      {
+        stop('Y is not of a valid type. Object provided: ', class(Y))
+      }
+      Y <- base::unname(base::as.matrix(Y))
+      colname <- NULL
+    }
+  }else{
+    if(!is.null(data) && !is.null(colname))
+    {
+      if(!is.data.frame(data))
+      {
+        stop('data is not of a valid type. Object provided: ', class(data))
+      }
+      if(!is.character(colname))
+      {
+        stop('colname is not of a valid type. Object provided: ', class(colname))
+      }
+      Y <- dplyr::pull(data[colname])
+      if(!tf::is_tf(Y))
+      {
+        stop('The colname indicated by parameter colname in the dataframe data must be a tidyfun vector')
+      }
+      Y <- base::unname(base::as.matrix(Y))
+    }else{
+      stop('Either parameter Y or parameters data and colname must be informed.')
+    }
+  }
+
+  # KFOLDS
+  Y.folds <- create_folds(Y, criteria = criteria, folds = n.folds, seed = seed)
+
+  # Initialize error storage
+  error.matrix <- matrix(-1, nrow = npc, ncol = n.folds)
+  list.models <- list()
+
+  # CROSS VALIDATION
+  for(j in 1:n.folds)
+  {
+    start_loop_time <- Sys.time()
+    if(verbose.cv){message('Fold: ', j)}
+
+    # Access data depending on criteria
+    if(criteria=='rows')
+    {
+      Y.train <- Y.folds$Y.train.list[[j]]
+      Y.test <- Y.folds$Y.test.list[[j]]
+    } else if(criteria == 'points')
+    {
+      Y.train <- Y.folds$Y.train.list[[j]]
+      Y.test <-  Y.folds$Y.test.list[[j]]
+    } else{stop('Invalid value for criteria. Valid values are observations or curves.')}
+
+    # Execute model
+    fqpca_results <- fqpca(Y = Y.train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, penalized=penalized, alpha.ridge = alpha.ridge, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
+    if(return.models)
+    {
+      name.model <- paste0('fold=', j)
+      list.models[[name.model]] <- fqpca_results
+    }
+    for(i in 1:npc)
+    {
+      # Obtain reconstruction
+      if(criteria == 'points')
+      {
+        loadings <- matrix(fqpca_results$loadings[, 1:(i+1)], ncol=(i+1))
+        scores <- matrix(fqpca_results$scores[, 1:(i+1)], ncol=(i+1))
+        Y.predicted <- scores %*% t(loadings)
+      }else if(criteria=='rows')
+      {
+        test.scores <- predict.fqpca_object(fqpca_results, Y.test)
+        loadings <- matrix(fqpca_results$loadings[, 1:(i+1)], ncol=(i+1))
+        scores <- matrix(test.scores[, 1:(i+1)], ncol=(i+1))
+        Y.predicted <- scores %*% t(loadings)
+      }
+      error.matrix[i, j] <- quantile_error(Y = Y.test, Y.pred = Y.predicted, quantile.value = quantile.value)
+    }
+    end_loop_time <-  Sys.time()
+    if(verbose.cv){message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), 'Fold: ', j, '. Execution completed in: ', round(difftime(end_loop_time, start_loop_time, units = "secs"), 3), ' seconds.')}
+  }
+  end_time <- Sys.time()
+  execution.time <- difftime(end_time, start_time, units = "secs")
+  return(list(error.matrix = error.matrix, execution.time = execution.time, criteria = criteria, list.models = list.models))
+}

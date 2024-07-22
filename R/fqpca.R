@@ -412,7 +412,7 @@ fqpca <- function(Y = NULL, data = NULL, colname = NULL, npc = 2,  quantile.valu
     spline.coefficients.1 <- try(compute_spline_coefficients(Y = Y, Y.mask = Y.mask, scores = scores.0, spline.basis = spline.basis, intercept.spline.basis = intercept.conquer.basis, quantile.value = quantile.value, method = method, alpha.ridge = alpha.ridge, R.block = R.block), silent = FALSE)
     if(!is.matrix(spline.coefficients.1))
     {
-      warning('Iteration: ', i, '. Failed computation of spline coefficients Providing results from previous iteration.')
+      warning('Iteration: ', i, '. Failed computation of spline coefficients. Providing results from previous iteration.')
       function.warnings$splines <- TRUE
       break
     }
@@ -580,7 +580,7 @@ predict.fqpca_object <- function(object, newdata, ...)
 #' @title Fit Yhat
 #' @description S3 method for class 'fqpca_object'. Given an fqpca_object model, estimates Yhat for different pve values.
 #' @param object An object output of the fqpca function.
-#' @param pve Percentage of explained variability used in Yhat estimation.
+#' @param pve If smaller than 1, taken as percentage of explained variability used in Yhat estimation. If greater than 1, taken as number of components  used in Yhat estimation.
 #' @param ... further arguments passed to or from other methods.
 #' @return The normalized matrix of scores.
 #' @export
@@ -600,9 +600,14 @@ predict.fqpca_object <- function(object, newdata, ...)
 fitted.fqpca_object <- function(object, pve=0.95, ...)
 {
   if (!base::inherits(object, "fqpca_object")){stop('The object must be of class fqpca_object')}
-
-  score.variance = cumsum(object$pve)
-  n.components = min(which(score.variance > pve))
+  if(pve < 1)
+  {
+    score.variance = cumsum(object$pve)
+    n.components = min(which(score.variance > pve))
+  }else{
+    if(!pve == floor(pve)){stop('pve must be either a floating point number smaller than 1 or an integer number. Value provided: ', pve)}
+    n.components = pve
+  }
   Y.reconstruction = object$scores[, 1:(n.components+1)] %*% t(object$loadings[, 1:(n.components+1)])
   return(Y.reconstruction)
 }
