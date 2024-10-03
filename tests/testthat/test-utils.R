@@ -4,24 +4,6 @@ test_that("quantile function works", {
   expect_equal(quantile_function(matrix(c(1, -2, 7), nrow=3), quantile.value=0.2), matrix(c(0.2, 1.6, 1.4), nrow=3))
 })
 
-test_that("CVXR Quantile regression function works", {
-  set.seed(5)
-  data = test_data_cvxr()
-  x = data$x
-  y = data$y
-  solution = quantile_regression(x=x, y=y, quantile.value=0.5, solver='SCS')
-  expect_equal(round(solution, 4), round(c(0.8278325, 1.8020721), 4), tolerance=0.01)
-})
-
-test_that("CVXR Quantile ridge regression function works", {
-  set.seed(5)
-  data = test_data_cvxr()
-  x = data$x
-  y = data$y
-  solution = quantile_regression_ridge(x=x, y=y, R=diag(2), quantile.value=0.5, lambda=10, solver='SCS')
-  expect_equal(round(solution, 4), round(c(0.001840445, 0.027260196), 4), tolerance=0.01)
-})
-
 # TRAIN TEST SPLIT TESTS ------------------------------------------------------
 
 test_that("train_test_split based on rows function; train portion works", {
@@ -86,22 +68,22 @@ test_that("create_folds based on points function; train portion works", {
 
 # CROSS VALIDATION PROCESS ----------------------------------------------------
 
-test_that("cross_validation_alpha incorrect inputs detection works", {
+test_that("cross_validation_lambda incorrect inputs detection works", {
   Y = test_data_fqpca()
-  expect_error(cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=3, verbose.cv=FALSE, method='fn')) # method
-  expect_error(cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=2.5, verbose.cv=FALSE, method='SCS')) # n.folds
+  expect_error(cross_validation_lambda(data=Y, lambda.grid=c(0, 1e-15), n.folds=3, verbose.cv=FALSE, method='fn')) # method
+  expect_error(cross_validation_lambda(data=Y, lambda.grid=c(0, 1e-15), n.folds=2.5, verbose.cv=FALSE, method='SCS')) # n.folds
 })
 
-test_that("cross_validation_alpha based on points function works", {
+test_that("cross_validation_lambda based on points function works", {
   Y = test_data_fqpca()
-  cv_result = cross_validation_alpha(Y=Y, alpha.grid=c(0, 1e-15), n.folds=3, verbose.cv=FALSE, method='SCS', seed=5)
-  expected_result = readRDS(test_path("fixtures", "cv_alpha_05.rds"))
+  cv_result = cross_validation_lambda(data=Y, lambda.grid=c(0, 1e-3), n.folds=3, verbose.cv=FALSE, method='conquer', seed=5, return.models=FALSE)
+  expected_result = readRDS(test_path("fixtures", "cv_lambda_05.rds"))
   expect_equal(cv_result$error.matrix, expected_result$error.matrix, tolerance=0.01)
 })
 
 test_that("cross_validation_df based on points function works", {
   Y = test_data_fqpca()
-  cv_result = cross_validation_df(Y=Y, quantile.value=0.9, splines.df.grid=c(5, 10), n.folds=3, verbose.cv=FALSE, method='conquer', seed=5)
+  cv_result = cross_validation_df(data=Y, quantile.value=0.9, splines.df.grid=c(5, 10), n.folds=3, verbose.cv=FALSE, method='conquer', seed=5, return.models=FALSE)
   expected_result = readRDS(test_path("fixtures", "cv_df_09.rds"))
   expect_equal(cv_result$error.matrix, expected_result$error.matrix, tolerance=0.01)
 })

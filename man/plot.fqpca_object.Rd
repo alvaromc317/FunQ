@@ -28,7 +28,7 @@ Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
 # Add missing observations
 Y[sample(150*144, as.integer(0.2*150*144))] <- NA
 
-results <- fqpca(Y = Y, npc = 2, quantile.value = 0.5)
+results <- fqpca(data = Y, npc = 2, quantile.value = 0.5)
 
 plot(results)
 }

@@ -5,13 +5,12 @@
 \title{CROSS VALIDATION OF DEGREES OF FREEDOM}
 \usage{
 cross_validation_df(
-  Y = NULL,
-  data = NULL,
+  data,
   colname = NULL,
   npc = 2,
   pve = NULL,
   quantile.value = 0.5,
-  alpha.ridge = 0,
+  lambda.ridge = 0,
   n.folds = 3,
   return.models = TRUE,
   criteria = "points",
@@ -21,17 +20,18 @@ cross_validation_df(
   n.iters = 20,
   method = "conquer",
   penalized = FALSE,
+  weights = NULL,
+  parallelized.scores = FALSE,
+  num.cores = NULL,
   verbose.fqpca = FALSE,
   verbose.cv = TRUE,
   seed = NULL
 )
 }
 \arguments{
-\item{Y}{An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.}
+\item{data}{An \eqn{(N \times T)} matrix, a tf object from the tidyfun package or a data.frame containing the functional data as a tf column.}
 
-\item{data}{data.frame containing the functional data as a tf column.}
-
-\item{colname}{The name of the column containing the functional data. If used, data argument must not be NULL.}
+\item{colname}{The name of the column containing the functional data. Use only if data is a dataframe and colname is a column in the dataframe.}
 
 \item{npc}{The number of estimated components.}
 
@@ -39,7 +39,7 @@ cross_validation_df(
 
 \item{quantile.value}{The quantile considered.}
 
-\item{alpha.ridge}{Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}. Experimantal component.}
+\item{lambda.ridge}{Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}. Experimantal component.}
 
 \item{n.folds}{Number of folds to be used on cross validation.}
 
@@ -58,6 +58,12 @@ cross_validation_df(
 \item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.}
 
 \item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.}
+
+\item{weights}{Optional array of weights used in penalized fqpca models. It must have dimension equal to (npc+1)}
+
+\item{parallelized.scores}{Should the scores be computed in parallel? Experimantal component.}
+
+\item{num.cores}{Number of cores to use in parallelized executions.}
 
 \item{verbose.fqpca}{Boolean indicating verbosity of the fqpca function.}
 
@@ -80,5 +86,5 @@ Y <- Y + matrix(rnorm(200*144, 0, 0.4), nrow = 200)
 # Add missing observations
 Y[sample(200*144, as.integer(0.2*200*144))] <- NA
 
-cv_result <- cross_validation_df(Y, splines.df.grid = c(5, 10, 15), n.folds = 2)
+cv_result <- cross_validation_df(data=Y, splines.df.grid = c(5, 10, 15), n.folds = 2)
 }
