@@ -36,11 +36,11 @@ devtools::install_github("alvaromc317/FunQ")
 
 `FunQ` provides functions for implementing the Functional Quantile Principal Component Analysis methodology. Key features include:
 
-* Flexible Input Formats: Accepts functional data as an $(N\timesT)$ matrix, a `tf` functional vector, or a `dataframe` containing a column with a `tf` functional vector (using the `data` and `colname` parameters).
-* Handling Missing Data: Capable of dealing with irregular time grids and missing data.
-* Smoothness Control: Allows control over the smoothness of the results using two approaches:
+* Flexible Input Formats: accepts functional data as an $(I\times T)$ matrix, a `tf` functional vector, or a `dataframe` containing a column with a `tf` functional vector (using the `data` and `colname` parameters).
+* Handling Missing Data: capable of dealing with irregular time grids and missing data.
+* Smoothness Control: allows control over the smoothness of the results using two approaches:
   * Spline Degrees of Freedom: Using the `splines.df` parameter to set the degrees of freedom in spline basis reconstruction.
-  * Second Derivative Penalty: Experimental method involving a second derivative penalty on the spline coefficients by setting `penalized = TRUE` and specifying `lambda.ridge`. Requires setting `method = "conquer"`.
+  * Second Derivative Penalty: experimental method involving a second derivative penalty on the spline coefficients by setting `penalized = TRUE` and specifying `lambda.ridge`. Requires setting `method = "conquer"`.
   
 Additionally, the package includes functions for cross-validation of parameters such as `splines.df` (`cross_validation_df`) and `lambda.ridge` (`cross_validation_lambda`), using the quantile error as the reference prediction error metric (`quantile_error` function).
 
@@ -151,7 +151,7 @@ paste0('Optimal number of degrees of freedom: ', splines.df.grid[optimal_df])
 
 ## Example 2: Using penalized `fqpca`
 
-n this example, we demonstrate how to apply the second derivative penalty approach by setting penalized = TRUE and lambda.ridge = 0.001. This method is experimental but has shown promising results.
+In this example, we demonstrate how to apply the second derivative penalty approach by setting penalized = TRUE and lambda.ridge = 0.001. This method is experimental but has shown promising results.
 
 ```{r}
 # Apply fqpca with penalization
@@ -162,7 +162,7 @@ Y.train.estimated_penalized <- fitted(results_penalized, pve = 0.95)
 
 ```
 
-The package also includes a function that allows to perform cross validation on the hyper-parameter controlling the effect of a second derivative penalty on the splines. Be aware that this smoothness controlling process is experimental.
+The package also includes a function that allows to perform cross validation on the hyper-parameter controlling the effect of a second derivative penalty on the splines.
 
 ```{r}
 cv_result = cross_validation_lambda(Y, lambda.grid=c(0, 1e-5, 1e-3), n.folds=3, verbose.cv=F)

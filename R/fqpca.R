@@ -323,9 +323,9 @@ check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, method
 
   # Check 'splines.df': integer positive number, larger than 'npc'
   if (!is.numeric(splines.df) || length(splines.df) != 1 ||
-      splines.df %% 1 != 0 || splines.df <= npc) {
+      splines.df %% 1 != 0 || splines.df < npc) {
     stop("Invalid input for 'splines.df': ", splines.df,
-         ". Expected an integer number larger than 'npc' (", npc, ").")
+         ". Expected an integer number larger or equal than 'npc' (", npc, ").")
   }
 
   # Check 'method': must be either 'conquer' or 'quantreg'
