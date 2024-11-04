@@ -267,10 +267,9 @@ create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 #' @param quantile.value The quantile considered.
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df Degrees of freedom for the splines.
-#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.
-#' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.
-#' @param lambda.grid An array containing the list of possible lambda values (these should be always positive numbers).
-#' @param weights Optional array of weights used in penalized fqpca models. It must have dimension equal to (npc+1)
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
+#' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.
+#' @param lambda.grid  Grid of hyper parameter values controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @param n.folds Number of folds to be used on cross validation.
 #' @param return.models Should the list of all the models built be returned?
 #' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
@@ -293,7 +292,7 @@ create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 #' Y[sample(200*144, as.integer(0.2*200*144))] <- NA
 #'
 #' cv_result <- cross_validation_lambda(data=Y, lambda.grid = c(0, 1e-6), n.folds = 2)
-cross_validation_lambda <- function(data, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5, lambda.grid  =  c(0, 1e-10, 1e-5), n.folds = 3, return.models=TRUE, criteria = 'points', periodic = TRUE, splines.df = 10, tol = 1e-3, n.iters = 20, method = 'conquer', penalized=TRUE, weights=NULL, parallelized.scores=FALSE, num.cores=NULL, verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
+cross_validation_lambda <- function(data, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5, lambda.grid  =  c(0, 1e-10, 1e-5), n.folds = 3, return.models=TRUE, criteria = 'points', periodic = TRUE, splines.df = 10, tol = 1e-3, n.iters = 20, method = 'conquer', penalized=TRUE, parallelized.scores=FALSE, num.cores=NULL, verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()
   if(!base::is.null(seed))
@@ -346,7 +345,7 @@ cross_validation_lambda <- function(data, colname=NULL, npc = 2,  pve=NULL, quan
       } else{stop('Invalid value for criteria. Valid values are observations or curves')}
 
       # Execute model
-      fqpca_results <- fqpca(data = Y.train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, penalized=TRUE, lambda.ridge = lambda.ridge, weights=weights, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
+      fqpca_results <- fqpca(data = Y.train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, penalized=TRUE, lambda.ridge = lambda.ridge, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
       if(return.models)
       {
         name.model <- paste0('lambda_idx=', i, '.fold=', j)
@@ -391,10 +390,9 @@ cross_validation_lambda <- function(data, colname=NULL, npc = 2,  pve=NULL, quan
 #' @param quantile.value The quantile considered.
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df.grid Grid of possible values for the degrees of freedom.
-#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.
-#' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.
-#' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}. Experimantal component.
-#' @param weights Optional array of weights used in penalized fqpca models. It must have dimension equal to (npc+1)
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
+#' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.
+#' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @param n.folds Number of folds to be used on cross validation.
 #' @param return.models Should the list of all the models built be returned?
 #' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
@@ -417,7 +415,7 @@ cross_validation_lambda <- function(data, colname=NULL, npc = 2,  pve=NULL, quan
 #' Y[sample(200*144, as.integer(0.2*200*144))] <- NA
 #'
 #' cv_result <- cross_validation_df(data=Y, splines.df.grid = c(5, 10, 15), n.folds = 2)
-cross_validation_df <- function(data, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5,  lambda.ridge = 0, n.folds = 3, return.models = TRUE, criteria = 'points', periodic = TRUE, splines.df.grid = c(5, 10, 15, 20), tol = 1e-3, n.iters = 20, method = 'conquer', penalized=FALSE,  weights=NULL, parallelized.scores=FALSE, num.cores=NULL, verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
+cross_validation_df <- function(data, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5,  lambda.ridge = 0, n.folds = 3, return.models = TRUE, criteria = 'points', periodic = TRUE, splines.df.grid = c(5, 10, 15, 20), tol = 1e-3, n.iters = 20, method = 'conquer', penalized=FALSE, parallelized.scores=FALSE, num.cores=NULL, verbose.fqpca = FALSE, verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
@@ -475,7 +473,7 @@ cross_validation_df <- function(data, colname=NULL, npc = 2,  pve=NULL, quantile
       } else{stop('Invalid value for criteria. Valid values are observations or curves.')}
 
       # Execute model
-      fqpca_results <- fqpca(data = Y.train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, penalized=penalized, lambda.ridge = lambda.ridge, weights = weights, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
+      fqpca_results <- fqpca(data = Y.train, npc = npc,  quantile.value = quantile.value,  periodic = periodic, splines.df = splines.df, method = method, penalized=penalized, lambda.ridge = lambda.ridge, tol = tol, n.iters = n.iters, verbose = verbose.fqpca, seed = seed)
       if(return.models)
       {
         name.model <- paste0('df_idx=', i, '.fold=', j)

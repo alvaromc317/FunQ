@@ -18,9 +18,10 @@ compute_scores_sequential <- function(Y, Y.mask, loadings, quantile.value)
   {
     # Obtain the loadings associated to observation i with a specific time grid
     loadings.obs <- loadings[Y.mask[i, ], ]
-    # Obtain the observation removing missing data and substract intercept
+    # Obtain the observation removing missing data and subtract intercept
     Yi <- Y[i, Y.mask[i, ]] - loadings.obs[,1]
-    scores[i,] <-  quantreg::rq.fit.br(y=Yi, x=loadings.obs[,2:npc1], tau=quantile.value)$coefficients
+    loadings.matrix = matrix(loadings.obs[,2:npc1], ncol=npc1-1)
+    scores[i,] <-  quantreg::rq.fit.br(y=Yi, x=loadings.matrix, tau=quantile.value)$coefficients
   }
   # Add intercept column
   scores <- base::cbind(1, scores)
@@ -33,11 +34,10 @@ compute_scores_sequential <- function(Y, Y.mask, loadings, quantile.value)
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
 #' @param loadings Matrix of loading coefficients.
 #' @param quantile.value The quantile considered.
-#' @param parallelized.scores Should the scores be computed in parallel?
 #' @param num.cores Number of cores used in parallel executions.
 #' @return The matrix of scores.
 #' @importFrom foreach %dopar%
-compute_scores_parallel <- function(Y, Y.mask, loadings, quantile.value, parallelized.scores, num.cores)
+compute_scores_parallel <- function(Y, Y.mask, loadings, quantile.value, num.cores)
 {
   i = 1
   # Initialize the matrix of scores
@@ -52,7 +52,8 @@ compute_scores_parallel <- function(Y, Y.mask, loadings, quantile.value, paralle
     {
       loadings.obs <- loadings[Y.mask[i, ], ]
       Yi <- Y[i, Y.mask[i, ]] - loadings.obs[,1]
-      quantreg::rq.fit.br(y=Yi, x=loadings.obs[,2:npc1], tau=quantile.value)$coefficients
+      loadings.matrix = matrix(loadings.obs[,2:npc1], ncol=npc1-1)
+      quantreg::rq.fit.br(y=Yi, x=loadings.matrix, tau=quantile.value)$coefficients
     }
   parallel::stopCluster(cl)
   foreach::registerDoSEQ()
@@ -76,7 +77,7 @@ compute_scores <- function(Y, Y.mask, loadings, quantile.value, parallelized.sco
 {
   if(parallelized.scores)
   {
-    scores <- compute_scores_parallel(Y, Y.mask, loadings, quantile.value, parallelized.scores, num.cores)
+    scores <- compute_scores_parallel(Y, Y.mask, loadings, quantile.value, num.cores)
   }else{
     scores <- compute_scores_sequential(Y, Y.mask, loadings, quantile.value)
   }
@@ -91,15 +92,15 @@ compute_scores <- function(Y, Y.mask, loadings, quantile.value, parallelized.sco
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating wich observations in Y are known.
 #' @param scores Initial matrix of scores.
 #' @param spline.basis The spline basis matrix.
-#' @param intercept.spline.basis The spline basis matrix for the conquer intercept.
 #' @param quantile.value The quantile considered.
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
 #' @return The matrix of spline coefficients splines coefficients.
-compute_spline_coefficients_unpenalized <- function(Y, Y.mask, scores, spline.basis, intercept.spline.basis, quantile.value, method)
+compute_spline_coefficients_unpenalized <- function(Y, Y.mask, scores, spline.basis, quantile.value, method)
 {
   n.obs <- base::nrow(Y)
   npc1 <- base::ncol(scores)
   n.basis <- base::ncol(spline.basis)
+  intercept.spline.basis <-  spline.basis[, -1]
   # vectorize Y [Y11, ..., Y1T, Y21, ..., Y2T,...YNT]
   Y.vector <- c()
   for(i in base::seq(n.obs)){Y.vector <- c(Y.vector, Y[i, Y.mask[i,]])}
@@ -146,16 +147,15 @@ compute_spline_coefficients_unpenalized <- function(Y, Y.mask, scores, spline.ba
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating wich observations in Y are known.
 #' @param scores Initial matrix of scores.
 #' @param spline.basis The spline basis matrix.
-#' @param intercept.spline.basis The spline basis matrix for the conquer intercept.
 #' @param quantile.value The quantile considered.
-#' @param lambda.ridge The hyper-parameter controlling the penalization on the splines. This parameter has no effect if method is 'quantreg'
-#' @param weights Array of weights used in the penalization. It must have dimension equal to (npc+1) * ncol(spline.basis)-1. (The -1 comes from the presence of an intercept term)
+#' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @return The matrix of spline coefficients splines coefficients.
-compute_spline_coefficients_penalized <- function(Y, Y.mask, scores, spline.basis, intercept.spline.basis, quantile.value, lambda.ridge, weights)
+compute_spline_coefficients_penalized <- function(Y, Y.mask, scores, spline.basis, quantile.value, lambda.ridge)
 {
   n.obs <- base::nrow(Y)
   npc1 <- base::ncol(scores)
   n.basis <- base::ncol(spline.basis)
+  intercept.spline.basis <-  spline.basis[, -1]
   Y.vector <- c()
   for(i in base::seq(n.obs)){Y.vector <- c(Y.vector, Y[i, Y.mask[i,]])}
   tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=npc1*n.basis-1)
@@ -173,7 +173,7 @@ compute_spline_coefficients_penalized <- function(Y, Y.mask, scores, spline.basi
   {
     B.vector <- conquer::conquer(Y=Y.vector, X=tensor.matrix, tau=quantile.value)$coeff
   }else{
-    B.vector <- conquer::conquer.reg(Y=Y.vector, X=tensor.matrix, tau=quantile.value, penalty='group', group=1:(npc1*n.basis-1), weights=weights, lambda=lambda.ridge)$coeff
+    B.vector <- conquer::conquer.reg(Y=Y.vector, X=tensor.matrix, tau=quantile.value, penalty='elastic', lambda=lambda.ridge, para.elastic=0)$coeff
   }
   spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=npc1)
   return(spline.coefficients)
@@ -186,19 +186,17 @@ compute_spline_coefficients_penalized <- function(Y, Y.mask, scores, spline.basi
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating wich observations in Y are known.
 #' @param scores Initial matrix of scores.
 #' @param spline.basis The spline basis matrix.
-#' @param intercept.spline.basis The spline basis matrix for the conquer intercept.
 #' @param quantile.value The quantile considered.
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
-#' @param lambda.ridge The hyper-parameter controlling the penalization on the splines. This parameter has no effect if method is 'quantreg'
-#' @param weights Array of weights used in the penalization. It must have dimension equal to (npc+1) * ncol(spline.basis)-1. (The -1 comes from the presence of an intercept term)
+#' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @return The matrix of spline coefficients splines coefficients.
-compute_spline_coefficients <- function(penalized, Y, Y.mask, scores, spline.basis, intercept.spline.basis, quantile.value, method, lambda.ridge, weights)
+compute_spline_coefficients <- function(penalized, Y, Y.mask, scores, spline.basis, quantile.value, method, lambda.ridge)
 {
   if(penalized)
   {
-    spline.coefficients <- compute_spline_coefficients_penalized(Y, Y.mask, scores, spline.basis, intercept.spline.basis, quantile.value, lambda.ridge, weights)
+    spline.coefficients <- compute_spline_coefficients_penalized(Y=Y, Y.mask=Y.mask, scores=scores, spline.basis=spline.basis, quantile.value=quantile.value, lambda.ridge=lambda.ridge)
   }else{
-    spline.coefficients <- compute_spline_coefficients_unpenalized(Y, Y.mask, scores, spline.basis, intercept.spline.basis, quantile.value, method)
+    spline.coefficients <- compute_spline_coefficients_unpenalized(Y=Y, Y.mask=Y.mask, scores=scores, spline.basis=spline.basis, quantile.value=quantile.value, method=method)
   }
   return(spline.coefficients)
 }
@@ -222,12 +220,12 @@ compute_objective_value <- function(Y, quantile.value, scores, loadings)
 #' @title Compute loadings (aka principal components)
 #' @description Inner function to compute the loadings of the fqpca methodology.
 #' @param spline.basis The spline basis matrix.
-#' @param intercept.spline.basis The spline basis matrix for the conquer intercept.
 #' @param spline.coefficients the matrix of spline coefficients.
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')} along with any available solver in \code{CVXR} package.
 #' @return The matrix of loadings
-compute_loadings <- function(spline.basis, intercept.spline.basis, spline.coefficients, method)
+compute_loadings <- function(spline.basis, spline.coefficients, method)
 {
+  intercept.spline.basis <-  spline.basis[, -1]
   if(method == 'conquer')
   {
     intercept.part <- cbind(1, intercept.spline.basis) %*% matrix(spline.coefficients[,1], ncol=1)
@@ -290,7 +288,7 @@ compute_explained_variability <- function(scores)
 #' @param quantile.value The quantile considered.
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df Degrees of freedom for the splines.
-#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
 #' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.
 #' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}.
 #' @param tol Tolerance on the convergence of the algorithm.
@@ -300,8 +298,8 @@ compute_explained_variability <- function(scores)
 #' @param parallelized.scores Should the scores be computed in parallel? Experimantal component.
 #' @param num.cores Number of cores to use in parallelized executions.
 #' @return No return
-check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, method, penalized, lambda.ridge, tol, n.iters, verbose, seed, parallelized.scores, num.cores) {
-
+check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, method, penalized, lambda.ridge, tol, n.iters, verbose, seed, parallelized.scores, num.cores)
+{
   # Check 'npc': integer number, positive
   if (!is.numeric(npc) || length(npc) != 1 || npc %% 1 != 0 || npc <= 0) {
     stop("Invalid input for 'npc': ", npc,
@@ -474,10 +472,9 @@ fqpca_structure <- function(loadings, scores, pve, objective.function.value,
 #' @param quantile.value The quantile considered.
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df Degrees of freedom for the splines.
-#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.
-#' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.
-#' @param weights Optional array of weights used in penalized fqpca models. It must have dimension equal to (npc+1)
-#' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}.
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
+#' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.
+#' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @param tol Tolerance on the convergence of the algorithm.
 #' @param n.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
@@ -499,7 +496,7 @@ fqpca_structure <- function(loadings, scores, pve, objective.function.value,
 #'
 #' loadings <- results$loadings
 #' scores <- results$scores
-fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.df = 10, method = 'conquer', penalized = FALSE, lambda.ridge = 0, weights = NULL, tol = 1e-3, n.iters = 20, verbose = FALSE, seed = NULL, parallelized.scores=FALSE, num.cores=NULL)
+fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.df = 10, method = 'conquer', penalized = FALSE, lambda.ridge = 0, tol = 1e-3, n.iters = 20, verbose = FALSE, seed = NULL, parallelized.scores=FALSE, num.cores=NULL)
 {
   global.start.time <- base::Sys.time()
 
@@ -554,18 +551,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
     second.part = eigen.decomp$vectors[, 1:(n.basis-2)] %*% (base::diag(1 / base::sqrt(eigen.decomp$values[1:(n.basis-2)])))
     U = cbind(first.part, second.part)
     spline.basis = spline.basis %*% U
-
-    weights.fixed = c(0,1,rep(1, n.basis-3), rep(c(0,0,rep(1, n.basis-2)), npc))
-    if(is.null(weights))
-    {
-      weights.final = weights.fixed
-    }else{
-      if(length(weights) != npc+1){stop('weights must be either NULL or have length equal to the number of npc+1')}
-      weights.final = rep(weights, each=splines.df)[-1] # Remove 1 to account for the intercept
-      weights.final = weights.final * weights.fixed
-    }
   }
-  intercept.spline.basis <-  spline.basis[, -1]
 
   # INITIALIZATION OF SCORES AND LOADINGS -------------------------------------
 
@@ -608,7 +594,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
     loop.start.time <- base::Sys.time()
 
     # OBTAIN SPLINE COEFFICIENTS
-    spline.coefficients.1 <- try(compute_spline_coefficients(penalized = penalized, Y = Y, Y.mask = Y.mask, scores = scores.0, spline.basis = spline.basis, intercept.spline.basis = intercept.spline.basis, quantile.value = quantile.value, method = method, lambda.ridge = lambda.ridge, weights = weights.final), silent = FALSE)
+    spline.coefficients.1 <- try(compute_spline_coefficients(penalized = penalized, Y = Y, Y.mask = Y.mask, scores = scores.0, spline.basis = spline.basis, quantile.value = quantile.value, method = method, lambda.ridge = lambda.ridge), silent = FALSE)
     if(!is.matrix(spline.coefficients.1))
     {
       warning('Iteration: ', i, '. Failed computation of spline coefficients. Providing results from previous iteration.')
@@ -616,7 +602,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
       break
     }
 
-    loadings.1 <- compute_loadings(spline.basis=spline.basis, intercept.spline.basis=intercept.spline.basis, spline.coefficients=spline.coefficients.1, method=method)
+    loadings.1 <- compute_loadings(spline.basis=spline.basis, spline.coefficients=spline.coefficients.1, method=method)
     if(is_rank_deficient(loadings.1)){warning('Loadings matrix is singular. This was likely induced by a very large penalization term and will impede the correct computation of scores the next iteration. Consider reducing the value of the penalization term.')}
 
     # OBTAIN SCORES
@@ -662,7 +648,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
       message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration: ', i, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
               '\n', 'Objective function (i-1) value: ', base::round(objective.function.0, 4),
               '\n', 'Objective function   i   value: ', round(objective.function.1, 4),
-              '\n', 'Convergence criteria value: ', base::round(convergence.criteria[i], 4),
+              '\n', 'Convergence criteria value    : ', base::round(convergence.criteria[i], 4),
               '\n', '____________________________________________________________')
     }
 
@@ -680,9 +666,9 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
       if(verbose)
       {
         message('Iteration: ', i, '. Breaking diverging loop',
-                '\n', 'Objective value function:         ', base::round(objective.function.array[i+1], 4),
-                '\n', 'Initial objective value function: ', base::round(objective.function.array[2], 4),
-                '\n', 'Smallest objective value:         ', base::round(best.results$objective.function, 4), ' at iteration: ', best.results$iteration, ' will be provided')
+                '\n', 'Objective function (i) value     : ', base::round(objective.function.array[i+1], 4),
+                '\n', 'Initial objective function value : ', base::round(objective.function.array[2], 4),
+                '\n', 'Smallest objective function value: ', base::round(best.results$objective.function, 4), ' obtained at iteration ', best.results$iteration, ' will be provided.')
       }
       break
     }

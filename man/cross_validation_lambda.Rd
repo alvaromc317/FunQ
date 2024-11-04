@@ -20,7 +20,6 @@ cross_validation_lambda(
   n.iters = 20,
   method = "conquer",
   penalized = TRUE,
-  weights = NULL,
   parallelized.scores = FALSE,
   num.cores = NULL,
   verbose.fqpca = FALSE,
@@ -39,7 +38,7 @@ cross_validation_lambda(
 
 \item{quantile.value}{The quantile considered.}
 
-\item{lambda.grid}{An array containing the list of possible lambda values (these should be always positive numbers).}
+\item{lambda.grid}{Grid of hyper parameter values controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.}
 
 \item{n.folds}{Number of folds to be used on cross validation.}
 
@@ -55,11 +54,9 @@ cross_validation_lambda(
 
 \item{n.iters}{Maximum number of iterations.}
 
-\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.}
+\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
 
-\item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.}
-
-\item{weights}{Optional array of weights used in penalized fqpca models. It must have dimension equal to (npc+1)}
+\item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.}
 
 \item{parallelized.scores}{Should the scores be computed in parallel? Experimantal component.}
 

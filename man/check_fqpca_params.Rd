@@ -29,7 +29,7 @@ check_fqpca_params(
 
 \item{splines.df}{Degrees of freedom for the splines.}
 
-\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.}
+\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
 
 \item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.}
 

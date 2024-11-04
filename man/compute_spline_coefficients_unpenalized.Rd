@@ -9,7 +9,6 @@ compute_spline_coefficients_unpenalized(
   Y.mask,
   scores,
   spline.basis,
-  intercept.spline.basis,
   quantile.value,
   method
 )
@@ -22,8 +21,6 @@ compute_spline_coefficients_unpenalized(
 \item{scores}{Initial matrix of scores.}
 
 \item{spline.basis}{The spline basis matrix.}
-
-\item{intercept.spline.basis}{The spline basis matrix for the conquer intercept.}
 
 \item{quantile.value}{The quantile considered.}
 

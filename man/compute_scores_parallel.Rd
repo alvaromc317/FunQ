@@ -4,14 +4,7 @@
 \alias{compute_scores_parallel}
 \title{Compute scores}
 \usage{
-compute_scores_parallel(
-  Y,
-  Y.mask,
-  loadings,
-  quantile.value,
-  parallelized.scores,
-  num.cores
-)
+compute_scores_parallel(Y, Y.mask, loadings, quantile.value, num.cores)
 }
 \arguments{
 \item{Y}{The \eqn{(N \times T)} matrix of observed time instants.}
@@ -21,8 +14,6 @@ compute_scores_parallel(
 \item{loadings}{Matrix of loading coefficients.}
 
 \item{quantile.value}{The quantile considered.}
-
-\item{parallelized.scores}{Should the scores be computed in parallel?}
 
 \item{num.cores}{Number of cores used in parallel executions.}
 }

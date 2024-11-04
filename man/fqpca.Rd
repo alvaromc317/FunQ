@@ -14,7 +14,6 @@ fqpca(
   method = "conquer",
   penalized = FALSE,
   lambda.ridge = 0,
-  weights = NULL,
   tol = 0.001,
   n.iters = 20,
   verbose = FALSE,
@@ -36,13 +35,11 @@ fqpca(
 
 \item{splines.df}{Degrees of freedom for the splines.}
 
-\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('br', 'fn', 'pfn', 'sfn')} from \code{quantreg} package along with any available solver in \code{CVXR} package.}
+\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
 
-\item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.}
+\item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.}
 
-\item{lambda.ridge}{Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}.}
-
-\item{weights}{Optional array of weights used in penalized fqpca models. It must have dimension equal to (npc+1)}
+\item{lambda.ridge}{Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.}
 
 \item{tol}{Tolerance on the convergence of the algorithm.}
 

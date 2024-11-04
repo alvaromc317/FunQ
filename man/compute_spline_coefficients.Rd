@@ -10,11 +10,9 @@ compute_spline_coefficients(
   Y.mask,
   scores,
   spline.basis,
-  intercept.spline.basis,
   quantile.value,
   method,
-  lambda.ridge,
-  weights
+  lambda.ridge
 )
 }
 \arguments{
@@ -28,15 +26,11 @@ compute_spline_coefficients(
 
 \item{spline.basis}{The spline basis matrix.}
 
-\item{intercept.spline.basis}{The spline basis matrix for the conquer intercept.}
-
 \item{quantile.value}{The quantile considered.}
 
 \item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
 
-\item{lambda.ridge}{The hyper-parameter controlling the penalization on the splines. This parameter has no effect if method is 'quantreg'}
-
-\item{weights}{Array of weights used in the penalization. It must have dimension equal to (npc+1) * ncol(spline.basis)-1. (The -1 comes from the presence of an intercept term)}
+\item{lambda.ridge}{Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.}
 }
 \value{
 The matrix of spline coefficients splines coefficients.

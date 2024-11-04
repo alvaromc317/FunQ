@@ -4,17 +4,10 @@
 \alias{compute_loadings}
 \title{Compute loadings (aka principal components)}
 \usage{
-compute_loadings(
-  spline.basis,
-  intercept.spline.basis,
-  spline.coefficients,
-  method
-)
+compute_loadings(spline.basis, spline.coefficients, method)
 }
 \arguments{
 \item{spline.basis}{The spline basis matrix.}
-
-\item{intercept.spline.basis}{The spline basis matrix for the conquer intercept.}
 
 \item{spline.coefficients}{the matrix of spline coefficients.}
 
