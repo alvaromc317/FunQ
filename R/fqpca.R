@@ -553,61 +553,65 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
     spline.basis = spline.basis %*% U
   }
 
-  # INITIALIZATION OF SCORES AND LOADINGS -------------------------------------
+  loop.start.time <- base::Sys.time()
 
   # Randomly generate splines coefficients
-  spline.coefficients.0 <- base::matrix(stats::rnorm(n.basis * (npc+1), mean = 0, sd = 1), nrow=n.basis, ncol=npc+1)
+  spline.coefficients <- base::matrix(stats::rnorm(n.basis * (npc+1), mean = 0, sd = 1), nrow=n.basis, ncol=npc+1)
+  loadings <- spline.basis %*% spline.coefficients
 
-  loadings.0 <- spline.basis %*% spline.coefficients.0
-
-  scores.0 <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings.0, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
-  if(!is.matrix(scores.0))
-  {
-    stop('Iteration: 0. Failed computation of scores')
-  }
+  scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
+  if(!is.matrix(scores)){stop('Iteration: 0. Failed computation of scores')}
 
   # Rotate loadings and scores
-  rotation.result <- try(rotate_scores_and_loadings(loadings = loadings.0, scores = scores.0), silent = FALSE)
+  rotation.result <- try(rotate_scores_and_loadings(loadings = loadings, scores = scores), silent = FALSE)
   error.chr <- class(rotation.result)
   if(error.chr=="try-error")
   {
-    warning('Iteration: 0. Failed rotation process. Skipping rotation on this iteration.')
+    warning('Iteration: 1. Failed rotation process. Skipping rotation on this iteration.')
     function.warnings$rotation <- TRUE
-    rotation.result <- list(loadings = loadings.0, scores = scores.0, rotation.matrix = diag(npc))
+    rotation.result <- list(loadings = loadings, scores = scores, rotation.matrix = diag(npc))
   }
-  loadings.0 <- rotation.result$loadings
-  scores.0 <- rotation.result$scores
-  rotation.matrix.0 = rotation.result$rotation.matrix
+  loadings <- rotation.result$loadings
+  scores <- rotation.result$scores
+  rotation.matrix = rotation.result$rotation.matrix
+
+  loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
 
   # Compute objective value function
-  objective.function.0 <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores.0, loadings = loadings.0)
+  objective.function <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores, loadings = loadings)
+  objective.function.array <- objective.function
 
-  # Initialize storage of final solution
-  objective.function.array <- objective.function.0
-  best.results <- list(loadings = loadings.0, scores = scores.0, spline.coefficients = spline.coefficients.0, objective.function = objective.function.0, rotation.matrix = rotation.matrix.0, iteration = 0)
+  best.results <- list(loadings = loadings, scores = scores, spline.coefficients = spline.coefficients, objective.function=objective.function.array[1], rotation.matrix = rotation.matrix, iteration = 1)
+
+  if(verbose)
+  {
+    message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration: ', 1, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
+            '\n', 'Objective function (i) value: ', base::round(objective.function.array[1], 4),
+            '\n', '____________________________________________________________')
+  }
 
   # Iterate until convergence or until n.iters is reached
-  convergence.criteria <- c()
-
-  for(i in 1:n.iters)
+  convergence.criteria <- c(0)
+  convergence = F
+  for(i in 2:n.iters)
   {
     loop.start.time <- base::Sys.time()
 
     # OBTAIN SPLINE COEFFICIENTS
-    spline.coefficients.1 <- try(compute_spline_coefficients(penalized = penalized, Y = Y, Y.mask = Y.mask, scores = scores.0, spline.basis = spline.basis, quantile.value = quantile.value, method = method, lambda.ridge = lambda.ridge), silent = FALSE)
-    if(!is.matrix(spline.coefficients.1))
+    spline.coefficients <- try(compute_spline_coefficients(penalized = penalized, Y = Y, Y.mask = Y.mask, scores = scores, spline.basis = spline.basis, quantile.value = quantile.value, method = method, lambda.ridge = lambda.ridge), silent = FALSE)
+    if(!is.matrix(spline.coefficients))
     {
       warning('Iteration: ', i, '. Failed computation of spline coefficients. Providing results from previous iteration.')
       function.warnings$splines <- TRUE
       break
     }
 
-    loadings.1 <- compute_loadings(spline.basis=spline.basis, spline.coefficients=spline.coefficients.1, method=method)
-    if(is_rank_deficient(loadings.1)){warning('Loadings matrix is singular. This was likely induced by a very large penalization term and will impede the correct computation of scores the next iteration. Consider reducing the value of the penalization term.')}
+    loadings <- compute_loadings(spline.basis=spline.basis, spline.coefficients=spline.coefficients, method=method)
+    if(is_rank_deficient(loadings)){warning('Loadings matrix is singular. This was likely induced by a very large penalization term and will impede the correct computation of scores the next iteration. Consider reducing the value of the penalization term.')}
 
     # OBTAIN SCORES
-    scores.1 <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings.1, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
-    if(!is.matrix(scores.1))
+    scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
+    if(!is.matrix(scores))
     {
       warning('Iteration: ', i, '. Failed computation of scores. Providing results from previous iteration.')
       function.warnings$scores <- TRUE
@@ -615,70 +619,64 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
     }
 
     # Rotate loadings and scores
-    rotation.result <- try(rotate_scores_and_loadings(loadings = loadings.1, scores = scores.1), silent = FALSE)
+    rotation.result <- try(rotate_scores_and_loadings(loadings = loadings, scores = scores), silent = FALSE)
     error.chr <- class(rotation.result)
     if(error.chr=="try-error")
     {
       warning('Iteration: ', i, '. Failed rotation process. Skipping rotation on this iteration.')
       function.warnings$rotation <- TRUE
-      rotation.result <- list(loadings = loadings.1, scores = scores.1, rotation.matrix = diag(npc))
+      rotation.result <- list(loadings = loadings, scores = scores, rotation.matrix = diag(npc))
     }
-    loadings.1 <- rotation.result$loadings
-    scores.1 <- rotation.result$scores
-    rotation.matrix.1 = rotation.result$rotation.matrix
+    loadings <- rotation.result$loadings
+    scores <- rotation.result$scores
+    rotation.matrix = rotation.result$rotation.matrix
 
     # Compute objective function
-    objective.function.1 <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores.1, loadings = loadings.1)
-    objective.function.array <- c(objective.function.array, objective.function.1)
+    objective.function <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores, loadings = loadings)
+    objective.function.array <- c(objective.function.array, objective.function)
 
     # COMPROBATION OF CONVERGENCE ---------------------------------------------
 
-    if(objective.function.1 <= best.results$objective.function)
+    if(objective.function.array[i] <= best.results$objective.function)
     {
-      best.results <- list(loadings = loadings.1, scores = scores.1, spline.coefficients = spline.coefficients.1, objective.function = objective.function.1, rotation.matrix = rotation.matrix.1, iteration = i)
+      best.results <- list(loadings = loadings, scores = scores, spline.coefficients = spline.coefficients, objective.function = objective.function.array[i], rotation.matrix = rotation.matrix, iteration = i)
     }
 
-    convergence.criteria[i] <- base::abs(objective.function.1 - objective.function.0)
+    convergence.criteria[i] <- base::abs(objective.function.array[i] - objective.function.array[i-1])
+    if(convergence.criteria[i] < tol){convergence = T}
 
     # Measure computation time
     loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
 
-    if(verbose)
+    if(verbose & convergence)
     {
       message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration: ', i, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
-              '\n', 'Objective function (i-1) value: ', base::round(objective.function.0, 4),
-              '\n', 'Objective function   i   value: ', round(objective.function.1, 4),
+              '\n', 'Objective function (i-1) value: ', base::round(objective.function.array[i-1], 4),
+              '\n', 'Objective function   i   value: ', round(objective.function.array[i], 4),
+              '\n', 'Convergence criteria value    : ', base::round(convergence.criteria[i], 4),
+              '\n', 'Algorithm converged succesfully.',
+              '\n', '____________________________________________________________',
+              '\n\n')
+    }
+    if(verbose & !convergence)
+    {
+      message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration: ', i, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
+              '\n', 'Objective function (i-1) value: ', base::round(objective.function.array[i-1], 4),
+              '\n', 'Objective function   i   value: ', round(objective.function.array[i], 4),
               '\n', 'Convergence criteria value    : ', base::round(convergence.criteria[i], 4),
               '\n', '____________________________________________________________')
     }
+    if(convergence){break}
 
-    if(convergence.criteria[i] < tol)
-    {
-      if(verbose){message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Algorithm converged with value: ', base::round(convergence.criteria[i], 4))}
-      break
-    }
-
-    # If the objective value function (that should be decreasing) is
-    # 50 times larger than the original objective value function, break
-    if( objective.function.array[i+1] > 50 * objective.function.array[2])
+    # Avoid computational issues and do early stops if reaching diverging loops.
+    if(i>=3 & (objective.function.array[i] > 10 * objective.function.array[2]))
     {
       function.warnings$diverging.loop <- TRUE
-      if(verbose)
-      {
-        message('Iteration: ', i, '. Breaking diverging loop',
-                '\n', 'Objective function (i) value     : ', base::round(objective.function.array[i+1], 4),
-                '\n', 'Initial objective function value : ', base::round(objective.function.array[2], 4),
-                '\n', 'Smallest objective function value: ', base::round(best.results$objective.function, 4), ' obtained at iteration ', best.results$iteration, ' will be provided.')
-      }
+      message('Iteration: ', i, '. Breaking diverging loop')
       break
     }
-
-    # UPDATE VALUES -----------------------------------------------------------
-
-    objective.function.0 <- objective.function.1
-    scores.0 <- scores.1
   }
-  if(i == n.iters){warning('Iteration: ', n.iters, '. Algorithm reached maximum number of iterations without convergence. Consider increasing the value of parameter n.iters')}
+  if(i == n.iters){warning('Algorithm reached maximum number of iterations without convergence. Consider increasing the value of n.iters parameter')}
 
   # EXPLAINED VARIABILITY -----------------------------------------------------
 
