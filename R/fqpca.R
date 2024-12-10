@@ -585,7 +585,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
   if(verbose)
   {
     message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration ', 1, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
-            '\n', 'Objective function (i) value: ', base::round(objective.function.array[1], 4),
+            '\n', 'Objective function   i   value: ', round(objective.function.array[1], 4),
             '\n', '____________________________________________________________')
   }
 
