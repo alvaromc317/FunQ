@@ -274,8 +274,6 @@ rotate_scores_and_loadings <- function(loadings, scores)
 #' @return The percentage of variability each component is explaining.
 compute_explained_variability <- function(scores)
 {
-  npc <- base::ncol(scores)-1
-  scores <- base::matrix(scores[,-1], ncol=npc)
   variability <- base::diag(stats::var(scores))
   pve <- variability / base::sum(variability)
   return(pve)
@@ -639,7 +637,7 @@ fqpca <- function(
 
   # EXPLAINED VARIABILITY -----------------------------------------------------
 
-  pve <- compute_explained_variability(last.iteration$scores)
+  pve <- compute_explained_variability(last.iteration$scores[, -1, drop=F])
 
   global.execution.time <- difftime(base::Sys.time(), global.start.time, units = 'secs')
 
