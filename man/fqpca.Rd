@@ -11,7 +11,7 @@ fqpca(
   quantile.value = 0.5,
   periodic = TRUE,
   splines.df = 10,
-  method = "conquer",
+  splines.method = "conquer",
   penalized = FALSE,
   lambda.ridge = 0,
   tol = 0.001,
@@ -35,7 +35,7 @@ fqpca(
 
 \item{splines.df}{Degrees of freedom for the splines.}
 
-\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
+\item{splines.method}{Method used in the resolution of the splines quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
 
 \item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.}
 
@@ -49,7 +49,7 @@ fqpca(
 
 \item{seed}{Seed for the random generator number.}
 
-\item{parallelized.scores}{Should the scores be computed in parallel? Experimantal component.}
+\item{parallelized.scores}{Should the scores be computed in parallel? Experimental component.}
 
 \item{num.cores}{Number of cores to use in parallelized executions.}
 }

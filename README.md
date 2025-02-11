@@ -8,7 +8,7 @@
 [![License: GPL
 v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Package
-Version](https://img.shields.io/badge/version-0.1.6-blue.svg)](https://cran.r-project.org/package=yourPackageName)
+Version](https://img.shields.io/badge/version-0.1.9-blue.svg)](https://cran.r-project.org/package=yourPackageName)
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-brightgreen.svg)](https://www.tidyverse.org/lifecycle/)
 <!-- badges: end -->
 
@@ -52,7 +52,7 @@ Principal Component Analysis methodology. Key features include:
   - Second Derivative Penalty: experimental method involving a second
     derivative penalty on the spline coefficients by setting
     `penalized = TRUE` and specifying `lambda.ridge`. Requires setting
-    `method = "conquer"`.
+    `splines.method = "conquer"`.
 
 Additionally, the package includes functions for cross-validation of
 parameters such as `splines.df` (`cross_validation_df`) and
@@ -130,7 +130,7 @@ results = fqpca(data=Y.train, npc=2, quantile.value=0.5)
 loadings = results$loadings
 scores = results$scores
 
-# Recover x_train based on decomposition
+# Recover Y.train based on decomposition
 Y.train.estimated = fitted(results, pve = 0.95)
 ```
 
@@ -190,7 +190,7 @@ This method is experimental but has shown promising results.
 
 ``` r
 # Apply fqpca with penalization
-results_penalized <- fqpca(data = Y.train, npc = 2, quantile.value = 0.5, penalized = TRUE, lambda.ridge = 0.001, method = "conquer")
+results_penalized <- fqpca(data = Y.train, npc = 2, quantile.value = 0.5, penalized = TRUE, lambda.ridge = 0.001, splines.method = "conquer")
 
 # Reconstruct the training data
 Y.train.estimated_penalized <- fitted(results_penalized, pve = 0.95)
@@ -205,8 +205,8 @@ cv_result = cross_validation_lambda(Y, lambda.grid=c(0, 1e-5, 1e-3), n.folds=3, 
 cv_result$error.matrix
 #>         Fold 1    Fold 2    Fold 3
 #> [1,] 0.1686230 0.1659071 0.1675024
-#> [2,] 0.1696019 0.1673563 0.1691598
-#> [3,] 0.1694931 0.1680963 0.1686873
+#> [2,] 0.1696160 0.1681106 0.1691590
+#> [3,] 0.1696826 0.1679575 0.1695439
 ```
 
 The dimensions of the error matrix are `(length(lambda.grid), n.folds)`.
@@ -269,8 +269,8 @@ explained variance:
 ``` r
 results = fqpca(data=data$temperature, npc=10, quantile.value=0.5, splines.df=optimal_df, seed=5)
 cumsum(results$pve)
-#>  [1] 0.8869980 0.9723360 0.9918146 0.9970347 0.9981933 0.9990281 0.9995235
-#>  [8] 0.9997616 0.9999040 1.0000000
+#>  [1] 0.8869913 0.9723314 0.9918136 0.9970323 0.9981916 0.9990270 0.9995228
+#>  [8] 0.9997607 0.9999038 1.0000000
 ```
 
 With 3 components, we achieve over 99% of explained variability.

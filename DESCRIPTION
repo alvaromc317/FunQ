@@ -1,6 +1,6 @@
 Package: FunQ
 Title: Functional Quantile methodologies
-Version: 0.1.8
+Version: 0.1.9
 Authors@R: 
     person("Álvaro", "Méndez-Civieta", , "am5490@cumc.columbia.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-2044-4170"))
@@ -16,9 +16,11 @@ Imports:
     quantreg,
     conquer,
     pbs,
+    rlang,
     tidyr,
     dplyr,
     tibble,
+    ggplot2,
     caret,
     tf,
     foreach,
@@ -33,4 +35,3 @@ Depends:
 Remotes:
   tidyfun/tf,
 Config/testthat/edition: 3
-VignetteBuilder: knitr

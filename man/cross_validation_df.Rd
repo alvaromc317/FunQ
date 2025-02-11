@@ -18,7 +18,7 @@ cross_validation_df(
   splines.df.grid = c(5, 10, 15, 20),
   tol = 0.001,
   n.iters = 20,
-  method = "conquer",
+  splines.method = "conquer",
   penalized = FALSE,
   parallelized.scores = FALSE,
   num.cores = NULL,
@@ -54,7 +54,7 @@ cross_validation_df(
 
 \item{n.iters}{Maximum number of iterations.}
 
-\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
+\item{splines.method}{Method used in the resolution of the splines quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
 
 \item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.}
 

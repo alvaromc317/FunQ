@@ -287,7 +287,7 @@ compute_explained_variability <- function(scores)
 #' @param quantile.value The quantile considered.
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df Degrees of freedom for the splines.
-#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
+#' @param splines.method Method used in the resolution of the splines quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
 #' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.
 #' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}.
 #' @param tol Tolerance on the convergence of the algorithm.
@@ -297,7 +297,7 @@ compute_explained_variability <- function(scores)
 #' @param parallelized.scores Should the scores be computed in parallel? Experimantal component.
 #' @param num.cores Number of cores to use in parallelized executions.
 #' @return No return
-check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, method, penalized, lambda.ridge, tol, n.iters, verbose, seed, parallelized.scores, num.cores)
+check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, splines.method, penalized, lambda.ridge, tol, n.iters, verbose, seed, parallelized.scores, num.cores)
 {
   # Check 'npc': integer number, positive
   if (!is.numeric(npc) || length(npc) != 1 || npc %% 1 != 0 || npc <= 0) {
@@ -326,9 +326,9 @@ check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, method
   }
 
   # Check 'method': must be either 'conquer' or 'quantreg'
-  if (!is.character(method) || length(method) != 1 ||
-      !method %in% c("conquer", "quantreg")) {
-    stop("Invalid input for 'method': '", method,
+  if (!is.character(splines.method) || length(splines.method) != 1 ||
+      !splines.method %in% c("conquer", "quantreg")) {
+    stop("Invalid input for 'splines.method': '", splines.method,
          "'. Expected 'conquer' or 'quantreg'.")
   }
 
@@ -427,42 +427,6 @@ check_input_data <- function(data, colname)
 
 # MAIN ------------------------------------------------------------------------
 
-fqpca_structure <- function(loadings, scores, pve, objective.function.value,
-                            objective.function.array, function.warnings,
-                            execution.time, colname, npc, quantile.value, method,
-                            penalized, lambda.ridge, periodic, splines.df, tol, n.iters, verbose,
-                            seed, parallelized.scores, num.cores, rotation.matrix,
-                            spline.coefficients, spline.basis)
-{
-  structure(list(
-    loadings = loadings,
-    scores = scores,
-    pve = pve,
-    objective.function.value = objective.function.value,
-    objective.function.array = objective.function.array,
-    function.warnings = function.warnings,
-    execution.time = execution.time,
-    colname = colname,
-    npc = npc,
-    quantile.value = quantile.value,
-    method = method,
-    penalized = penalized,
-    lambda.ridge = lambda.ridge,
-    periodic = periodic,
-    splines.df = splines.df,
-    tol = tol,
-    n.iters = n.iters,
-    verbose = verbose,
-    seed = seed,
-    parallelized.scores = parallelized.scores,
-    num.cores = num.cores,
-    rotation.matrix = rotation.matrix,
-    spline.coefficients = spline.coefficients,
-    spline.basis = spline.basis
-  ),
-  class = "fqpca_object")
-}
-
 #' @title FQPCA (Functional Quantile Principal Component Analysis)
 #' @description Solves the functional quantile principal component analysis methodology
 #' @param data An \eqn{(N \times T)} matrix, a tf object from the tidyfun package or a data.frame containing the functional data as a tf column.
@@ -471,14 +435,14 @@ fqpca_structure <- function(loadings, scores, pve, objective.function.value,
 #' @param quantile.value The quantile considered.
 #' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
 #' @param splines.df Degrees of freedom for the splines.
-#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
+#' @param splines.method Method used in the resolution of the splines quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
 #' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.
 #' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @param tol Tolerance on the convergence of the algorithm.
 #' @param n.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
 #' @param seed Seed for the random generator number.
-#' @param parallelized.scores Should the scores be computed in parallel? Experimantal component.
+#' @param parallelized.scores Should the scores be computed in parallel? Experimental component.
 #' @param num.cores Number of cores to use in parallelized executions.
 #' @return fqpca_object
 #' @export
@@ -495,13 +459,21 @@ fqpca_structure <- function(loadings, scores, pve, objective.function.value,
 #'
 #' loadings <- results$loadings
 #' scores <- results$scores
-fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodic = TRUE, splines.df = 10, method = 'conquer', penalized = FALSE, lambda.ridge = 0, tol = 1e-3, n.iters = 20, verbose = FALSE, seed = NULL, parallelized.scores=FALSE, num.cores=NULL)
+fqpca <- function(
+    data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodic = TRUE,
+    splines.df = 10, splines.method = 'conquer', penalized = FALSE,
+    lambda.ridge = 0, tol = 1e-3, n.iters = 20, verbose = FALSE, seed = NULL,
+    parallelized.scores=FALSE, num.cores=NULL)
 {
   global.start.time <- base::Sys.time()
 
+  # Get the input parameters
+  formal_names <- base::setdiff(names(formals(sys.function())), "...")
+  inputs <- base::mget(formal_names, envir = environment())
+
    # Check the input parameters except Y and colname
   check_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
-                     splines.df=splines.df, method=method, penalized=penalized,
+                     splines.df=splines.df, splines.method=splines.method, penalized=penalized,
                      lambda.ridge=lambda.ridge, tol=tol, n.iters=n.iters,
                      verbose=verbose, seed=seed, parallelized.scores=parallelized.scores,
                      num.cores=num.cores)
@@ -509,11 +481,11 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
   # Check Y and colname and return an unnamed matrix
   Y <- check_input_data(data=data, colname=colname)
 
-  # Check if method is valid
-  if(penalized && method != 'conquer')
+  # Check if splines.method is valid
+  if(penalized && splines.method != 'conquer')
   {
-    stop("Invalid input for 'method and/or penalized':
-         If penalized is set to  TRUE then method must be 'conquer'")
+    stop("Invalid input for 'splines.method and/or penalized':
+         If penalized is set to  TRUE then splines.method must be 'conquer'")
   }
 
   # If seed is provided, set seed for computations
@@ -596,7 +568,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
     loop.start.time <- base::Sys.time()
 
     # OBTAIN SPLINE COEFFICIENTS
-    spline.coefficients <- try(compute_spline_coefficients(penalized = penalized, Y = Y, Y.mask = Y.mask, scores = scores, spline.basis = spline.basis, quantile.value = quantile.value, method = method, lambda.ridge = lambda.ridge), silent = FALSE)
+    spline.coefficients <- try(compute_spline_coefficients(penalized = penalized, Y = Y, Y.mask = Y.mask, scores = scores, spline.basis = spline.basis, quantile.value = quantile.value, method = splines.method, lambda.ridge = lambda.ridge), silent = FALSE)
     if(!is.matrix(spline.coefficients))
     {
       warning('Iteration ', i, '. Failed computation of spline coefficients. Providing results from previous iteration.')
@@ -604,7 +576,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
       break
     }
 
-    loadings <- compute_loadings(spline.basis=spline.basis, spline.coefficients=spline.coefficients, method=method)
+    loadings <- compute_loadings(spline.basis=spline.basis, spline.coefficients=spline.coefficients, method=splines.method)
     if(is_rank_deficient(loadings)){warning('Loadings matrix is singular.')}
 
     # OBTAIN SCORES
@@ -641,17 +613,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
     # Measure computation time
     loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
 
-    if(verbose & convergence)
-    {
-      message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration ', i, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
-              '\n', 'Objective function (i-1) value: ', base::round(objective.function.array[i-1], 4),
-              '\n', 'Objective function   i   value: ', round(objective.function.array[i], 4),
-              '\n', 'Convergence criteria value    : ', base::round(convergence.criteria, 4),
-              '\n', 'Algorithm converged succesfully.',
-              '\n', '____________________________________________________________',
-              '\n\n')
-    }
-    if(verbose & !convergence)
+    if(verbose)
     {
       message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration ', i, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
               '\n', 'Objective function (i-1) value: ', base::round(objective.function.array[i-1], 4),
@@ -659,6 +621,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
               '\n', 'Convergence criteria value    : ', base::round(convergence.criteria, 4),
               '\n', '____________________________________________________________')
     }
+
     if(convergence){break}
 
     # Avoid computational issues and do early stops if reaching diverging loops.
@@ -669,7 +632,10 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
       break
     }
   }
-  if(i == n.iters & !convergence){warning('Algorithm reached maximum number of iterations without convergence. Consider increasing the value of n.iters parameter')}
+
+  if(verbose & convergence){message("\u2705 Algorithm converged succesfully")}
+
+  if(i == n.iters & !convergence){warning('\u274C Algorithm reached maximum number of iterations without convergence. Consider increasing the value of n.iters parameter')}
 
   # EXPLAINED VARIABILITY -----------------------------------------------------
 
@@ -677,7 +643,7 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
 
   global.execution.time <- difftime(base::Sys.time(), global.start.time, units = 'secs')
 
-  results <- fqpca_structure(
+  results <- structure(list(
     loadings = last.iteration$loadings,
     scores = last.iteration$scores,
     pve = pve,
@@ -685,24 +651,13 @@ fqpca <- function(data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodi
     objective.function.array = objective.function.array,
     function.warnings = function.warnings,
     execution.time = global.execution.time,
-    npc = npc,
-    colname = colname,
-    quantile.value = quantile.value,
-    method = method,
-    penalized = penalized,
-    lambda.ridge = lambda.ridge,
-    periodic = periodic,
-    splines.df = splines.df,
-    tol = tol,
-    n.iters = last.iteration$iteration,
-    verbose = verbose,
-    seed = seed,
-    parallelized.scores = parallelized.scores,
-    num.cores = num.cores,
     rotation.matrix = last.iteration$rotation.matrix,
     spline.coefficients = last.iteration$spline.coefficients,
-    spline.basis = spline.basis
-  )
+    spline.basis = spline.basis,
+    n.iters = last.iteration$iteration,
+    inputs = inputs),
+    class = "fqpca_object")
+
   return(results)
 }
 
@@ -731,11 +686,11 @@ predict.fqpca_object <- function(object, newdata, ...)
 {
   if (!base::inherits(object, "fqpca_object")){stop('The object must be of class fqpca_object')}
 
-  if(is.null(object$colname))
+  if(is.null(object$inputs$colname))
   {
     Y <- base::unname(base::as.matrix(newdata))
   }else{
-    Y <- base::unname(base::as.matrix(dplyr::pull(newdata[object$colname])))
+    Y <- base::unname(base::as.matrix(dplyr::pull(newdata[object$inputs$colname])))
   }
   if(base::ncol(newdata) == 1){ newdata <- t(newdata)}
 
@@ -745,7 +700,7 @@ predict.fqpca_object <- function(object, newdata, ...)
   if(sum(!Y.mask) == n.obs * n.time){stop('newdata contains no information. Check that there are values different from NA')}
 
   # Estimation of scores
-  scores <- try(compute_scores(Y = newdata, Y.mask = Y.mask, loadings = object$loadings, quantile.value = object$quantile.value, parallelized.scores = FALSE, num.cores = 1), silent = FALSE)
+  scores <- try(compute_scores(Y = newdata, Y.mask = Y.mask, loadings = object$loadings, quantile.value = object$inputs$quantile.value, parallelized.scores = FALSE, num.cores = 1), silent = FALSE)
   if(!is.matrix(scores))
   {
     stop('Computation of scores failed.')
@@ -789,42 +744,62 @@ fitted.fqpca_object <- function(object, pve=0.95, ...)
 
 # BASIC PLOT ------------------------------------------------------------------
 
-#' @title Plot fqpca loading functions
-#' @description S3 method for class 'fqpca_object'. Given a fqpca object, plot the loading functions
+#' @title Plot fqpca loading functions with ggplot2
+#' @description S3 method for class 'fqpca_object'. Given a fqpca object, plot
+#'              the loading functions using ggplot2 facets.
 #' @param x An object output of the fqpca function.
-#' @param pve Percentage of explained variability plotted.
-#' @param ... further arguments passed to or from other methods.
-#' @return The plot of loadings
+#' @param pve Percentage of explained variability to determine the number of components.
+#' @param ... Further arguments passed to or from other methods.
+#' @return A ggplot object plotting the intercept and FQPC curves.
+#' @importFrom rlang .data
 #' @export
 #' @examples
 #' # Generate fake dataset with 150 observations and 144 time points
-#'
 #' Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 150), byrow = TRUE, nrow = 150)
 #' Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
-#'
 #' # Add missing observations
 #' Y[sample(150*144, as.integer(0.2*150*144))] <- NA
-#'
 #' results <- fqpca(data = Y, npc = 2, quantile.value = 0.5)
-#'
 #' plot(results)
-plot.fqpca_object <- function(x, pve=0.99, ...)
+plot.fqpca_object <- function(x, pve = 0.99, ...)
 {
-  if (!base::inherits(x, "fqpca_object")){stop('The x must be of class fqpca_object')}
+  if (!inherits(x, "fqpca_object")) {stop("The x must be of class fqpca_object")}
 
-  score.variance = cumsum(x$pve)
-  n.components = min(which(score.variance > pve))
+  # Determine the number of components required based on cumulative PVE
+  score_variance <- cumsum(x$pve)
+  n_components <- min(which(score_variance > pve))
 
   loadings <- x$loadings
-  graphics::par(mfrow = c(1, 2))
-  graphics::plot(loadings[,1], type = 'l', lty = 1, lwd = 2, xlab = '', ylab = '')
-  graphics::title('Intercept curve')
 
-  no_intercept_loadings <- loadings[,2:(n.components+1)]
-  if(base::ncol(loadings) == 2)
-  {
-    no_intercept_loadings <- base::matrix(no_intercept_loadings, ncol = 1)
-  }
-  graphics::matplot(no_intercept_loadings, type =  "l", lty = 1, lwd = 2, xlab = '', ylab = '')
-  graphics::title('FQPCs ')
+  # Create a data frame for the intercept curve
+  intercept_df <- data.frame(
+    Time = seq_len(nrow(loadings)),
+    Loading = loadings[, 1],
+    Component = "Intercept")
+
+  # Extract the non-intercept loadings (columns 2 to n_components+1)
+  non_int <- loadings[, 2:(n_components + 1), drop = FALSE]
+
+  # Reshape non-intercept loadings into a long format data frame
+  fqpc_df <- data.frame(
+    Time = rep(seq_len(nrow(non_int)), times = ncol(non_int)),
+    Loading = as.vector(non_int),
+    Component = rep(paste0("FQPC ", seq_len(ncol(non_int))), each = nrow(non_int)))
+
+  # Combine the intercept and FQPC data frames
+  plot_data <- rbind(intercept_df, fqpc_df)
+  plot_data$Component = factor(plot_data$Component, levels = c('Intercept', paste0('FQPC ', 1:ncol(non_int))))
+
+  # Create the GGPlot object with facets displaying each component separately.
+  p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$Time, y = .data$Loading)) +
+    ggplot2::geom_line(color = "steelblue", linewidth = 1) +
+    ggplot2::facet_wrap(~ Component, scales = "free_y", ncol = 3) +
+    ggplot2::labs(title = "Loading Functions",
+                  x = "Time",
+                  y = "Loading") +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(strip.background = ggplot2::element_rect(fill = "grey90"),
+                   strip.text = ggplot2::element_text(face = "bold"))
+
+  return(p)
 }

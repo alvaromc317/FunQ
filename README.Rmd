@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Package Version](https://img.shields.io/badge/version-0.1.6-blue.svg)](https://cran.r-project.org/package=yourPackageName)
+[![Package Version](https://img.shields.io/badge/version-0.1.9-blue.svg)](https://cran.r-project.org/package=yourPackageName)
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-brightgreen.svg)](https://www.tidyverse.org/lifecycle/)
 <!-- badges: end -->
 
@@ -40,7 +40,7 @@ devtools::install_github("alvaromc317/FunQ")
 * Handling Missing Data: capable of dealing with irregular time grids and missing data.
 * Smoothness Control: allows control over the smoothness of the results using two approaches:
   * Spline Degrees of Freedom: Using the `splines.df` parameter to set the degrees of freedom in spline basis reconstruction.
-  * Second Derivative Penalty: experimental method involving a second derivative penalty on the spline coefficients by setting `penalized = TRUE` and specifying `lambda.ridge`. Requires setting `method = "conquer"`.
+  * Second Derivative Penalty: experimental method involving a second derivative penalty on the spline coefficients by setting `penalized = TRUE` and specifying `lambda.ridge`. Requires setting `splines.method = "conquer"`.
   
 Additionally, the package includes functions for cross-validation of parameters such as `splines.df` (`cross_validation_df`) and `lambda.ridge` (`cross_validation_lambda`), using the quantile error as the reference prediction error metric (`quantile_error` function).
 
@@ -109,7 +109,7 @@ results = fqpca(data=Y.train, npc=2, quantile.value=0.5)
 loadings = results$loadings
 scores = results$scores
 
-# Recover x_train based on decomposition
+# Recover Y.train based on decomposition
 Y.train.estimated = fitted(results, pve = 0.95)
 ```
 
@@ -155,7 +155,7 @@ In this example, we demonstrate how to apply the second derivative penalty appro
 
 ```{r}
 # Apply fqpca with penalization
-results_penalized <- fqpca(data = Y.train, npc = 2, quantile.value = 0.5, penalized = TRUE, lambda.ridge = 0.001, method = "conquer")
+results_penalized <- fqpca(data = Y.train, npc = 2, quantile.value = 0.5, penalized = TRUE, lambda.ridge = 0.001, splines.method = "conquer")
 
 # Reconstruct the training data
 Y.train.estimated_penalized <- fitted(results_penalized, pve = 0.95)
@@ -298,7 +298,7 @@ fqpca_reconstruction = selected_curves_long %>%
   facet_wrap(~link_curve) +
   ggtitle('FQPCA reconstruction') +
   xlab('Time') +
-  ylab('Accelerometer') +
+  ylab('Temperature') +
   theme_light() + 
   scale_color_manual(values = colors) + 
   scale_alpha_manual(values=c(1, 1, 1, 0.4)) +

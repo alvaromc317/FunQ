@@ -2,33 +2,30 @@
 % Please edit documentation in R/fqpca.R
 \name{plot.fqpca_object}
 \alias{plot.fqpca_object}
-\title{Plot fqpca loading functions}
+\title{Plot fqpca loading functions with ggplot2}
 \usage{
 \method{plot}{fqpca_object}(x, pve = 0.99, ...)
 }
 \arguments{
 \item{x}{An object output of the fqpca function.}
 
-\item{pve}{Percentage of explained variability plotted.}
+\item{pve}{Percentage of explained variability to determine the number of components.}
 
-\item{...}{further arguments passed to or from other methods.}
+\item{...}{Further arguments passed to or from other methods.}
 }
 \value{
-The plot of loadings
+A ggplot object plotting the intercept and FQPC curves.
 }
 \description{
-S3 method for class 'fqpca_object'. Given a fqpca object, plot the loading functions
+S3 method for class 'fqpca_object'. Given a fqpca object, plot
+the loading functions using ggplot2 facets.
 }
 \examples{
 # Generate fake dataset with 150 observations and 144 time points
-
 Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 150), byrow = TRUE, nrow = 150)
 Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
-
 # Add missing observations
 Y[sample(150*144, as.integer(0.2*150*144))] <- NA
-
 results <- fqpca(data = Y, npc = 2, quantile.value = 0.5)
-
 plot(results)
 }
