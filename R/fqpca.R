@@ -764,8 +764,14 @@ plot.fqpca_object <- function(x, pve = 0.99, ...)
   if (!inherits(x, "fqpca_object")) {stop("The x must be of class fqpca_object")}
 
   # Determine the number of components required based on cumulative PVE
-  score_variance <- cumsum(x$pve)
-  n_components <- min(which(score_variance > pve))
+  if(pve < 1)
+  {
+    score.variance = cumsum(object$pve)
+    n.components = min(which(score.variance > pve))
+  }else{
+    if(!pve == floor(pve)){stop('pve must be either a floating point number smaller than 1 or an integer number. Value provided: ', pve)}
+    n.components = pve
+  }
 
   loadings <- x$loadings
 
@@ -775,8 +781,8 @@ plot.fqpca_object <- function(x, pve = 0.99, ...)
     Loading = loadings[, 1],
     Component = "Intercept")
 
-  # Extract the non-intercept loadings (columns 2 to n_components+1)
-  non_int <- loadings[, 2:(n_components + 1), drop = FALSE]
+  # Extract the non-intercept loadings (columns 2 to n.components+1)
+  non_int <- loadings[, 2:(n.components + 1), drop = FALSE]
 
   # Reshape non-intercept loadings into a long format data frame
   fqpc_df <- data.frame(
