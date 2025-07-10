@@ -5,7 +5,7 @@
 \title{Compute spline coefficients}
 \usage{
 compute_spline_coefficients_penalized(
-  Y,
+  Y.vector,
   Y.mask,
   scores,
   spline.basis,
@@ -14,9 +14,9 @@ compute_spline_coefficients_penalized(
 )
 }
 \arguments{
-\item{Y}{\eqn{(N \times T)} matrix of observed time instants.}
+\item{Y.vector}{vectorised version of Y, the \eqn{(N \times T)} matrix of observed time instants.}
 
-\item{Y.mask}{Mask matrix of the same dimensions as Y indicating wich observations in Y are known.}
+\item{Y.mask}{Mask matrix of the same dimensions as Y indicating which observations in Y are known.}
 
 \item{scores}{Initial matrix of scores.}
 

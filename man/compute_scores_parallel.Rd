@@ -4,12 +4,21 @@
 \alias{compute_scores_parallel}
 \title{Compute scores}
 \usage{
-compute_scores_parallel(Y, Y.mask, loadings, quantile.value, num.cores)
+compute_scores_parallel(
+  Y,
+  Y.mask,
+  intercept,
+  loadings,
+  quantile.value,
+  num.cores
+)
 }
 \arguments{
 \item{Y}{The \eqn{(N \times T)} matrix of observed time instants.}
 
 \item{Y.mask}{Mask matrix of the same dimensions as Y indicating which observations in Y are known.}
+
+\item{intercept}{population intercept}
 
 \item{loadings}{Matrix of loading coefficients.}
 

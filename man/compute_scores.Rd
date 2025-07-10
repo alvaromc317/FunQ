@@ -7,6 +7,7 @@
 compute_scores(
   Y,
   Y.mask,
+  intercept,
   loadings,
   quantile.value,
   parallelized.scores,
@@ -17,6 +18,8 @@ compute_scores(
 \item{Y}{The \eqn{(N \times T)} matrix of observed time instants.}
 
 \item{Y.mask}{Mask matrix of the same dimensions as Y indicating which observations in Y are known.}
+
+\item{intercept}{population intercept}
 
 \item{loadings}{Matrix of loading coefficients.}
 

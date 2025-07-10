@@ -15,7 +15,7 @@ fqpca(
   penalized = FALSE,
   lambda.ridge = 0,
   tol = 0.001,
-  n.iters = 20,
+  max.iters = 20,
   verbose = FALSE,
   seed = NULL,
   parallelized.scores = FALSE,
@@ -43,7 +43,7 @@ fqpca(
 
 \item{tol}{Tolerance on the convergence of the algorithm.}
 
-\item{n.iters}{Maximum number of iterations.}
+\item{max.iters}{Maximum number of iterations.}
 
 \item{verbose}{Boolean indicating the verbosity.}
 
@@ -60,16 +60,31 @@ fqpca_object
 Solves the functional quantile principal component analysis methodology
 }
 \examples{
-# Generate fake dataset with 150 observations and 144 time points
 
-Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 150), byrow = TRUE, nrow = 150)
-Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
+n.obs = 150
+n.time = 144
+
+# Generate scores
+c1.vals = rnorm(n.obs)
+c2.vals = rnorm(n.obs)
+
+# Generate pc's
+pc1 = sin(seq(0, 2*pi, length.out = n.time))
+pc2 = cos(seq(0, 2*pi, length.out = n.time))
+
+# Generate data
+Y <- c1.vals * matrix(pc1, nrow = n.obs, ncol=n.time, byrow = TRUE) +
+c2.vals * matrix(pc2, nrow = n.obs, ncol=n.time, byrow = TRUE)
+
+# Add noise
+Y <- Y + matrix(rnorm(n.obs * n.time, 0, 0.4), nrow = n.obs)
 
 # Add missing observations
-Y[sample(150*144, as.integer(0.2*150*144))] <- NA
+Y[sample(n.obs*n.time, as.integer(0.2*n.obs*n.time))] <- NA
 
-results <- fqpca(data = Y, npc = 2, quantile.value = 0.5)
+results <- fqpca(data = Y, npc = 2, quantile.value = 0.5, seed=1)
 
+intercept <- results$intercept
 loadings <- results$loadings
 scores <- results$scores
 }

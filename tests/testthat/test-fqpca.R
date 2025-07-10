@@ -1,9 +1,10 @@
 
 test_that('rotate_scores_and_loadings function works', {
   set.seed(5)
-  loadings = matrix(rnorm(18), nrow=6)
   scores = matrix(rnorm(15), nrow=5)
-  results = rotate_scores_and_loadings(loadings, scores)
+  intercept = rnorm(6)
+  loadings = matrix(rnorm(18), nrow=6)
+  results = rotate_scores_and_loadings(scores, intercept, loadings)
   expected_result = readRDS(test_path("fixtures", "rotation_result.rds"))
   expect_equal(round(results$loadings, 4), round(expected_result$loadings, 4))
   expect_equal(round(results$scores, 4), round(expected_result$scores, 4))
@@ -58,8 +59,8 @@ test_that('FQPCA algorithm for quantile.value=0.5 with penalized conquer works',
 test_that('FQPCA Fitted values works', {
   Y = test_data_fqpca()
   results = fqpca(data=Y, npc=1, quantile.value=0.5, seed=5, verbose=FALSE)
-  fitted.values = fitted(results)
-  fitted2 = results$scores %*% t(results$loadings)
+  fitted.values = fitted(results, pve=0.95)
+  fitted2 = sweep(results$scores %*% t(results$loadings), 2, results$intercept, FUN = "+")
   expect_equal(round(fitted.values, 4), round(fitted2, 4))
 })
 

@@ -17,7 +17,7 @@ knitr::opts_chunk$set(
 
 <!-- badges: start -->
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Package Version](https://img.shields.io/badge/version-0.1.9-blue.svg)](https://cran.r-project.org/package=yourPackageName)
+[![Package Version](https://img.shields.io/badge/version-0.1.10-blue.svg)](https://cran.r-project.org/package=yourPackageName)
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-brightgreen.svg)](https://www.tidyverse.org/lifecycle/)
 <!-- badges: end -->
 
@@ -66,22 +66,36 @@ We use the `tidyfun` package for handling functional data structures.
 
 We generate a synthetic dataset with 200 observations taken every 10 minutes over a day (144 time points). The data follows the formula:
 
-$$x_i = c_{i1}(\text{sin}(t)+\text{sin}(0.5t))+\varepsilon_i$$
+$$x_i(t) = c_{i1}\text{sin}(t) + c_{i2}\text{cos}(t) + \frac{t}{50} + \varepsilon_i$$
 
 where
 
-* $c_1\sim N(0,0.4)$ 
+* $c_1\sim N(0, 1)$ 
+* $c_2\sim N(0, 1)$ 
 * $\varepsilon_i\sim\chi^2(3)$
 
 
 ```{r, fig.height = 4, fig.width = 10}
 set.seed(5)
 
-n = 200
-t = 144
-time.points = seq(0, 2*pi, length.out=t)
-Y = matrix(rep(sin(time.points) + sin(0.5*time.points), n), byrow=TRUE, nrow=n)
-Y = Y + matrix(rnorm(n*t, 0, 0.4), nrow=n) + rchisq(n, 3)
+n.obs = 200
+n.time = 144
+
+# Generate scores
+c1.vals = rnorm(n.obs)
+c2.vals = rnorm(n.obs)
+
+# Generate pc's
+pc1 = sin(seq(0, 2*pi, length.out = n.time))
+pc2 = cos(seq(0, 2*pi, length.out = n.time))
+
+# Generate data
+Y <- c1.vals * matrix(pc1, nrow = n.obs, ncol=n.time, byrow = TRUE) +
+  c2.vals * matrix(pc2, nrow = n.obs, ncol=n.time, byrow = TRUE) +
+  matrix(seq(1/n.time, 1, length.out=n.time), nrow = n.obs, ncol=n.time, byrow = TRUE)
+
+# Add noise
+Y <- Y + matrix(rchisq(n.obs * n.time, 3), nrow = n.obs)
 
 Y[1:50,] %>% tf::tfd() %>% plot(alpha=0.2)
 ```
@@ -89,7 +103,8 @@ Y[1:50,] %>% tf::tfd() %>% plot(alpha=0.2)
 The above plot visualizes a subset of the data generated this way. To simulate missing data and test the method's robustness, we introduce 50% missing observations:
 
 ```{r}
-Y[sample(n*t, as.integer(0.50*n*t))] = NA
+# Add missing observations
+Y[sample(n.obs*n.time, as.integer(0.5*n.obs*n.time))] <- NA
 ```
 
 ### Aplying `fqpca`
@@ -98,14 +113,15 @@ We split the data into training and testing sets:
 
 ```{r}
 Y.train = Y[1:150,]
-Y.test = Y[151:n,]
+Y.test = Y[151:n.obs,]
 ```
 
 We then apply the `fqpca` function to decompose the data in terms of the median (`quantile.value = 0.5`), providing a robust alternative to mean-based predictions:
 
 ```{r}
-results = fqpca(data=Y.train, npc=2, quantile.value=0.5)
+results = fqpca(data=Y.train, npc=2, quantile.value=0.5, periodic=FALSE)
 
+intercept = results$intercept
 loadings = results$loadings
 scores = results$scores
 
@@ -138,7 +154,7 @@ We perform cross-validation to optimize the `splines.df` parameter:
 
 ```{r}
 splines.df.grid = c(5, 10, 15, 20)
-cv_result = cross_validation_df(Y, splines.df.grid=splines.df.grid, n.folds=3, verbose.cv=F)
+cv_result = fqpca_cv_df(Y, splines.df.grid=splines.df.grid, n.folds=3, verbose.cv=F, periodic=F)
 cv_result$error.matrix
 ```
 
@@ -155,7 +171,7 @@ In this example, we demonstrate how to apply the second derivative penalty appro
 
 ```{r}
 # Apply fqpca with penalization
-results_penalized <- fqpca(data = Y.train, npc = 2, quantile.value = 0.5, penalized = TRUE, lambda.ridge = 0.001, splines.method = "conquer")
+results_penalized <- fqpca(data = Y.train, npc = 2, quantile.value = 0.5, penalized = TRUE, lambda.ridge = 0.001, splines.method = "conquer", periodic=F)
 
 # Reconstruct the training data
 Y.train.estimated_penalized <- fitted(results_penalized, pve = 0.95)
@@ -165,7 +181,7 @@ Y.train.estimated_penalized <- fitted(results_penalized, pve = 0.95)
 The package also includes a function that allows to perform cross validation on the hyper-parameter controlling the effect of a second derivative penalty on the splines.
 
 ```{r}
-cv_result = cross_validation_lambda(Y, lambda.grid=c(0, 1e-5, 1e-3), n.folds=3, verbose.cv=F)
+cv_result = fqpca_cv_lambda(Y, lambda.grid=c(0, 1e-5, 1e-3), n.folds=3, verbose.cv=F, periodic=F)
 cv_result$error.matrix
 ```
 
@@ -203,7 +219,7 @@ We perform cross-validation to find the optimal `splines.df` value:
 
 ```{r}
 splines.df.grid = c(5, 10, 15, 20)
-cv_result = cross_validation_df(data=data, colname='temperature', splines.df.grid=splines.df.grid, n.folds=3, verbose.cv=F)
+cv_result = fqpca_cv_df(data=data, colname='temperature', splines.df.grid=splines.df.grid, n.folds=3, verbose.cv=F)
 optimal_df = splines.df.grid[which.min(rowMeans(cv_result$error.matrix))]
 paste0('Optimal number of degrees of freedom: ', optimal_df)
 ```

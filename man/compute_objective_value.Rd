@@ -4,7 +4,7 @@
 \alias{compute_objective_value}
 \title{Compute objective value function.}
 \usage{
-compute_objective_value(Y, quantile.value, scores, loadings)
+compute_objective_value(Y, quantile.value, scores, intercept, loadings)
 }
 \arguments{
 \item{Y}{\eqn{(N \times T)} matrix of observed time instants.}
@@ -12,6 +12,8 @@ compute_objective_value(Y, quantile.value, scores, loadings)
 \item{quantile.value}{The quantile considered.}
 
 \item{scores}{The matrix of estimated scores.}
+
+\item{intercept}{population intercept}
 
 \item{loadings}{The matrix of estimated loadings.}
 }

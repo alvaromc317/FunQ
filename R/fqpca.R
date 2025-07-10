@@ -1,30 +1,28 @@
-
 # SCORES ----------------------------------------------------------------------
 
 #' @title Compute scores
 #' @description Inner function to compute the scores of the fqpca methodology.
 #' @param Y The \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
+#' @param intercept population intercept
 #' @param loadings Matrix of loading coefficients.
 #' @param quantile.value The quantile considered.
 #' @return The matrix of scores.
-compute_scores_sequential <- function(Y, Y.mask, loadings, quantile.value)
+compute_scores_sequential <- function(Y, Y.mask, intercept, loadings, quantile.value)
 {
   # Initialize the matrix of scores
   n.obs <- base::nrow(Y)
-  npc1 <- base::ncol(loadings)
-  scores <-  base::matrix(0, n.obs, npc1-1)
+  npc <- base::ncol(loadings)
+  scores <-  base::matrix(0, n.obs, npc)
   for(i in base::seq(n.obs))
   {
     # Obtain the loadings associated to observation i with a specific time grid
-    loadings.obs <- loadings[Y.mask[i, ], ]
+    loadings.obs <- loadings[Y.mask[i, ], , drop = FALSE]
+    intercept.obs <- intercept[Y.mask[i, ]]
     # Obtain the observation removing missing data and subtract intercept
-    Yi <- Y[i, Y.mask[i, ]] - loadings.obs[,1]
-    loadings.matrix = matrix(loadings.obs[,2:npc1], ncol=npc1-1)
-    scores[i,] <-  quantreg::rq.fit.br(y=Yi, x=loadings.matrix, tau=quantile.value)$coefficients
+    Yi <- Y[i, Y.mask[i, ]] - intercept.obs
+    scores[i,] <-  quantreg::rq.fit.br(y=Yi, x=loadings.obs, tau=quantile.value)$coefficients
   }
-  # Add intercept column
-  scores <- base::cbind(1, scores)
   return(scores)
 }
 
@@ -32,34 +30,33 @@ compute_scores_sequential <- function(Y, Y.mask, loadings, quantile.value)
 #' @description Inner function to compute the scores of the fqpca methodology.
 #' @param Y The \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
+#' @param intercept population intercept
 #' @param loadings Matrix of loading coefficients.
 #' @param quantile.value The quantile considered.
 #' @param num.cores Number of cores used in parallel executions.
 #' @return The matrix of scores.
 #' @importFrom foreach %dopar%
-compute_scores_parallel <- function(Y, Y.mask, loadings, quantile.value, num.cores)
+compute_scores_parallel <- function(Y, Y.mask, intercept, loadings, quantile.value, num.cores)
 {
-  i = 1
   # Initialize the matrix of scores
   n.obs <- base::nrow(Y)
-  npc1 <- base::ncol(loadings)
-  scores <-  base::matrix(0, n.obs, npc1-1)
+  npc <- base::ncol(loadings)
   # Initialize the cluster each time the scores are computed
-  cl = parallel::makeCluster(num.cores)
+  cl <- parallel::makeCluster(num.cores)
   doParallel::registerDoParallel(cl)
+  i <- 1
   scores <-
-    foreach::foreach(i = base::seq(n.obs), .combine='rbind') %dopar%
+    foreach::foreach(i = base::seq(n.obs), .combine='rbind', .packages = c('quantreg')) %dopar%
     {
-      loadings.obs <- loadings[Y.mask[i, ], ]
-      Yi <- Y[i, Y.mask[i, ]] - loadings.obs[,1]
-      loadings.matrix = matrix(loadings.obs[,2:npc1], ncol=npc1-1)
-      quantreg::rq.fit.br(y=Yi, x=loadings.matrix, tau=quantile.value)$coefficients
+      loadings.obs <- loadings[Y.mask[i, ], , drop = FALSE]
+      intercept.obs <- intercept[Y.mask[i, ]]
+      Yi <- Y[i, Y.mask[i, ]] - intercept.obs
+      quantreg::rq.fit.br(y=Yi, x=loadings.obs, tau=quantile.value)$coefficients
     }
   parallel::stopCluster(cl)
   foreach::registerDoSEQ()
-  rownames(scores) = colnames(scores) = NULL
-  # Add intercept column
-  scores <- base::cbind(1, scores)
+  rownames(scores) <- NULL
+  colnames(scores) <- NULL
   return(scores)
 }
 
@@ -67,19 +64,20 @@ compute_scores_parallel <- function(Y, Y.mask, loadings, quantile.value, num.cor
 #' @description Inner function to compute the scores of the fqpca methodology.
 #' @param Y The \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
+#' @param intercept population intercept
 #' @param loadings Matrix of loading coefficients.
 #' @param quantile.value The quantile considered.
 #' @param parallelized.scores Should the scores be computed in parallel?
 #' @param num.cores Number of cores used in parallel executions.
 #' @return The matrix of scores.
 #' @importFrom foreach %dopar%
-compute_scores <- function(Y, Y.mask, loadings, quantile.value, parallelized.scores, num.cores)
+compute_scores <- function(Y, Y.mask, intercept, loadings, quantile.value, parallelized.scores, num.cores)
 {
   if(parallelized.scores)
   {
-    scores <- compute_scores_parallel(Y, Y.mask, loadings, quantile.value, num.cores)
+    scores <- compute_scores_parallel(Y, Y.mask, intercept, loadings, quantile.value, num.cores)
   }else{
-    scores <- compute_scores_sequential(Y, Y.mask, loadings, quantile.value)
+    scores <- compute_scores_sequential(Y, Y.mask, intercept, loadings, quantile.value)
   }
   return(scores)
 }
@@ -88,82 +86,61 @@ compute_scores <- function(Y, Y.mask, loadings, quantile.value, parallelized.sco
 
 #' @title Compute spline coefficients
 #' @description Inner function to compute the spline coefficients of the fqpca methodology.
-#' @param Y \eqn{(N \times T)} matrix of observed time instants.
-#' @param Y.mask Mask matrix of the same dimensions as Y indicating wich observations in Y are known.
+#' @param Y.vector vectorised version of Y, the \eqn{(N \times T)} matrix of observed time instants.
+#' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
 #' @param scores Initial matrix of scores.
 #' @param spline.basis The spline basis matrix.
 #' @param quantile.value The quantile considered.
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
-#' @return The matrix of spline coefficients splines coefficients.
-compute_spline_coefficients_unpenalized <- function(Y, Y.mask, scores, spline.basis, quantile.value, method)
+#' @return The matrix of spline coefficients.
+compute_spline_coefficients_unpenalized <- function(Y.vector, Y.mask, scores, spline.basis, quantile.value, method)
 {
-  n.obs <- base::nrow(Y)
-  npc1 <- base::ncol(scores)
+  n.obs <- base::nrow(scores)
+  npc <- base::ncol(scores)
   n.basis <- base::ncol(spline.basis)
   intercept.spline.basis <-  spline.basis[, -1]
-  # vectorize Y [Y11, ..., Y1T, Y21, ..., Y2T,...YNT]
-  Y.vector <- c()
-  for(i in base::seq(n.obs)){Y.vector <- c(Y.vector, Y[i, Y.mask[i,]])}
-
-  # Compute tensor product of scores and spline basis
-  # Solve the large quantile regression model
-  if(method == 'conquer')
+  tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=(npc+1)*n.basis-1)
+  row.idx <- 1
+  for(i in base::seq(n.obs))
   {
-    tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=npc1*n.basis-1)
-    row.idx <- 1
-    for(i in base::seq(n.obs))
-    {
-      scores.i <- base::matrix(scores[i, -1], nrow=1)
-      tmp.splines <- spline.basis[Y.mask[i, ], ]
-      tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], ]
-      n.time.i <- base::nrow(tmp.splines)
-      tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::cbind(tmp.intercept.splines, base::kronecker(scores.i, tmp.splines))
-      row.idx <- row.idx+n.time.i
-    }
+    scores.i <- scores[i, , drop=F]
+    tmp.splines <- spline.basis[Y.mask[i, ], , drop = FALSE]
+    tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], , drop = FALSE]
+    n.time.i <- base::nrow(tmp.splines)
+    tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::cbind(tmp.intercept.splines, base::kronecker(scores.i, tmp.splines))
+    row.idx <- row.idx+n.time.i
+  }
+  if(method == 'conquer'){
     B.vector <- conquer::conquer(Y=Y.vector, X=tensor.matrix, tau=quantile.value)$coeff
+  }else if(method == 'quantreg'){
+    B.vector <- quantreg::rq(Y.vector~tensor.matrix, tau=quantile.value, method='fnb')$coefficients
   }
-  if(method == 'quantreg')
-  {
-    tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=npc1*n.basis)
-    row.idx <- 1
-    for(i in base::seq(n.obs))
-    {
-      scores.i <- base::matrix(scores[i, ], nrow=1)
-      tmp.splines <- spline.basis[Y.mask[i, ], ]
-      n.time.i <- base::nrow(tmp.splines)
-      tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::kronecker(scores.i, tmp.splines)
-      row.idx <- row.idx+n.time.i
-    }
-    B.vector <- quantreg::rq.fit.fnb(y=Y.vector, x=tensor.matrix, tau=quantile.value)$coefficients
-  }
-  spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=npc1)
+  spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=(npc+1))
   return(spline.coefficients)
 }
 
 #' @title Compute spline coefficients
 #' @description Inner function to compute the spline coefficients of the fqpca methodology.
-#' @param Y \eqn{(N \times T)} matrix of observed time instants.
-#' @param Y.mask Mask matrix of the same dimensions as Y indicating wich observations in Y are known.
+#' @param Y.vector vectorised version of Y, the \eqn{(N \times T)} matrix of observed time instants.
+#' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
 #' @param scores Initial matrix of scores.
 #' @param spline.basis The spline basis matrix.
 #' @param quantile.value The quantile considered.
 #' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @return The matrix of spline coefficients splines coefficients.
-compute_spline_coefficients_penalized <- function(Y, Y.mask, scores, spline.basis, quantile.value, lambda.ridge)
+compute_spline_coefficients_penalized <- function(Y.vector, Y.mask, scores, spline.basis, quantile.value, lambda.ridge)
 {
-  n.obs <- base::nrow(Y)
-  npc1 <- base::ncol(scores)
+  n.obs <- base::nrow(scores)
+  npc <- base::ncol(scores)
   n.basis <- base::ncol(spline.basis)
   intercept.spline.basis <-  spline.basis[, -1]
-  Y.vector <- c()
-  for(i in base::seq(n.obs)){Y.vector <- c(Y.vector, Y[i, Y.mask[i,]])}
-  tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=npc1*n.basis-1)
+  tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=(npc+1)*n.basis-1)
   row.idx <- 1
   for(i in base::seq(n.obs))
   {
-    scores.i <- base::matrix(scores[i, -1], nrow=1)
-    tmp.splines <- spline.basis[Y.mask[i, ], ]
-    tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], ]
+    scores.i <- scores[i, , drop=F]
+    tmp.splines <- spline.basis[Y.mask[i, ], , drop = FALSE]
+    tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], , drop = FALSE]
     n.time.i <- base::nrow(tmp.splines)
     tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::cbind(tmp.intercept.splines, base::kronecker(scores.i, tmp.splines))
     row.idx <- row.idx+n.time.i
@@ -174,28 +151,28 @@ compute_spline_coefficients_penalized <- function(Y, Y.mask, scores, spline.basi
   }else{
     B.vector <- conquer::conquer.reg(Y=Y.vector, X=tensor.matrix, tau=quantile.value, penalty='elastic', lambda=lambda.ridge, para.elastic=0)$coeff
   }
-  spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=npc1)
+  spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=(npc+1))
   return(spline.coefficients)
 }
 
 #' @title Compute spline coefficients
 #' @description Inner function to compute the spline coefficients of the fqpca methodology.
 #' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty.
-#' @param Y \eqn{(N \times T)} matrix of observed time instants.
-#' @param Y.mask Mask matrix of the same dimensions as Y indicating wich observations in Y are known.
+#' @param Y.vector vectorised version of Y, the \eqn{(N \times T)} matrix of observed time instants.
+#' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
 #' @param scores Initial matrix of scores.
 #' @param spline.basis The spline basis matrix.
 #' @param quantile.value The quantile considered.
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
 #' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
-#' @return The matrix of spline coefficients splines coefficients.
-compute_spline_coefficients <- function(penalized, Y, Y.mask, scores, spline.basis, quantile.value, method, lambda.ridge)
+#' @return The matrix of spline coefficients.
+compute_spline_coefficients <- function(penalized, Y.vector, Y.mask, scores, spline.basis, quantile.value, method, lambda.ridge)
 {
   if(penalized)
   {
-    spline.coefficients <- compute_spline_coefficients_penalized(Y=Y, Y.mask=Y.mask, scores=scores, spline.basis=spline.basis, quantile.value=quantile.value, lambda.ridge=lambda.ridge)
+    spline.coefficients <- compute_spline_coefficients_penalized(Y.vector=Y.vector, Y.mask=Y.mask, scores=scores, spline.basis=spline.basis, quantile.value=quantile.value, lambda.ridge=lambda.ridge)
   }else{
-    spline.coefficients <- compute_spline_coefficients_unpenalized(Y=Y, Y.mask=Y.mask, scores=scores, spline.basis=spline.basis, quantile.value=quantile.value, method=method)
+    spline.coefficients <- compute_spline_coefficients_unpenalized(Y.vector=Y.vector, Y.mask=Y.mask, scores=scores, spline.basis=spline.basis, quantile.value=quantile.value, method=method)
   }
   return(spline.coefficients)
 }
@@ -207,11 +184,12 @@ compute_spline_coefficients <- function(penalized, Y, Y.mask, scores, spline.bas
 #' @param Y \eqn{(N \times T)} matrix of observed time instants.
 #' @param quantile.value The quantile considered.
 #' @param scores The matrix of estimated scores.
+#' @param intercept population intercept
 #' @param loadings The matrix of estimated loadings.
 #' @return The objective value function.
-compute_objective_value <- function(Y, quantile.value, scores, loadings)
+compute_objective_value <- function(Y, quantile.value, scores, intercept, loadings)
 {
-  Y.pred <- scores %*% t(loadings)
+  Y.pred <- sweep(scores %*% t(loadings), MARGIN = 2, STATS = intercept, FUN = "+")
   objective.value <- quantile_error(Y=Y, Y.pred=Y.pred, quantile.value=quantile.value)
   return(objective.value)
 }
@@ -220,51 +198,51 @@ compute_objective_value <- function(Y, quantile.value, scores, loadings)
 #' @description Inner function to compute the loadings of the fqpca methodology.
 #' @param spline.basis The spline basis matrix.
 #' @param spline.coefficients the matrix of spline coefficients.
-#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')} along with any available solver in \code{CVXR} package.
 #' @return The matrix of loadings
-compute_loadings <- function(spline.basis, spline.coefficients, method)
+compute_loadings <- function(spline.basis, spline.coefficients)
 {
   intercept.spline.basis <-  spline.basis[, -1]
-  if(method == 'conquer')
-  {
-    intercept.part <- cbind(1, intercept.spline.basis) %*% matrix(spline.coefficients[,1], ncol=1)
-    fqpc.part <- spline.basis %*% spline.coefficients[,-1]
-    loadings <- cbind(intercept.part, fqpc.part)
-  }else{
-    loadings <- spline.basis %*% spline.coefficients
-  }
-  return(loadings)
+  intercept.part <- c(cbind(1, intercept.spline.basis) %*% matrix(spline.coefficients[,1], ncol=1))
+  fqpc.part <- spline.basis %*% spline.coefficients[, -1, drop=FALSE]
+  return(list(intercept=intercept.part, loadings=fqpc.part))
 }
 
 #' @title Rotation of fqpca loadings and scores
 #' @description Performs the rotation of loadings and scores in order to ensure the solution is unique.
-#' @param loadings Matrix of loadings.
 #' @param scores Matrix of scores.
+#' @param intercept population intercept
+#' @param loadings Matrix of loadings.
 #' @return The rotated matrices of loadings and scores and the rotation matrix.
-rotate_scores_and_loadings <- function(loadings, scores)
+rotate_scores_and_loadings <- function(scores, intercept, loadings)
 {
-  npc <- base::ncol(loadings)-1
+  npc <- base::ncol(loadings)
 
-  # Remove intercept from rotation
-  loadings.no.intercept <- base::matrix(loadings[, 2:ncol(loadings)], ncol=npc)
-  scores.no.intercept <- base::matrix(scores[, 2:ncol(scores)], ncol=npc)
+  # Ensure scores are mean-centered
+  means.scores <- base::matrix(colMeans(scores), ncol=1)
+  scores <- base::scale(scores, center=TRUE, scale=FALSE)
 
-  # Ensure scores are mean-centered and move the effect of the mean scores to the intercept
-  means.scores <- base::matrix(colMeans(scores.no.intercept), ncol=1)
-  scores.no.intercept <- base::scale(scores.no.intercept, center=TRUE, scale=FALSE)
-  loadings[, 1] <- loadings[, 1] + loadings.no.intercept %*% means.scores
+  # Move the effect of the mean scores to the intercept
+  intercept <- intercept + loadings %*% means.scores
+
+  # Make covariance matrix positive definite using eigen-decomposition
+  cov.score <- stats::cov(scores)
+  eig <- eigen(cov.score, symmetric=TRUE)
+  eig$values[eig$values < 1e-8] <- 1e-8
+  if (npc == 1) {
+    eig_vals_diag <- eig$values
+  } else {
+    eig_vals_diag <- diag(eig$values)
+  }
+  cov.score.pd <- eig$vectors %*% eig_vals_diag %*% t(eig$vectors)
 
   # Perform rotation
-  cov.score <- stats::cov(scores.no.intercept)
-  svd.decomp <- base::svd((chol(cov.score))  %*% t(loadings.no.intercept))
-  rotation.matrix <- base::solve(chol(cov.score)) %*% svd.decomp$u %*% base::diag(svd.decomp$d, nrow=length(svd.decomp$d))
+  svd.decomp <- svd(chol(cov.score.pd) %*% t(loadings))
+  rotation.matrix <- solve(chol(cov.score.pd)) %*% svd.decomp$u %*%
+    diag(svd.decomp$d, nrow=length(svd.decomp$d))
+  scores <- scores %*% rotation.matrix
+  loadings <- svd.decomp$v
 
-  scores.no.intercept <- scores.no.intercept %*% rotation.matrix
-  loadings.no.intercept <- svd.decomp$v
-
-  loadings <- base::cbind(loadings[,1], loadings.no.intercept)
-  scores <- base::cbind(scores[,1], scores.no.intercept)
-  results <- list(loadings=loadings, scores=scores, rotation.matrix=rotation.matrix)
+  results <- list(scores=scores, intercept=intercept, loadings=loadings, rotation.matrix=rotation.matrix)
   return(results)
 }
 
@@ -279,6 +257,28 @@ compute_explained_variability <- function(scores)
   return(pve)
 }
 
+#' @title Obtain npc
+#' @description Computes the required number of components to achieve the desired pve value
+#' @param scores matrix of scores
+#' @param pve If smaller than 1, taken as percentage of explained variability. If greater than 1, taken as number of components.
+obtain_npc <- function(scores, pve)
+{
+  if(is.null(pve))
+  {
+    npc <- ncol(scores)
+  }else if(pve < 1)
+  {
+    score.variance <- cumsum(compute_explained_variability(scores))
+    npc <- min(which(score.variance > pve))
+  }else
+  {
+    if(!(pve == floor(pve))){stop('pve must be either a floating point number smaller than 1 or an integer number smaller than the number of pc. Value provided: ', pve)}
+    if(pve > ncol(scores)){stop('pve must be either a floating point number smaller than 1 or an integer number smaller than the number of pc. Value provided: ', pve)}
+    npc <- pve
+  }
+  return(npc)
+}
+
 #' @title Check input parameters
 #' @description Check input parameters
 #' @param npc The number of estimated components.
@@ -289,13 +289,13 @@ compute_explained_variability <- function(scores)
 #' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental and is much slower than the control of the smoothness using the degrees of freedom.
 #' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE}.
 #' @param tol Tolerance on the convergence of the algorithm.
-#' @param n.iters Maximum number of iterations.
+#' @param max.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
 #' @param seed Seed for the random generator number.
-#' @param parallelized.scores Should the scores be computed in parallel? Experimantal component.
+#' @param parallelized.scores Should the scores be computed in parallel? Experimental component.
 #' @param num.cores Number of cores to use in parallelized executions.
 #' @return No return
-check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, splines.method, penalized, lambda.ridge, tol, n.iters, verbose, seed, parallelized.scores, num.cores)
+check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, splines.method, penalized, lambda.ridge, tol, max.iters, verbose, seed, parallelized.scores, num.cores)
 {
   # Check 'npc': integer number, positive
   if (!is.numeric(npc) || length(npc) != 1 || npc %% 1 != 0 || npc <= 0) {
@@ -323,7 +323,7 @@ check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, spline
          ". Expected an integer number larger or equal than 'npc' (", npc, ").")
   }
 
-  # Check 'method': must be either 'conquer' or 'quantreg'
+  # Check 'splines.method': must be either 'conquer' or 'quantreg'
   if (!is.character(splines.method) || length(splines.method) != 1 ||
       !splines.method %in% c("conquer", "quantreg")) {
     stop("Invalid input for 'splines.method': '", splines.method,
@@ -349,10 +349,10 @@ check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, spline
          ". Expected a positive float number.")
   }
 
-  # Check 'n.iters': positive integer number
-  if (!is.numeric(n.iters) || length(n.iters) != 1 ||
-      n.iters %% 1 != 0 || n.iters <= 0) {
-    stop("Invalid input for 'n.iters': ", n.iters,
+  # Check 'max.iters': positive integer number
+  if (!is.numeric(max.iters) || length(max.iters) != 1 ||
+      max.iters %% 1 != 0 || max.iters <= 0) {
+    stop("Invalid input for 'max.iters': ", max.iters,
          ". Expected a positive integer number.")
   }
 
@@ -385,7 +385,6 @@ check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, spline
 
 #' @title Check input data
 #' @description Check input data
-#' @title Explained variability of the fqpca scores computation
 #' @param data An \eqn{(N \times T)} matrix, a tf object from the tidyfun package or a data.frame containing the functional data as a tf column.
 #' @param colname The name of the column containing the functional data. Use only if data is a dataframe and colname is a column in the dataframe.
 #' @return an unnamed matrix
@@ -437,7 +436,7 @@ check_input_data <- function(data, colname)
 #' @param penalized Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.
 #' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @param tol Tolerance on the convergence of the algorithm.
-#' @param n.iters Maximum number of iterations.
+#' @param max.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
 #' @param seed Seed for the random generator number.
 #' @param parallelized.scores Should the scores be computed in parallel? Experimental component.
@@ -445,22 +444,37 @@ check_input_data <- function(data, colname)
 #' @return fqpca_object
 #' @export
 #' @examples
-#' # Generate fake dataset with 150 observations and 144 time points
 #'
-#' Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 150), byrow = TRUE, nrow = 150)
-#' Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
+#' n.obs = 150
+#' n.time = 144
+#'
+#' # Generate scores
+#' c1.vals = rnorm(n.obs)
+#' c2.vals = rnorm(n.obs)
+#'
+#' # Generate pc's
+#' pc1 = sin(seq(0, 2*pi, length.out = n.time))
+#' pc2 = cos(seq(0, 2*pi, length.out = n.time))
+#'
+#' # Generate data
+#' Y <- c1.vals * matrix(pc1, nrow = n.obs, ncol=n.time, byrow = TRUE) +
+#' c2.vals * matrix(pc2, nrow = n.obs, ncol=n.time, byrow = TRUE)
+#'
+#' # Add noise
+#' Y <- Y + matrix(rnorm(n.obs * n.time, 0, 0.4), nrow = n.obs)
 #'
 #' # Add missing observations
-#' Y[sample(150*144, as.integer(0.2*150*144))] <- NA
+#' Y[sample(n.obs*n.time, as.integer(0.2*n.obs*n.time))] <- NA
 #'
-#' results <- fqpca(data = Y, npc = 2, quantile.value = 0.5)
+#' results <- fqpca(data = Y, npc = 2, quantile.value = 0.5, seed=1)
 #'
+#' intercept <- results$intercept
 #' loadings <- results$loadings
 #' scores <- results$scores
 fqpca <- function(
     data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodic = TRUE,
     splines.df = 10, splines.method = 'conquer', penalized = FALSE,
-    lambda.ridge = 0, tol = 1e-3, n.iters = 20, verbose = FALSE, seed = NULL,
+    lambda.ridge = 0, tol = 1e-3, max.iters = 20, verbose = FALSE, seed = NULL,
     parallelized.scores=FALSE, num.cores=NULL)
 {
   global.start.time <- base::Sys.time()
@@ -468,11 +482,13 @@ fqpca <- function(
   # Get the input parameters
   formal_names <- base::setdiff(names(formals(sys.function())), "...")
   inputs <- base::mget(formal_names, envir = environment())
+  inputs$data = NULL
+  inputs$colname = NULL
 
-   # Check the input parameters except Y and colname
+  # Check the input parameters except Y and colname
   check_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
                      splines.df=splines.df, splines.method=splines.method, penalized=penalized,
-                     lambda.ridge=lambda.ridge, tol=tol, n.iters=n.iters,
+                     lambda.ridge=lambda.ridge, tol=tol, max.iters=max.iters,
                      verbose=verbose, seed=seed, parallelized.scores=parallelized.scores,
                      num.cores=num.cores)
 
@@ -493,9 +509,13 @@ fqpca <- function(
   if(parallelized.scores && is.null(num.cores)){num.cores <- parallel::detectCores() - 1}
 
   # Step 1: Initialize values
+  n.obs <- base::nrow(Y)
   n.time <- base::dim(Y)[2]
   Y.axis <- base::seq(0, 1, length.out = n.time)
   Y.mask <- !base::is.na(Y)
+  # vectorize Y [Y11, ..., Y1T, Y21, ..., Y2T,...YNT]
+  Y.list <- lapply(base::seq(n.obs), function(j) Y[j, Y.mask[j, ]])
+  Y.vector <- unlist(Y.list, use.names = FALSE)
   function.warnings <- list(splines = FALSE, scores = FALSE, rotation = FALSE, diverging.loop = FALSE)
 
   # Initialize splines knots
@@ -509,46 +529,49 @@ fqpca <- function(
 
   # Initialize spline basis
   spline.basis <- pbs::pbs(Y.axis, degree = 3, knots = knots, intercept = T, periodic=periodic, Boundary.knots = c(min(Y.axis), max(Y.axis)))
-  n.basis = base::ncol(spline.basis)
+  n.basis <- base::ncol(spline.basis)
 
   # If penalized, compute different basis with an identity second derivative matrix with 0s in first and second positions
   # Based on Garcia de la Garza et al. (2024) (Adaptive Functional Principal Component Analysis)
   if(penalized)
   {
-    eigen.decomp = base::eigen(base::crossprod(base::diff(spline.basis, differences = 2)))
-    first.part = eigen.decomp$vectors[, (n.basis-1):n.basis]
-    second.part = eigen.decomp$vectors[, 1:(n.basis-2)] %*% (base::diag(1 / base::sqrt(eigen.decomp$values[1:(n.basis-2)])))
-    U = cbind(first.part, second.part)
-    spline.basis = spline.basis %*% U
+    eigen.decomp <- base::eigen(base::crossprod(base::diff(spline.basis, differences = 2)))
+    first.part <- eigen.decomp$vectors[, (n.basis-1):n.basis]
+    safe_eigen_values <- pmax(eigen.decomp$values[1:(n.basis-2)], 1e-8) # or a suitable small constant
+    second.part <- eigen.decomp$vectors[, 1:(n.basis-2)] %*% base::diag(1 / base::sqrt(safe_eigen_values))
+    U <- cbind(first.part, second.part)
+    spline.basis <- spline.basis %*% U
   }
 
   loop.start.time <- base::Sys.time()
 
   # Randomly generate splines coefficients
   spline.coefficients <- base::matrix(stats::rnorm(n.basis * (npc+1), mean = 0, sd = 1), nrow=n.basis, ncol=npc+1)
-  loadings <- spline.basis %*% spline.coefficients
 
-  scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
+  loadings_list <- spline.basis %*% spline.coefficients
+  intercept <- loadings_list[, 1]
+  loadings <- loadings_list[, -1, drop=FALSE]
+
+  scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = intercept, loadings = loadings, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
   if(!is.matrix(scores)){stop('Iteration 1. Failed computation of scores')}
 
   # Rotate loadings and scores
-  rotation.result <- try(rotate_scores_and_loadings(loadings = loadings, scores = scores), silent = FALSE)
-  error.chr <- class(rotation.result)
-  if(error.chr=="try-error")
+  rotation.result <- try(rotate_scores_and_loadings(scores = scores, intercept = intercept, loadings = loadings), silent = FALSE)
+  if(inherits(rotation.result, "try-error"))
   {
     warning('Iteration 1. Failed rotation process. Skipping rotation on this iteration.')
     function.warnings$rotation <- TRUE
-    rotation.result <- list(loadings = loadings, scores = scores, rotation.matrix = diag(npc))
+    rotation.result <- list(scores = scores, intercept = intercept, loadings = loadings, rotation.matrix = diag(npc))
   }
-  loadings <- rotation.result$loadings
   scores <- rotation.result$scores
+  intercept <- rotation.result$intercept
+  loadings <- rotation.result$loadings
   rotation.matrix = rotation.result$rotation.matrix
 
   # Compute objective value function
-  objective.function <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores, loadings = loadings)
-  objective.function.array <- objective.function
+  objective.function.array <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores, intercept = intercept,  loadings = loadings)
 
-  last.iteration <- list(loadings = loadings, scores = scores, spline.coefficients = spline.coefficients, objective.function=objective.function, rotation.matrix = rotation.matrix, iteration = 1)
+  last.iteration <- list(scores = scores, intercept = intercept, loadings = loadings, spline.coefficients = spline.coefficients, objective.function=objective.function.array[1], rotation.matrix = rotation.matrix, iteration = 1)
 
   loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
 
@@ -559,14 +582,14 @@ fqpca <- function(
             '\n', '____________________________________________________________')
   }
 
-  # Iterate until convergence or until n.iters is reached
-  convergence = F
-  for(i in 2:n.iters)
+  # Iterate until convergence or until max.iters is reached
+  convergence <- F
+  for(i in 2:max.iters)
   {
     loop.start.time <- base::Sys.time()
 
     # OBTAIN SPLINE COEFFICIENTS
-    spline.coefficients <- try(compute_spline_coefficients(penalized = penalized, Y = Y, Y.mask = Y.mask, scores = scores, spline.basis = spline.basis, quantile.value = quantile.value, method = splines.method, lambda.ridge = lambda.ridge), silent = FALSE)
+    spline.coefficients <- try(compute_spline_coefficients(penalized = penalized, Y.vector = Y.vector, Y.mask = Y.mask, scores = scores, spline.basis = spline.basis, quantile.value = quantile.value, method = splines.method, lambda.ridge = lambda.ridge), silent = FALSE)
     if(!is.matrix(spline.coefficients))
     {
       warning('Iteration ', i, '. Failed computation of spline coefficients. Providing results from previous iteration.')
@@ -574,11 +597,13 @@ fqpca <- function(
       break
     }
 
-    loadings <- compute_loadings(spline.basis=spline.basis, spline.coefficients=spline.coefficients, method=splines.method)
+    loadings_list <- compute_loadings(spline.basis=spline.basis, spline.coefficients=spline.coefficients)
+    intercept <- loadings_list$intercept
+    loadings <- loadings_list$loadings
     if(is_rank_deficient(loadings)){warning('Loadings matrix is singular.')}
 
     # OBTAIN SCORES
-    scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, loadings = loadings, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
+    scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = intercept, loadings = loadings, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
     if(!is.matrix(scores))
     {
       warning('Iteration ', i, '. Failed computation of scores. Providing results from previous iteration.')
@@ -587,23 +612,23 @@ fqpca <- function(
     }
 
     # Rotate loadings and scores
-    rotation.result <- try(rotate_scores_and_loadings(loadings = loadings, scores = scores), silent = FALSE)
-    error.chr <- class(rotation.result)
-    if(error.chr=="try-error")
+    rotation.result <- try(rotate_scores_and_loadings(scores = scores, intercept = intercept, loadings = loadings), silent = FALSE)
+    if(inherits(rotation.result, "try-error"))
     {
       warning('Iteration ', i, '. Failed rotation process. Skipping rotation on this iteration.')
       function.warnings$rotation <- TRUE
-      rotation.result <- list(loadings = loadings, scores = scores, rotation.matrix = diag(npc))
+      rotation.result <- list(scores = scores, intercept = intercept, loadings = loadings, rotation.matrix = diag(npc))
     }
-    loadings <- rotation.result$loadings
     scores <- rotation.result$scores
+    intercept <- rotation.result$intercept
+    loadings <- rotation.result$loadings
     rotation.matrix = rotation.result$rotation.matrix
 
     # Compute objective function
-    objective.function <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores, loadings = loadings)
+    objective.function <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores, intercept = intercept, loadings = loadings)
     objective.function.array <- c(objective.function.array, objective.function)
 
-    last.iteration <- list(loadings = loadings, scores = scores, spline.coefficients = spline.coefficients, objective.function=objective.function, rotation.matrix = rotation.matrix, iteration = i)
+    last.iteration <- list(scores = scores, intercept = intercept, loadings = loadings, spline.coefficients = spline.coefficients, objective.function=objective.function.array[i], rotation.matrix = rotation.matrix, iteration = i)
 
     convergence.criteria <- base::abs(objective.function.array[i] - objective.function.array[i-1])
     if(convergence.criteria < tol){convergence = T}
@@ -633,17 +658,18 @@ fqpca <- function(
 
   if(verbose & convergence){message("\u2705 Algorithm converged succesfully")}
 
-  if(i == n.iters & !convergence){warning('\u274C Algorithm reached maximum number of iterations without convergence. Consider increasing the value of n.iters parameter')}
+  if(i == max.iters & !convergence){warning('\u274C Algorithm reached maximum number of iterations without convergence. Consider increasing the value of max.iters parameter')}
 
   # EXPLAINED VARIABILITY -----------------------------------------------------
 
-  pve <- compute_explained_variability(last.iteration$scores[, -1, drop=F])
+  pve <- compute_explained_variability(last.iteration$scores)
 
   global.execution.time <- difftime(base::Sys.time(), global.start.time, units = 'secs')
 
   results <- structure(list(
-    loadings = last.iteration$loadings,
     scores = last.iteration$scores,
+    intercept = last.iteration$intercept,
+    loadings = last.iteration$loadings,
     pve = pve,
     objective.function.value = last.iteration$objective.function,
     objective.function.array = objective.function.array,
@@ -652,7 +678,7 @@ fqpca <- function(
     rotation.matrix = last.iteration$rotation.matrix,
     spline.coefficients = last.iteration$spline.coefficients,
     spline.basis = spline.basis,
-    n.iters = last.iteration$iteration,
+    n.iters = i,
     inputs = inputs),
     class = "fqpca_object")
 
@@ -669,36 +695,45 @@ fqpca <- function(
 #' @return The normalized matrix of scores.
 #' @export
 #' @examples
-#' # Generate fake dataset with 150 observations and 144 time points
 #'
-#' Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 150), byrow = TRUE, nrow = 150)
-#' Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
+#' n.obs = 150
+#' n.time = 144
+#'
+#' # Generate scores
+#' c1.vals = rnorm(n.obs)
+#' c2.vals = rnorm(n.obs)
+#'
+#' # Generate pc's
+#' pc1 = sin(seq(0, 2*pi, length.out = n.time))
+#' pc2 = cos(seq(0, 2*pi, length.out = n.time))
+#'
+#' # Generate data
+#' Y <- c1.vals * matrix(pc1, nrow = n.obs, ncol=n.time, byrow = TRUE) +
+#' c2.vals * matrix(pc2, nrow = n.obs, ncol=n.time, byrow = TRUE)
+#'
+#' # Add noise
+#' Y <- Y + matrix(rnorm(n.obs * n.time, 0, 0.4), nrow = n.obs)
 #'
 #' # Add missing observations
-#' Y[sample(150*144, as.integer(0.2*150*144))] <- NA
+#' Y[sample(n.obs*n.time, as.integer(0.2*n.obs*n.time))] <- NA
 #'
-#' results <- fqpca(data = Y[1:100,], npc = 2, quantile.value = 0.5)
+#' results <- fqpca(data = Y, npc = 2, quantile.value = 0.5, seed=1)
 #'
 #' predictions <- predict(object = results, newdata = Y[101:150,])
+#'
 predict.fqpca_object <- function(object, newdata, ...)
 {
   if (!base::inherits(object, "fqpca_object")){stop('The object must be of class fqpca_object')}
 
-  if(is.null(object$inputs$colname))
-  {
-    Y <- base::unname(base::as.matrix(newdata))
-  }else{
-    Y <- base::unname(base::as.matrix(dplyr::pull(newdata[object$inputs$colname])))
-  }
-  if(base::ncol(newdata) == 1){ newdata <- t(newdata)}
+  Y <- check_input_data(data=newdata, colname=object$inputs$colname)
 
-  Y.mask <- !base::is.na(newdata)
-  n.obs <- base::nrow(newdata)
-  n.time <- base::ncol(newdata)
+  Y.mask <- !base::is.na(Y)
+  n.obs <- base::nrow(Y)
+  n.time <- base::ncol(Y)
   if(sum(!Y.mask) == n.obs * n.time){stop('newdata contains no information. Check that there are values different from NA')}
 
   # Estimation of scores
-  scores <- try(compute_scores(Y = newdata, Y.mask = Y.mask, loadings = object$loadings, quantile.value = object$inputs$quantile.value, parallelized.scores = FALSE, num.cores = 1), silent = FALSE)
+  scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = object$intercept, loadings = object$loadings, quantile.value = object$inputs$quantile.value, parallelized.scores = FALSE, num.cores = 1), silent = FALSE)
   if(!is.matrix(scores))
   {
     stop('Computation of scores failed.')
@@ -714,30 +749,38 @@ predict.fqpca_object <- function(object, newdata, ...)
 #' @return The normalized matrix of scores.
 #' @export
 #' @examples
-#' # Generate fake dataset with 150 observations and 144 time points
 #'
-#' Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 150), byrow = TRUE, nrow = 150)
-#' Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
+#' n.obs = 150
+#' n.time = 144
+#'
+#' # Generate scores
+#' c1.vals = rnorm(n.obs)
+#' c2.vals = rnorm(n.obs)
+#'
+#' # Generate pc's
+#' pc1 = sin(seq(0, 2*pi, length.out = n.time))
+#' pc2 = cos(seq(0, 2*pi, length.out = n.time))
+#'
+#' # Generate data
+#' Y <- c1.vals * matrix(pc1, nrow = n.obs, ncol=n.time, byrow = TRUE) +
+#' c2.vals * matrix(pc2, nrow = n.obs, ncol=n.time, byrow = TRUE)
+#'
+#' # Add noise
+#' Y <- Y + matrix(rnorm(n.obs * n.time, 0, 0.4), nrow = n.obs)
 #'
 #' # Add missing observations
-#' Y[sample(150*144, as.integer(0.2*150*144))] <- NA
+#' Y[sample(n.obs*n.time, as.integer(0.2*n.obs*n.time))] <- NA
 #'
-#' results <- fqpca(data = Y[1:100,], npc = 2, quantile.value = 0.5)
+#' results <- fqpca(data = Y, npc = 2, quantile.value = 0.5, seed=1)
 #'
 #' Yhat <- fitted(object = results, pve=0.99)
+#'
 fitted.fqpca_object <- function(object, pve=0.95, ...)
 {
   if (!base::inherits(object, "fqpca_object")){stop('The object must be of class fqpca_object')}
-  if(pve < 1)
-  {
-    score.variance = cumsum(object$pve)
-    n.components = min(which(score.variance > pve))
-  }else{
-    if(!pve == floor(pve)){stop('pve must be either a floating point number smaller than 1 or an integer number. Value provided: ', pve)}
-    n.components = pve
-  }
-  Y.reconstruction = object$scores[, 1:(n.components+1)] %*% t(object$loadings[, 1:(n.components+1)])
-  return(Y.reconstruction)
+  n.components <- obtain_npc(scores=object$scores, pve=pve)
+  Y.pred <- sweep(object$scores[, 1:n.components, drop=F] %*% t(object$loadings[, 1:n.components, drop=F]), MARGIN = 2, STATS = object$intercept, FUN = "+")
+  return(Y.pred)
 }
 
 # BASIC PLOT ------------------------------------------------------------------
@@ -752,37 +795,49 @@ fitted.fqpca_object <- function(object, pve=0.95, ...)
 #' @importFrom rlang .data
 #' @export
 #' @examples
-#' # Generate fake dataset with 150 observations and 144 time points
-#' Y <- matrix(rep(sin(seq(0, 2*pi, length.out = 144)), 150), byrow = TRUE, nrow = 150)
-#' Y <- Y + matrix(rnorm(150*144, 0, 0.4), nrow = 150)
+#'
+#' n.obs = 150
+#' n.time = 144
+#'
+#' # Generate scores
+#' c1.vals = rnorm(n.obs)
+#' c2.vals = rnorm(n.obs)
+#'
+#' # Generate pc's
+#' pc1 = sin(seq(0, 2*pi, length.out = n.time))
+#' pc2 = cos(seq(0, 2*pi, length.out = n.time))
+#'
+#' # Generate data
+#' Y <- c1.vals * matrix(pc1, nrow = n.obs, ncol=n.time, byrow = TRUE) +
+#' c2.vals * matrix(pc2, nrow = n.obs, ncol=n.time, byrow = TRUE) +
+#' matrix(seq(1, 10, length.out=n.time), nrow = n.obs, ncol=n.time, byrow = TRUE)
+#'
+#' # Add noise
+#' Y <- Y + matrix(rnorm(n.obs * n.time, 0, 0.4), nrow = n.obs)
+#'
 #' # Add missing observations
-#' Y[sample(150*144, as.integer(0.2*150*144))] <- NA
-#' results <- fqpca(data = Y, npc = 2, quantile.value = 0.5)
+#' Y[sample(n.obs*n.time, as.integer(0.2*n.obs*n.time))] <- NA
+#'
+#' results <- fqpca(data = Y, npc = 2, quantile.value = 0.5, periodic = FALSE, seed=1)
+#'
 #' plot(results)
 plot.fqpca_object <- function(x, pve = 0.99, ...)
 {
   if (!inherits(x, "fqpca_object")) {stop("The x must be of class fqpca_object")}
 
   # Determine the number of components required based on cumulative PVE
-  if(pve < 1)
-  {
-    score.variance = cumsum(object$pve)
-    n.components = min(which(score.variance > pve))
-  }else{
-    if(!pve == floor(pve)){stop('pve must be either a floating point number smaller than 1 or an integer number. Value provided: ', pve)}
-    n.components = pve
-  }
+  n.components <- obtain_npc(scores=x$scores, pve=pve)
 
+  intercept <- x$intercept
   loadings <- x$loadings
 
   # Create a data frame for the intercept curve
   intercept_df <- data.frame(
-    Time = seq_len(nrow(loadings)),
-    Loading = loadings[, 1],
+    Time = seq_len(length(intercept)),
+    Loading = intercept,
     Component = "Intercept")
 
-  # Extract the non-intercept loadings (columns 2 to n.components+1)
-  non_int <- loadings[, 2:(n.components + 1), drop = FALSE]
+  non_int <- loadings[, 1:n.components, drop = FALSE]
 
   # Reshape non-intercept loadings into a long format data frame
   fqpc_df <- data.frame(
@@ -792,7 +847,7 @@ plot.fqpca_object <- function(x, pve = 0.99, ...)
 
   # Combine the intercept and FQPC data frames
   plot_data <- rbind(intercept_df, fqpc_df)
-  plot_data$Component = factor(plot_data$Component, levels = c('Intercept', paste0('FQPC ', 1:ncol(non_int))))
+  plot_data$Component <- factor(plot_data$Component, levels = c('Intercept', paste0('FQPC ', 1:ncol(non_int))))
 
   # Create the GGPlot object with facets displaying each component separately.
   p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$Time, y = .data$Loading)) +
@@ -801,9 +856,6 @@ plot.fqpca_object <- function(x, pve = 0.99, ...)
     ggplot2::labs(title = "Loading Functions",
                   x = "Time",
                   y = "Loading") +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(strip.background = ggplot2::element_rect(fill = "grey90"),
-                   strip.text = ggplot2::element_text(face = "bold"))
-
+    ggplot2::theme_bw()
   return(p)
 }
