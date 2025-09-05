@@ -85,6 +85,41 @@ proportion_under_quantile <- function(Y, Y.pred)
   mean(Y <= Y.pred, na.rm = T)
 }
 
+# VARIABILITY OF SCORES -------------------------------------------------------
+
+#' @title Explained variability of the fqpca scores computation
+#' @description Computes the percentage of explained variability based on the variance of the scores matrix
+#' @param scores Matrix of scores.
+#' @return The percentage of variability each component is explaining.
+compute_explained_variability <- function(scores)
+{
+  variability <- base::diag(stats::var(scores))
+  pve <- variability / base::sum(variability)
+  return(pve)
+}
+
+#' @title Obtain npc
+#' @description Computes the required number of components to achieve the desired pve value
+#' @param scores matrix of scores
+#' @param pve If smaller than 1, taken as percentage of explained variability. If greater than 1, taken as number of components.
+obtain_npc <- function(scores, pve)
+{
+  if(is.null(pve))
+  {
+    npc <- ncol(scores)
+  }else if(pve < 1)
+  {
+    score.variance <- cumsum(compute_explained_variability(scores))
+    npc <- min(which(score.variance > pve))
+  }else
+  {
+    if(!(pve == floor(pve))){stop('pve must be either a floating point number smaller than 1 or an integer number smaller than the number of pc. Value provided: ', pve)}
+    if(pve > ncol(scores)){stop('pve must be either a floating point number smaller than 1 or an integer number smaller than the number of pc. Value provided: ', pve)}
+    npc <- pve
+  }
+  return(npc)
+}
+
 # TRAIN TEST SPLIT ------------------------------------------------------------
 
 #' @title Split rows of a given matrix Y into train / test
