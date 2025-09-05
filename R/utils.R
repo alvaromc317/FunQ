@@ -14,42 +14,6 @@ is_rank_deficient <- function(x)
   if(qr_mat$rank < min_dim){return(TRUE)}else{return(FALSE)}
 }
 
-#' @title Pivot long a matrix
-#' @description Given a new matrix x of dimensions (n, m) pivot into a (n*m, 3) matrix indexing (row, column, value)
-#' @param x Input matrix.
-#' @return The pivoted matrix.
-pivot_long_x <- function(x)
-{
-  rowid <- column <- NULL # Required to avoid warning when compiling package
-  x.df <- data.frame(x)
-  colnames(x.df) <- seq_len(ncol(x.df))
-  x.df <- tibble::rowid_to_column(x.df)
-  x.df <- tidyr::pivot_longer(data = x.df, cols = -rowid, names_to = 'column')
-  x.df <- dplyr::mutate(.data = x.df, column = as.integer(column))
-  x.df <- dplyr::rename(.data = x.df, row = rowid)
-  x.df <- as.matrix(x.df)
-  return(x.df)
-}
-
-#' @title Pivot short a matrix
-#' @description Given a (n*m, 3) matrix indexing (row, column, value) pivots it into an (n, m) matrix.
-#' @param x.long Input matrix.
-#' @param dimensions array of two elements indicating the dimensions of the original data.
-#' @return The pivoted matrix as a tibble
-pivot_wide_x <- function(x.long, dimensions = NULL)
-{
-  x.long <- as.matrix(x.long)
-  if(!is.null(dimensions))
-  {
-    dimensions <- c(max(x.long[, 1], dimensions[1]), max(x.long[, 2], dimensions[2]))
-  } else {
-    dimensions <- c(max(x.long[, 1]), max(x.long[, 2]))
-  }
-  x <- matrix(NA, nrow = dimensions[1], ncol = dimensions[2])
-  x <- base::replace(x, x.long[,c(1,2)], x.long[, 3])
-  return(x)
-}
-
 # QUANTILE BASED FUNCTIONS ----------------------------------------------------
 
 #' @title Quantile regression objective value
@@ -131,19 +95,91 @@ obtain_npc <- function(scores, pve)
 #' @return A list containing a matrix Y.train and a matrix Y.test
 train_test_split_rows <- function(Y, train.pct = NULL, train.size = NULL, seed = NULL)
 {
-  # train.pct takes preference over train.size
-  if(is.null(train.pct) && is.null(train.size)){stop('Either train.pct or train.size must be filled.')}
-  if(!is.null(seed)){set.seed(seed)}
-  if(is.null(train.pct)){train.pct <- train.size / nrow(Y) }
+  # Validate inputs
+  if (is.null(train.pct) && is.null(train.size)) {
+    stop("Either train.pct or train.size must be provided.")
+  }
+  if (!is.null(train.pct)) {
+    if (!is.numeric(train.pct) || length(train.pct) != 1L || is.na(train.pct) || train.pct < 0 || train.pct > 1) {
+      stop("train.pct must be a numeric scalar in [0, 1].")
+    }
+  }
+  if (!is.null(train.size)) {
+    if (!is.numeric(train.size) || length(train.size) != 1L || is.na(train.size)) {
+      stop("train.size must be a numeric scalar.")
+    }
+  }
+  if (!is.null(seed)) {
+    if (!is.numeric(seed) || length(seed) != 1L || is.na(seed)) stop("seed must be a numeric scalar.")
+    set.seed(seed)
+  }
+
   Y <- as.matrix(Y)
-  Y.mask <- base::is.na(Y)
-  curve_NAs <- base::rowSums(Y.mask) == ncol(Y)
-  train_idx <- caret::createDataPartition(curve_NAs, p = train.pct, list = FALSE)
-  Y.train <- Y[train_idx, ]
-  Y.test <- Y[-train_idx,]
-  results <- list(Y.train = Y.train, Y.test = Y.test)
-  return(results)
+  n <- nrow(Y); m <- ncol(Y)
+  if (is.null(n) || is.null(m)) stop("Y must be a 2D object (matrix/data.frame) coercible to a matrix.")
+  if (n == 0L) stop("Y must have at least one row.")
+
+  # Determine train proportion
+  if (is.null(train.pct)) {
+    if (train.size < 0 || train.size > n) stop("train.size must be in [0, nrow(Y)].")
+    p <- if (n == 0) 0 else train.size / n
+  } else {
+    p <- train.pct
+  }
+
+  # Stratify rows: all-NA vs not-all-NA to mirror original intent
+  all_na <- rowSums(is.na(Y)) == m
+  idx_true  <- which(all_na)
+  idx_false <- which(!all_na)
+
+  total_target <- as.integer(round(p * n))
+  ns <- c(length(idx_true), length(idx_false))
+  raw <- p * ns
+  base_alloc <- floor(raw)
+  frac <- raw - base_alloc
+
+  alloc <- base_alloc
+  remainder <- total_target - sum(alloc)
+  if (remainder > 0L) {
+    order_add <- order(frac, decreasing = TRUE)
+    for (j in order_add) {
+      if (remainder <= 0L) break
+      if (alloc[j] < ns[j]) {
+        alloc[j] <- alloc[j] + 1L
+        remainder <- remainder - 1L
+      }
+    }
+  } else if (remainder < 0L) {
+    order_sub <- order(frac, decreasing = FALSE)
+    for (j in order_sub) {
+      if (remainder >= 0L) break
+      if (alloc[j] > 0L) {
+        alloc[j] <- alloc[j] - 1L
+        remainder <- remainder + 1L
+      }
+    }
+  }
+  alloc <- pmin(pmax(alloc, 0L), ns)
+
+  pick_from <- function(ix, k) {
+    if (k <= 0L || length(ix) == 0L) return(integer(0L))
+    if (k >= length(ix)) return(ix)
+    sample(ix, size = k, replace = FALSE)
+  }
+
+  train_idx <- c(
+    pick_from(idx_true,  alloc[1L]),
+    pick_from(idx_false, alloc[2L])
+  )
+  train_idx <- sort(train_idx)
+  test_idx <- setdiff(seq_len(n), train_idx)
+
+  Y.train <- Y[train_idx, , drop = FALSE]
+  Y.test  <- Y[test_idx,  , drop = FALSE]
+
+  list(Y.train = Y.train, Y.test = Y.test)
 }
+
 
 #' @title Split points of a given matrix Y into train / test
 #' @description Split points of a given matrix Y into train / test based on parameters train.pct and train.size. If both are informed train.pct takes preference. This function keeps the dimensions of the original Y in both train and test and substitutes the values in both splits by NAs
@@ -154,21 +190,89 @@ train_test_split_rows <- function(Y, train.pct = NULL, train.size = NULL, seed =
 #' @return A list containing a matrix Y.train and a matrix Y.test
 train_test_split_points <- function(Y, train.pct = NULL, train.size = NULL, seed = NULL)
 {
-  value <- NULL
-  if(is.null(train.pct) && is.null(train.size)){stop('Either train.pct or train.size must be filled.')}
-  if(!is.null(seed)){set.seed(seed)}
-  if(is.null(train.pct)){train.pct <- train.size / length(Y) }
-  Y.long <- pivot_long_x(Y)
-  Y.long <- tibble::as_tibble(Y.long)
-  Y.long <- dplyr::mutate(.data = Y.long, is_na = is.na(value))
-  train_idx <- caret::createDataPartition(Y.long$is_na, p = train.pct, list = FALSE)
-  train_idx <- as.vector(train_idx)
-  Y.train <- Y.long[train_idx, c('row', 'column', 'value')]
-  Y.train <- pivot_wide_x(x.long = Y.train, dimensions = c(nrow(Y), ncol(Y)))
-  Y.test <- Y.long[-train_idx, c('row', 'column', 'value')]
-  Y.test <- pivot_wide_x(x.long = Y.test, dimensions = c(nrow(Y), ncol(Y)))
-  results <- list(Y.train = Y.train, Y.test = Y.test)
-  return(results)
+  # Validate inputs
+  if (is.null(train.pct) && is.null(train.size)) {
+    stop("Either train.pct or train.size must be provided.")
+  }
+  if (!is.null(train.pct)) {
+    if (!is.numeric(train.pct) || length(train.pct) != 1L || is.na(train.pct) || train.pct < 0 || train.pct > 1) {
+      stop("train.pct must be a numeric scalar in [0, 1].")
+    }
+  }
+  if (!is.null(train.size)) {
+    if (!is.numeric(train.size) || length(train.size) != 1L || is.na(train.size) || train.size < 0) {
+      stop("train.size must be a non-negative numeric scalar.")
+    }
+  }
+  if (!is.null(seed)) {
+    if (!is.numeric(seed) || length(seed) != 1L || is.na(seed)) stop("seed must be a numeric scalar.")
+    set.seed(seed)
+  }
+
+  Y <- as.matrix(Y)
+  n <- nrow(Y); m <- ncol(Y)
+  if (is.null(n) || is.null(m)) stop("Y must be a 2D object (matrix/data.frame) coercible to a matrix.")
+  if (n == 0L || m == 0L) stop("Y must have at least one row and one column.")
+
+  total_points <- n * m
+
+  # Determine train proportion
+  if (is.null(train.pct)) {
+    if (train.size > total_points) stop("train.size cannot exceed length(Y) = nrow(Y) * ncol(Y).")
+    p <- if (total_points == 0) 0 else train.size / total_points
+  } else {
+    p <- train.pct
+  }
+
+  # Per-row allocation to keep the proportion within each row
+  raw_row <- rep(p * m, n)
+  base_k <- floor(raw_row)
+  frac <- raw_row - base_k
+  target_total <- as.integer(round(p * total_points))
+  remainder <- target_total - sum(base_k)
+
+  k_row <- base_k
+  if (remainder > 0L) {
+    order_add <- order(frac, decreasing = TRUE)
+    for (i in order_add) {
+      if (remainder <= 0L) break
+      if (k_row[i] < m) {
+        k_row[i] <- k_row[i] + 1L
+        remainder <- remainder - 1L
+      }
+    }
+  } else if (remainder < 0L) {
+    order_sub <- order(frac, decreasing = FALSE)
+    for (i in order_sub) {
+      if (remainder >= 0L) break
+      if (k_row[i] > 0L) {
+        k_row[i] <- k_row[i] - 1L
+        remainder <- remainder + 1L
+      }
+    }
+  }
+  k_row <- pmin(pmax(k_row, 0L), m)
+
+  # Prepare outputs
+  Y.train <- matrix(NA, nrow = n, ncol = m)
+  Y.test  <- matrix(NA, nrow = n, ncol = m)
+
+  cols <- seq_len(m)
+  for (i in seq_len(n)) {
+    ki <- k_row[i]
+    if (ki <= 0L) {
+      Y.test[i, ] <- Y[i, ]
+    } else if (ki >= m) {
+      Y.train[i, ] <- Y[i, ]
+    } else {
+      trc <- sample(cols, size = ki, replace = FALSE)
+      tec <- cols[!(cols %in% trc)]
+      if (length(trc)) Y.train[i, trc] <- Y[i, trc]
+      if (length(tec)) Y.test[i, tec] <- Y[i, tec]
+    }
+  }
+
+  list(Y.train = Y.train, Y.test = Y.test)
 }
 
 #' @title Split a given matrix Y into train / test
@@ -214,20 +318,50 @@ train_test_split <- function(Y, criteria = 'points', train.pct = NULL, train.siz
 #' @return A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
 kfold_cv_rows <- function(Y, folds = 3, seed = NULL)
 {
-  if(!is.null(seed)){set.seed(seed)}
-  Y <- as.matrix(Y)
-  Y.mask <- base::is.na(Y)
-  curve_NAs <- base::rowSums(Y.mask) == ncol(Y)
-  test_idx <- caret::createFolds(curve_NAs, k = folds, list = FALSE)
-  Y.train.list <- list()
-  Y.test.list <- list()
-  for(idx in 1:folds)
-  {
-    Y.train.list[[idx]] <- Y[test_idx != idx,]
-    Y.test.list[[idx]] <- Y[test_idx == idx,]
+  # Validate inputs
+  if (!is.numeric(folds) || length(folds) != 1L || is.na(folds)) stop("folds must be a numeric scalar.")
+  folds <- as.integer(folds)
+  if (folds < 2L) stop("folds must be at least 2.")
+  if (!is.null(seed)) {
+    if (!is.numeric(seed) || length(seed) != 1L || is.na(seed)) stop("seed must be a numeric scalar.")
+    set.seed(seed)
   }
-  results <- list(Y.train.list = Y.train.list, Y.test.list = Y.test.list)
-  return(results)
+
+  Y <- as.matrix(Y)
+  n <- nrow(Y); m <- ncol(Y)
+  if (is.null(n) || is.null(m)) stop("Y must be a 2D object (matrix/data.frame) coercible to a matrix.")
+  if (n == 0L) stop("Y must have at least one row.")
+  if (folds > n) stop("folds cannot exceed the number of rows in Y.")
+
+  all_na <- rowSums(is.na(Y)) == m
+  idx_true  <- which(all_na)
+  idx_false <- which(!all_na)
+
+  # Assign folds within each stratum; always return a data.frame (even if empty)
+  assign_folds <- function(ix, k) {
+    if (length(ix) == 0L) return(data.frame(index = integer(0), fold = integer(0)))
+    perm <- sample(ix, length(ix), replace = FALSE)
+    fold_seq <- rep_len(seq_len(k), length(ix))
+    data.frame(index = perm, fold = fold_seq)
+  }
+
+  df_true  <- assign_folds(idx_true,  folds)
+  df_false <- assign_folds(idx_false, folds)
+
+  fold_id <- integer(n)
+  if (nrow(df_true) > 0L)  fold_id[df_true$index]  <- df_true$fold
+  if (nrow(df_false) > 0L) fold_id[df_false$index] <- df_false$fold
+
+  Y.train.list <- vector("list", folds)
+  Y.test.list  <- vector("list", folds)
+  for (k in seq_len(folds)) {
+    test_rows  <- which(fold_id == k)
+    train_rows <- which(fold_id != k)
+    Y.train.list[[k]] <- Y[train_rows, , drop = FALSE]
+    Y.test.list[[k]]  <- Y[test_rows,  , drop = FALSE]
+  }
+
+  list(Y.train.list = Y.train.list, Y.test.list = Y.test.list)
 }
 
 #' @title Split a given matrix Y into k-folds
@@ -238,24 +372,43 @@ kfold_cv_rows <- function(Y, folds = 3, seed = NULL)
 #' @return A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
 kfold_cv_points <- function(Y, folds = 3, seed = NULL)
 {
-  value <- NULL # Required to avoid warning when compiling package
-  if(!is.null(seed)){set.seed(seed)}
-  Y.long <- pivot_long_x(Y)
-  Y.long <- tibble::as_tibble(Y.long)
-  Y.long <- dplyr::mutate(.data = Y.long, is_na = is.na(value))
-  test_idx <- caret::createFolds(Y.long$is_na, k = folds, list = FALSE)
-  Y.train.list <- list()
-  Y.test.list <- list()
-  for(idx in 1:folds)
-  {
-    Y.train.list[[idx]] <- Y.long[test_idx != idx, c('row', 'column', 'value')]
-    Y.train.list[[idx]] <- pivot_wide_x(x.long = Y.train.list[[idx]], dimensions = c(nrow(Y), ncol(Y)))
-
-    Y.test.list[[idx]] <- Y.long[test_idx == idx, c('row', 'column', 'value')]
-    Y.test.list[[idx]] <- pivot_wide_x(x.long = Y.test.list[[idx]], dimensions = c(nrow(Y), ncol(Y)))
+  # Validate inputs
+  if (!is.numeric(folds) || length(folds) != 1L || is.na(folds)) stop("folds must be a numeric scalar.")
+  folds <- as.integer(folds)
+  if (folds < 2L) stop("folds must be at least 2.")
+  if (!is.null(seed)) {
+    if (!is.numeric(seed) || length(seed) != 1L || is.na(seed)) stop("seed must be a numeric scalar.")
+    set.seed(seed)
   }
-  results <- list(Y.train.list = Y.train.list, Y.test.list = Y.test.list)
-  return(results)
+
+  Y <- as.matrix(Y)
+  n <- nrow(Y); m <- ncol(Y)
+  if (is.null(n) || is.null(m)) stop("Y must be a 2D object (matrix/data.frame) coercible to a matrix.")
+  if (n == 0L || m == 0L) stop("Y must have at least one row and one column.")
+
+  # Per-row fold assignment for columns: balanced and randomized
+  fold_ids <- matrix(0L, nrow = n, ncol = m)
+  base_pattern <- seq_len(folds)
+  for (i in seq_len(n)) {
+    perm <- sample.int(m, m, replace = FALSE)
+    fold_seq <- rep_len(base_pattern, m)
+    fold_ids[i, perm] <- fold_seq
+  }
+
+  Y.train.list <- vector("list", folds)
+  Y.test.list  <- vector("list", folds)
+  for (k in seq_len(folds)) {
+    Ytrain <- matrix(NA, nrow = n, ncol = m)
+    Ytest  <- matrix(NA, nrow = n, ncol = m)
+    test_mask <- (fold_ids == k)
+    train_mask <- !test_mask
+    if (any(train_mask)) Ytrain[train_mask] <- Y[train_mask]
+    if (any(test_mask))  Ytest[test_mask]   <- Y[test_mask]
+    Y.train.list[[k]] <- Ytrain
+    Y.test.list[[k]]  <- Ytest
+  }
+
+  list(Y.train.list = Y.train.list, Y.test.list = Y.test.list)
 }
 
 #' @title Split a given matrix Y into k-folds

@@ -26,43 +26,53 @@ test_that("train_test_split based on rows function; test portion works", {
 
 test_that("train_test_split based on points function; train portion works", {
   set.seed(5)
-  x = matrix(rnorm(50), nrow=10)
+  x = matrix(1:50, nrow=10)
   train_test_rows = train_test_split(x, criteria='points', train.pct=0.5, seed=1)
   Y.train = train_test_rows$Y.train
-  expected_output_train = matrix(c(-0.8408555,NA,0.9005119,0.3159150,NA, 1.3843593,-0.8017795,NA,1.1096942,-0.80242318, NA,-1.0803926,NA,2.2154606,-0.07457892), nrow=3, byrow=T)
-  expect_equal(round(Y.train[1:3,], 4), round(expected_output_train, 4))
+  expected_output_train = matrix(
+    c(1, 2, NA, 4, 5, NA, 7, 8, 9, 10, NA, 12, 13, NA, 15, 16, NA, NA, NA, NA, 21, NA, 23, 24, NA, 26, 27, NA, NA, NA, 31, NA, 33, NA, NA, NA, NA, NA, NA, NA, NA, 42, NA, 44, 45, NA, NA, 48, 49, 50),
+    nrow=10)
+  expect_equal(round(Y.train, 4), round(expected_output_train, 4))
 })
 
 test_that("train_test_split based on points function; test portion works", {
   set.seed(5)
-  x = matrix(rnorm(50), nrow=10)
+  x = matrix(1:50, nrow=10)
   train_test_rows = train_test_split(x, criteria='points', train.pct=0.5, seed=1)
   Y.test = train_test_rows$Y.test
-  expected_output_test = matrix(c(NA, NA, -1.2554919, 1.2276303, NA, NA, NA, 0.9418694, 1.4679619, NA, NA, NA, 1.5500604, NA, NA), nrow=3, byrow=F)
-  expect_equal(round(Y.test[1:3,], 4), round(expected_output_test, 4))
+  expected_output_test = matrix(
+    c(NA, NA, 3, NA, NA, 6, NA, NA, NA, NA, 11, NA, NA, 14, NA, NA, 17, 18, 19, 20, NA, 22,  NA, NA, 25, NA, NA, 28, 29, 30, NA, 32, NA, 34, 35, 36, 37, 38, 39, 40, 41, NA, 43, NA,  NA, 46, 47, NA, NA, NA),
+    nrow=10)
+  expect_equal(round(Y.test, 4), round(expected_output_test, 4))
 })
 
 # KFOLDS TESTS ----------------------------------------------------------------
 
 test_that("create_folds based on rows function; train portion works", {
   set.seed(5)
-  x = matrix(rnorm(50), nrow=10)
+  x = matrix(1:50, nrow=10)
   kfolds = create_folds(x, criteria='rows',folds=3, seed=1)
   true_partial_output = list(train1=round(kfolds$Y.train.list[[1]], 4),
                              test1=round(kfolds$Y.test.list[[1]], 4))
-  expected_partial_output = list(train1=round(matrix(c(0.07014277,-0.1575344,0.7067611,1.2171036,1.89566795, 1.71144087,-1.0717600,0.8190089,1.4792218,-0.45656894, -0.60290798,-0.1389861,-0.2934818,0.9515738,0.56222336, -0.47216639,-0.5973131,1.4185891,-1.0095326,-0.88700851, -0.28577363,0.2408173,-0.6570821,-1.7621859,-0.72432849, 0.13810822,-0.2593554,-0.8527954,-0.1426081,-0.06921116), nrow=6, byrow=T), 4),
-                                 test1=round(matrix(c(-0.8408555,1.2276303,0.9005119,0.315915,1.55006037, 1.3843593,-0.8017795,0.9418694,1.109694,-0.80242318, -1.2554919,-1.0803926,1.4679619,2.215461,-0.07457892, -0.6353713,-2.1839668,1.4987738,-2.000473,-0.46024458), nrow=4, byrow=T), 4))
+  expected_partial_output = list(
+    train1 = matrix(c(2, 4, 5, 6, 7, 10, 12, 14, 15, 16, 17, 20, 22, 24, 25, 26, 27, 30, 32, 34, 35, 36, 37, 40, 42, 44, 45, 46, 47, 50), nrow=6),
+    test1 = matrix(c(1, 3, 8, 9, 11, 13, 18, 19, 21, 23, 28, 29, 31, 33, 38, 39, 41, 43, 48, 49), nrow=4)
+  )
   expect_equal(expected_partial_output, true_partial_output)
 })
 
 test_that("create_folds based on points function; train portion works", {
   set.seed(5)
-  x = matrix(rnorm(50), nrow=10)
+  x = matrix(1:50, nrow=10)
   kfolds = create_folds(x, criteria='points',folds=3, seed=1)
-  true_partial_output = list(train1=round(kfolds$Y.train.list[[1]][1:3,], 4),
-                             test1=round(kfolds$Y.test.list[[1]][1:3,], 4))
-  expected_partial_output = list(train1=round(matrix(c(-0.8408555,NA,NA,0.315915,NA, 1.3843593,-0.8017795,0.9418694,1.109694,-0.80242318, NA,NA,1.4679619,2.215461,-0.07457892), nrow=3, byrow=T), 4),
-                                 test1=round(matrix(c(NA,1.227630,0.9005119,NA,1.55006, NA,NA,NA,NA,NA, -1.255492,-1.080393,NA,NA,NA), nrow=3, byrow=T), 4))
+  true_partial_output = list(train1=round(kfolds$Y.train.list[[1]], 4),
+                             test1=round(kfolds$Y.test.list[[1]], 4))
+  expected_partial_output = list(
+    train1 = matrix(c(NA, 2, 3, 4, NA, NA, 7, NA, 9, 10, 11, NA, 13, NA, 15, 16, NA, NA, NA, 20, 21, 22,  NA, NA, 25, NA, 27, 28, 29, NA, 31, 32, NA, 34, NA, 36, NA, 38, NA, NA, NA, NA, 43, 44,  45, 46, 47, 48, 49, 50),
+                    nrow=10),
+    test1 = matrix(c(1, NA, NA, NA, 5, 6, NA, 8, NA, NA, NA, 12, NA, 14, NA, NA, 17, 18, 19, NA, NA, NA, 23, 24, NA, 26, NA, NA, NA, 30, NA, NA, 33, NA, 35, NA, 37, NA, 39, 40, 41, 42, NA, NA, NA, NA, NA, NA, NA, NA),
+                   nrow=10)
+  )
   expect_equal(expected_partial_output, true_partial_output)
 })
 

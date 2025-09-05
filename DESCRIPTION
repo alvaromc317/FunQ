@@ -18,11 +18,7 @@ Imports:
     conquer2,
     pbs,
     rlang,
-    tidyr,
-    dplyr,
-    tibble,
     ggplot2,
-    caret,
     tf
 Suggests:
     knitr,
