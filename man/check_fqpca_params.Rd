@@ -15,9 +15,7 @@ check_fqpca_params(
   tol,
   max.iters,
   verbose,
-  seed,
-  parallelized.scores,
-  num.cores
+  seed
 )
 }
 \arguments{
@@ -42,10 +40,6 @@ check_fqpca_params(
 \item{verbose}{Boolean indicating the verbosity.}
 
 \item{seed}{Seed for the random generator number.}
-
-\item{parallelized.scores}{Should the scores be computed in parallel? Experimental component.}
-
-\item{num.cores}{Number of cores to use in parallelized executions.}
 }
 \value{
 No return

@@ -20,8 +20,6 @@ fqpca_cv_lambda(
   max.iters = 20,
   splines.method = "conquer",
   penalized = TRUE,
-  parallelized.scores = FALSE,
-  num.cores = NULL,
   verbose.fqpca = FALSE,
   verbose.cv = TRUE,
   seed = NULL
@@ -57,10 +55,6 @@ fqpca_cv_lambda(
 \item{splines.method}{Method used in the resolution of the splines quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
 
 \item{penalized}{Boolean indicating if the smoothness should be controlled using a second derivative penalty. This functionality is experimental.}
-
-\item{parallelized.scores}{Should the scores be computed in parallel? Experimantal component.}
-
-\item{num.cores}{Number of cores to use in parallelized executions.}
 
 \item{verbose.fqpca}{Boolean indicating verbosity of the fqpca function.}
 

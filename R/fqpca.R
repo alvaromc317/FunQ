@@ -8,7 +8,7 @@
 #' @param loadings Matrix of loading coefficients.
 #' @param quantile.value The quantile considered.
 #' @return The matrix of scores.
-compute_scores_sequential <- function(Y, Y.mask, intercept, loadings, quantile.value)
+compute_scores <- function(Y, Y.mask, intercept, loadings, quantile.value)
 {
   # Initialize the matrix of scores
   n.obs <- base::nrow(Y)
@@ -22,62 +22,6 @@ compute_scores_sequential <- function(Y, Y.mask, intercept, loadings, quantile.v
     # Obtain the observation removing missing data and subtract intercept
     Yi <- Y[i, Y.mask[i, ]] - intercept.obs
     scores[i,] <-  quantreg::rq.fit.br(y=Yi, x=loadings.obs, tau=quantile.value)$coefficients
-  }
-  return(scores)
-}
-
-#' @title Compute scores
-#' @description Inner function to compute the scores of the fqpca methodology.
-#' @param Y The \eqn{(N \times T)} matrix of observed time instants.
-#' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
-#' @param intercept population intercept
-#' @param loadings Matrix of loading coefficients.
-#' @param quantile.value The quantile considered.
-#' @param num.cores Number of cores used in parallel executions.
-#' @return The matrix of scores.
-#' @importFrom foreach %dopar%
-compute_scores_parallel <- function(Y, Y.mask, intercept, loadings, quantile.value, num.cores)
-{
-  # Initialize the matrix of scores
-  n.obs <- base::nrow(Y)
-  npc <- base::ncol(loadings)
-  # Initialize the cluster each time the scores are computed
-  cl <- parallel::makeCluster(num.cores)
-  doParallel::registerDoParallel(cl)
-  i <- 1
-  scores <-
-    foreach::foreach(i = base::seq(n.obs), .combine='rbind', .packages = c('quantreg')) %dopar%
-    {
-      loadings.obs <- loadings[Y.mask[i, ], , drop = FALSE]
-      intercept.obs <- intercept[Y.mask[i, ]]
-      Yi <- Y[i, Y.mask[i, ]] - intercept.obs
-      quantreg::rq.fit.br(y=Yi, x=loadings.obs, tau=quantile.value)$coefficients
-    }
-  parallel::stopCluster(cl)
-  foreach::registerDoSEQ()
-  rownames(scores) <- NULL
-  colnames(scores) <- NULL
-  return(scores)
-}
-
-#' @title Compute scores
-#' @description Inner function to compute the scores of the fqpca methodology.
-#' @param Y The \eqn{(N \times T)} matrix of observed time instants.
-#' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
-#' @param intercept population intercept
-#' @param loadings Matrix of loading coefficients.
-#' @param quantile.value The quantile considered.
-#' @param parallelized.scores Should the scores be computed in parallel?
-#' @param num.cores Number of cores used in parallel executions.
-#' @return The matrix of scores.
-#' @importFrom foreach %dopar%
-compute_scores <- function(Y, Y.mask, intercept, loadings, quantile.value, parallelized.scores, num.cores)
-{
-  if(parallelized.scores)
-  {
-    scores <- compute_scores_parallel(Y, Y.mask, intercept, loadings, quantile.value, num.cores)
-  }else{
-    scores <- compute_scores_sequential(Y, Y.mask, intercept, loadings, quantile.value)
   }
   return(scores)
 }
@@ -292,10 +236,8 @@ obtain_npc <- function(scores, pve)
 #' @param max.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
 #' @param seed Seed for the random generator number.
-#' @param parallelized.scores Should the scores be computed in parallel? Experimental component.
-#' @param num.cores Number of cores to use in parallelized executions.
 #' @return No return
-check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, splines.method, penalized, lambda.ridge, tol, max.iters, verbose, seed, parallelized.scores, num.cores)
+check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, splines.method, penalized, lambda.ridge, tol, max.iters, verbose, seed)
 {
   # Check 'npc': integer number, positive
   if (!is.numeric(npc) || length(npc) != 1 || npc %% 1 != 0 || npc <= 0) {
@@ -368,19 +310,6 @@ check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, spline
     stop("Invalid input for 'seed': ", seed,
          ". Expected a positive integer number or NULL.")
   }
-
-  # Check 'parallelized.scores': Boolean
-  if (!is.logical(parallelized.scores) || length(parallelized.scores) != 1) {
-    stop("Invalid input for 'parallelized.scores': ", parallelized.scores,
-         ". Expected a Boolean value (TRUE or FALSE).")
-  }
-
-  # Check 'num.cores': positive integer number or NULL
-  if (!(is.null(num.cores) || (is.numeric(num.cores) && length(num.cores) == 1 &&
-                               num.cores %% 1 == 0 && num.cores > 0))) {
-    stop("Invalid input for 'num.cores': ", num.cores,
-         ". Expected a positive integer number or NULL.")
-  }
 }
 
 #' @title Check input data
@@ -439,8 +368,6 @@ check_input_data <- function(data, colname)
 #' @param max.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
 #' @param seed Seed for the random generator number.
-#' @param parallelized.scores Should the scores be computed in parallel? Experimental component.
-#' @param num.cores Number of cores to use in parallelized executions.
 #' @return fqpca_object
 #' @export
 #' @examples
@@ -474,8 +401,7 @@ check_input_data <- function(data, colname)
 fqpca <- function(
     data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodic = TRUE,
     splines.df = 10, splines.method = 'conquer', penalized = FALSE,
-    lambda.ridge = 0, tol = 1e-3, max.iters = 20, verbose = FALSE, seed = NULL,
-    parallelized.scores=FALSE, num.cores=NULL)
+    lambda.ridge = 0, tol = 1e-3, max.iters = 20, verbose = FALSE, seed = NULL)
 {
   global.start.time <- base::Sys.time()
 
@@ -489,8 +415,7 @@ fqpca <- function(
   check_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
                      splines.df=splines.df, splines.method=splines.method, penalized=penalized,
                      lambda.ridge=lambda.ridge, tol=tol, max.iters=max.iters,
-                     verbose=verbose, seed=seed, parallelized.scores=parallelized.scores,
-                     num.cores=num.cores)
+                     verbose=verbose, seed=seed)
 
   # Check Y and colname and return an unnamed matrix
   Y <- check_input_data(data=data, colname=colname)
@@ -504,9 +429,6 @@ fqpca <- function(
 
   # If seed is provided, set seed for computations
   if(!base::is.null(seed)){base::set.seed(seed)}
-
-  # If scores are computed in parallel, initialize num.cores
-  if(parallelized.scores && is.null(num.cores)){num.cores <- parallel::detectCores() - 1}
 
   # Step 1: Initialize values
   n.obs <- base::nrow(Y)
@@ -543,6 +465,7 @@ fqpca <- function(
     spline.basis <- spline.basis %*% U
   }
 
+  i <- 1
   loop.start.time <- base::Sys.time()
 
   # Randomly generate splines coefficients
@@ -552,7 +475,7 @@ fqpca <- function(
   intercept <- loadings_list[, 1]
   loadings <- loadings_list[, -1, drop=FALSE]
 
-  scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = intercept, loadings = loadings, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
+  scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = intercept, loadings = loadings, quantile.value = quantile.value), silent = FALSE)
   if(!is.matrix(scores)){stop('Iteration 1. Failed computation of scores')}
 
   # Rotate loadings and scores
@@ -603,7 +526,7 @@ fqpca <- function(
     if(is_rank_deficient(loadings)){warning('Loadings matrix is singular.')}
 
     # OBTAIN SCORES
-    scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = intercept, loadings = loadings, quantile.value = quantile.value, parallelized.scores = parallelized.scores, num.cores = num.cores), silent = FALSE)
+    scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = intercept, loadings = loadings, quantile.value = quantile.value), silent = FALSE)
     if(!is.matrix(scores))
     {
       warning('Iteration ', i, '. Failed computation of scores. Providing results from previous iteration.')
@@ -733,7 +656,7 @@ predict.fqpca_object <- function(object, newdata, ...)
   if(sum(!Y.mask) == n.obs * n.time){stop('newdata contains no information. Check that there are values different from NA')}
 
   # Estimation of scores
-  scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = object$intercept, loadings = object$loadings, quantile.value = object$inputs$quantile.value, parallelized.scores = FALSE, num.cores = 1), silent = FALSE)
+  scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = object$intercept, loadings = object$loadings, quantile.value = object$inputs$quantile.value), silent = FALSE)
   if(!is.matrix(scores))
   {
     stop('Computation of scores failed.')

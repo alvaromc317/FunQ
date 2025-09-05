@@ -17,9 +17,7 @@ fqpca(
   tol = 0.001,
   max.iters = 20,
   verbose = FALSE,
-  seed = NULL,
-  parallelized.scores = FALSE,
-  num.cores = NULL
+  seed = NULL
 )
 }
 \arguments{
@@ -48,10 +46,6 @@ fqpca(
 \item{verbose}{Boolean indicating the verbosity.}
 
 \item{seed}{Seed for the random generator number.}
-
-\item{parallelized.scores}{Should the scores be computed in parallel? Experimental component.}
-
-\item{num.cores}{Number of cores to use in parallelized executions.}
 }
 \value{
 fqpca_object

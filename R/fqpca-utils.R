@@ -21,8 +21,6 @@
 #' @param verbose.fqpca Boolean indicating verbosity of the fqpca function.
 #' @param verbose.cv Boolean indicating verbosity of the cross-validation process.
 #' @param seed Seed for the random generator number.
-#' @param parallelized.scores Should the scores be computed in parallel? Experimantal component.
-#' @param num.cores Number of cores to use in parallelized executions.
 #' @return A list containing the matrix of scores, the matrix of loadings, a list with all the trained models (if the return_models param is TRUE) and a secondary list with extra information.
 #' @export
 #' @examples
@@ -54,8 +52,7 @@ fqpca_cv_lambda <- function(
     data, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5,
     lambda.grid  =  c(0, 1e-10, 1e-5), n.folds = 3, return.models=TRUE,
     criteria = 'points', periodic = TRUE, splines.df = 10, tol = 1e-3,
-    max.iters = 20, splines.method = 'conquer', penalized=TRUE,
-    parallelized.scores=FALSE, num.cores=NULL, verbose.fqpca = FALSE,
+    max.iters = 20, splines.method = 'conquer', penalized=TRUE, verbose.fqpca = FALSE,
     verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()
@@ -73,8 +70,7 @@ fqpca_cv_lambda <- function(
   check_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
                      splines.df=splines.df, splines.method=splines.method, penalized=penalized,
                      lambda.ridge=lambda.grid[1], tol=tol, max.iters=max.iters,
-                     verbose=verbose.fqpca, seed=seed, parallelized.scores=parallelized.scores,
-                     num.cores=num.cores)
+                     verbose=verbose.fqpca, seed=seed)
 
   # Check Y and colname and return an unnamed matrix
   Y <- check_input_data(data=data, colname=colname)
@@ -166,8 +162,6 @@ fqpca_cv_lambda <- function(
 #' @param verbose.fqpca Boolean indicating verbosity of the fqpca function.
 #' @param verbose.cv Boolean indicating verbosity of the cross-validation process.
 #' @param seed Seed for the random generator number.
-#' @param parallelized.scores Should the scores be computed in parallel? Experimantal component.
-#' @param num.cores Number of cores to use in parallelized executions.
 #' @return A list containing the matrix of scores, the matrix of loadings, and a secondary list with extra information.
 #' @export
 #' @examples
@@ -197,8 +191,7 @@ fqpca_cv_df <- function(
     data, colname=NULL, npc = 2,  pve=NULL, quantile.value = 0.5,
     lambda.ridge = 0, n.folds = 3, return.models = TRUE, criteria = 'points',
     periodic = TRUE, splines.df.grid = c(5, 10, 15, 20), tol = 1e-3,
-    max.iters = 20, splines.method = 'conquer', penalized=FALSE,
-    parallelized.scores=FALSE, num.cores=NULL, verbose.fqpca = FALSE,
+    max.iters = 20, splines.method = 'conquer', penalized=FALSE, verbose.fqpca = FALSE,
     verbose.cv = TRUE, seed = NULL)
 {
   start_time <- Sys.time()
@@ -211,8 +204,7 @@ fqpca_cv_df <- function(
   check_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
                      splines.df=max(npc, splines.df.grid), splines.method=splines.method, penalized=penalized,
                      lambda.ridge=lambda.ridge, tol=tol, max.iters=max.iters,
-                     verbose=verbose.fqpca, seed=seed, parallelized.scores=parallelized.scores,
-                     num.cores=num.cores)
+                     verbose=verbose.fqpca, seed=seed)
 
   # Check Y and colname and return an unnamed matrix
   Y <- check_input_data(data=data, colname=colname)
