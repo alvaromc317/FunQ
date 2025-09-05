@@ -407,17 +407,7 @@ fqpca <- function(
   Y.vector <- unlist(Y.list, use.names = FALSE)
   function.warnings <- list(splines = FALSE, scores = FALSE, rotation = FALSE, diverging.loop = FALSE)
 
-  # Initialize splines knots
-  if(periodic)
-  {
-    knots <- base::seq(0, 1, length.out = 2 + splines.df - 1)  # 2 boundary knots + df - intercept
-  } else{
-    knots <- base::seq(0, 1, length.out = 2 + splines.df - 3 - 1) # 2 boundary knots + df - degree - intercept
-  }
-  knots <- knots[2:(base::length(knots)-1)]
-
-  # Initialize spline basis
-  spline.basis <- pbs::pbs(Y.axis, degree = 3, knots = knots, intercept = T, periodic=periodic, Boundary.knots = c(min(Y.axis), max(Y.axis)))
+  spline.basis <- pbs::pbs(Y.axis, degree = 3, df = splines.df, intercept = TRUE, periodic=periodic, Boundary.knots = c(min(Y.axis), max(Y.axis)))
   n.basis <- base::ncol(spline.basis)
 
   # If penalized, compute different basis with an identity second derivative matrix with 0s in first and second positions

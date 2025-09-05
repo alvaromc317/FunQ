@@ -488,19 +488,10 @@ mfqpca <- function(
   Y.list <- lapply(base::seq(n.obs), function(j) Y[j, Y.mask[j, ]])
   Y.vector <- unlist(Y.list, use.names = FALSE)
 
-  # Initialize splines knots
-  if(periodic)
-  {
-    knots <- base::seq(0, 1, length.out = 2 + splines.df - 1)  # 2 boundary knots + df - intercept
-  } else{
-    knots <- base::seq(0, 1, length.out = 2 + splines.df - 3 - 1) # 2 boundary knots + df - degree - intercept
-  }
-  knots <- knots[2:(base::length(knots)-1)]
+  spline.basis <- pbs::pbs(Y.axis, degree = 3, df = splines.df, intercept = TRUE, periodic=periodic, Boundary.knots = c(min(Y.axis), max(Y.axis)))
+  n.basis <- base::ncol(spline.basis)
 
-  # Initialize spline basis
-  spline.basis <- pbs::pbs(Y.axis, degree = 3, knots = knots, intercept = TRUE, periodic=periodic, Boundary.knots = c(min(Y.axis), max(Y.axis)))
-  n.basis = base::ncol(spline.basis)
-
+  i <- 1
   loop.start.time <- base::Sys.time()
 
   partial.execution.time <- list(
