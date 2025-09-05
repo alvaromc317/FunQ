@@ -98,15 +98,18 @@ mfqpca_cv_df <- function(
       {
         Y.train <- Y.folds$Y.train.list[[j]]
         Y.test <- Y.folds$Y.test.list[[j]]
+        group.train = group[Y.folds$train.idx.list[[j]]]
+        group.test = group[-Y.folds$train.idx.list[[j]]]
       } else if(criteria == 'points')
       {
         Y.train <- Y.folds$Y.train.list[[j]]
         Y.test <-  Y.folds$Y.test.list[[j]]
+        group.train = group
       } else{stop('Invalid value for criteria. Valid values are observations or curves.')}
 
       # Execute model
       mfqpca_results <- mfqpca(
-        data = Y.train, group = group, colname = colname, npc.between = npc.between.iteration,
+        data = Y.train, group = group.train, colname = colname, npc.between = npc.between.iteration,
         npc.within = npc.within.iteration, quantile.value = quantile.value,  periodic = periodic,
         splines.df = splines.df, splines.method = splines.method, tol = tol,
         max.iters = max.iters, verbose = verbose.mfqpca, seed = seed)
@@ -127,7 +130,7 @@ mfqpca_cv_df <- function(
         scores.within <- mfqpca_results$scores.within
       }else if(criteria=='rows')
       {
-        test.scores <- predict.mfqpca_object(mfqpca_results, Y.test)
+        test.scores <- predict.mfqpca_object(mfqpca_results, newdata.group=group.test, Y.test)
         scores.between.full <- test.scores$scores.between.full
         scores.within <- test.scores$scores.within
       }

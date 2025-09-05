@@ -76,7 +76,8 @@ mfqpca_compute_scores_within <- function(Y, Y.mask, loadings, quantile.value)
   for(i in base::seq(n.obs))
   {
     Yi <- Y[i, Y.mask[i, ]]
-    loadings.obs <- loadings[Y.mask[i, ], ]
+    loadings.obs <- loadings[Y.mask[i, ], , drop=FALSE]
+    if(length(Yi) < ncol(loadings.obs)){stop('Observation ', i, ' must have a larger number of timepoints than npcs.')}
     scores[i,] <-  quantreg::rq.fit.br(y=Yi, x=loadings.obs, tau=quantile.value)$coefficients
   }
   return(scores)
@@ -103,7 +104,7 @@ mfqpca_compute_splines_between <- function(Y.vector, Y.mask, scores, spline.basi
   row.idx <- 1
   for(i in base::seq(n.obs))
   {
-    scores.i <- scores[i, , drop=F]
+    scores.i <- scores[i, , drop=FALSE]
     tmp.splines <- spline.basis[Y.mask[i, ], , drop = FALSE]
     tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], , drop = FALSE]
     n.time.i <- base::nrow(tmp.splines)
@@ -542,7 +543,7 @@ mfqpca <- function(
             '\n', '____________________________________________________________')
   }
 
-  convergence = F
+  convergence = FALSE
   for(i in 2:max.iters)
   {
     loop.start.time <- base::Sys.time()
@@ -821,54 +822,67 @@ fitted.mfqpca_object <- function(object, pve.between=0.95, pve.within=0.95, ...)
 #'    data = Y, group=group, npc.between = 1, npc.within=1, quantile.value = 0.5,
 #'    periodic=FALSE, seed=1)
 #' plot(results)
-plot.mfqpca_object <- function(x, pve.between=0.95, pve.within=0.95, ...)
+plot.mfqpca_object <- function(x, pve.between = 0.95, pve.within = 0.95, ...)
 {
-  if (!inherits(x, "mfqpca_object")) {stop("The x must be of class mfqpca_object")}
+  if (!inherits(x, "mfqpca_object")) stop("The x must be of class mfqpca_object")
 
-  n.components.between <- obtain_npc(scores=x$scores.between, pve=pve.between)
-  n.components.within <- obtain_npc(scores=x$scores.within, pve=pve.within)
+  # Ensure zero components when pve == 0
+  n.components.between <- obtain_npc(scores = x$scores.between, pve = pve.between)
+  n.components.within  <- obtain_npc(scores = x$scores.within,  pve = pve.within)
 
   intercept <- x$intercept
 
-  # Create a data frame for the intercept curve
+  # Intercept data frame
   intercept_df <- data.frame(
-    Time = seq_len(length(intercept)),
+    Time = seq_along(intercept),
     Loading = intercept,
-    Component = "Intercept")
+    Component = "Intercept",
+    stringsAsFactors = FALSE
+  )
 
-  # Extract Between components
+  # Between components
   loadings.between <- x$loadings.between
-  loadings.between.filter <- loadings.between[, seq_len(n.components.between), drop = FALSE]
+  if (is.null(loadings.between) || n.components.between <= 0) {
+    fqpc_between_df <- data.frame(Time = integer(0), Loading = numeric(0), Component = character(0), stringsAsFactors = FALSE)
+    n.components.between <- 0
+  } else {
+    loadings.between.filter <- loadings.between[, seq_len(n.components.between), drop = FALSE]
+    fqpc_between_df <- data.frame(
+      Time = rep(seq_len(nrow(loadings.between.filter)), times = ncol(loadings.between.filter)),
+      Loading = as.vector(loadings.between.filter),
+      Component = rep(paste0("MFQPC Between ", seq_len(ncol(loadings.between.filter))), each = nrow(loadings.between.filter)),
+      stringsAsFactors = FALSE
+    )
+  }
 
-  # Reshape loadings-between into a long format data frame
-  fqpc_between_df <- data.frame(
-    Time = rep(seq_len(nrow(loadings.between.filter)), times = ncol(loadings.between.filter)),
-    Loading = as.vector(loadings.between.filter),
-    Component = rep(paste0("MFQPC Between ", seq_len(ncol(loadings.between.filter))), each = nrow(loadings.between.filter)))
-
+  # Within components
   loadings.within <- x$loadings.within
+  if (is.null(loadings.within) || n.components.within <= 0) {
+    fqpc_within_df <- data.frame(Time = integer(0), Loading = numeric(0), Component = character(0), stringsAsFactors = FALSE)
+    n.components.within <- 0
+  } else {
+    loadings.within.filter <- loadings.within[, seq_len(n.components.within), drop = FALSE]
+    fqpc_within_df <- data.frame(
+      Time = rep(seq_len(nrow(loadings.within.filter)), times = ncol(loadings.within.filter)),
+      Loading = as.vector(loadings.within.filter),
+      Component = rep(paste0("MFQPC Within ", seq_len(ncol(loadings.within.filter))), each = nrow(loadings.within.filter)),
+      stringsAsFactors = FALSE
+    )
+  }
 
-  # Extract Within components
-  loadings.within.filter <- loadings.within[, seq_len(n.components.within), drop = FALSE]
-
-  fqpc_within_df <- data.frame(
-    Time = rep(seq_len(nrow(loadings.within.filter)), times = ncol(loadings.within.filter)),
-    Loading = as.vector(loadings.within.filter),
-    Component = rep(paste0("MFQPC Within ", seq_len(ncol(loadings.within.filter))), each = nrow(loadings.within.filter)))
-
-  # Combine the intercept and FQPC data frames
+  # Combine data
   plot_data <- rbind(intercept_df, fqpc_between_df, fqpc_within_df)
-  plot_data$Component = factor(plot_data$Component, levels = c('Intercept',
-                                                               paste0('MFQPC Between ', 1:ncol(loadings.between.filter)),
-                                                               paste0('MFQPC Within ', 1:ncol(loadings.within.filter))))
 
-  # Create the GGPlot object with facets displaying each component separately.
+  # Safe factor levels (avoid 1:0 issue by using seq_len)
+  between_levels <- if (n.components.between > 0) paste0("MFQPC Between ", seq_len(n.components.between)) else character(0)
+  within_levels  <- if (n.components.within  > 0) paste0("MFQPC Within ",  seq_len(n.components.within))  else character(0)
+  plot_data$Component <- factor(plot_data$Component, levels = c("Intercept", between_levels, within_levels))
+
+  # Plot
   p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$Time, y = .data$Loading)) +
     ggplot2::geom_line(color = "steelblue", linewidth = 1) +
     ggplot2::facet_wrap(~ Component, scales = "free_y", ncol = 3) +
-    ggplot2::labs(title = "Loading Functions",
-                  x = "Time",
-                  y = "Loading") +
+    ggplot2::labs(title = "Loading Functions", x = "Time", y = "Loading") +
     ggplot2::theme_bw()
 
   return(p)

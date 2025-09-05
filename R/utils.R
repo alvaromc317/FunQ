@@ -177,7 +177,7 @@ train_test_split_rows <- function(Y, train.pct = NULL, train.size = NULL, seed =
   Y.train <- Y[train_idx, , drop = FALSE]
   Y.test  <- Y[test_idx,  , drop = FALSE]
 
-  list(Y.train = Y.train, Y.test = Y.test)
+  list(Y.train = Y.train, Y.test = Y.test, train.idx=train_idx)
 }
 
 
@@ -354,11 +354,13 @@ kfold_cv_rows <- function(Y, folds = 3, seed = NULL)
 
   Y.train.list <- vector("list", folds)
   Y.test.list  <- vector("list", folds)
+  train.idx.list <- vector("list", folds)
   for (k in seq_len(folds)) {
     test_rows  <- which(fold_id == k)
     train_rows <- which(fold_id != k)
     Y.train.list[[k]] <- Y[train_rows, , drop = FALSE]
     Y.test.list[[k]]  <- Y[test_rows,  , drop = FALSE]
+    train.idx.list[[k]] <- train_rows
   }
 
   list(Y.train.list = Y.train.list, Y.test.list = Y.test.list)
