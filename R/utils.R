@@ -104,11 +104,11 @@ compute_explained_variability <- function(scores)
 #' @param pve If smaller than 1, taken as percentage of explained variability. If greater than 1, taken as number of components.
 obtain_npc <- function(scores, pve)
 {
-  if(is.null(pve))
-  {
+  if(is.null(pve)){
     npc <- ncol(scores)
-  }else if(pve < 1)
-  {
+  }else if(pve == 0){
+    npc <- 0
+  }else if(pve < 1){
     score.variance <- cumsum(compute_explained_variability(scores))
     npc <- min(which(score.variance > pve))
   }else

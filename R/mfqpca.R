@@ -677,7 +677,6 @@ mfqpca_reconstruct <- function(scores, loadings, n.comp)
   {
     r = scores[, seq_len(n.comp), drop = FALSE] %*% t(loadings[, seq_len(n.comp), drop = FALSE])
   }else{
-    # Create a zero matrix
     r = matrix(0, nrow = nrow(scores), ncol = nrow(loadings))
   }
   return(r)
@@ -848,7 +847,7 @@ plot.mfqpca_object <- function(x, pve.between=0.95, pve.within=0.95, ...)
 
   # Extract Between components
   loadings.between <- x$loadings.between
-  loadings.between.filter <- loadings.between[, 1:n.components.between, drop = FALSE]
+  loadings.between.filter <- loadings.between[, seq_len(n.components.between), drop = FALSE]
 
   # Reshape loadings-between into a long format data frame
   fqpc_between_df <- data.frame(
@@ -859,7 +858,7 @@ plot.mfqpca_object <- function(x, pve.between=0.95, pve.within=0.95, ...)
   loadings.within <- x$loadings.within
 
   # Extract Within components
-  loadings.within.filter <- loadings.within[, 1:n.components.within, drop = FALSE]
+  loadings.within.filter <- loadings.within[, seq_len(n.components.within), drop = FALSE]
 
   fqpc_within_df <- data.frame(
     Time = rep(seq_len(nrow(loadings.within.filter)), times = ncol(loadings.within.filter)),

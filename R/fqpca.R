@@ -669,7 +669,12 @@ fitted.fqpca_object <- function(object, pve=0.95, ...)
 {
   if (!base::inherits(object, "fqpca_object")){stop('The object must be of class fqpca_object')}
   n.components <- obtain_npc(scores=object$scores, pve=pve)
-  Y.pred <- sweep(object$scores[, 1:n.components, drop=F] %*% t(object$loadings[, 1:n.components, drop=F]), MARGIN = 2, STATS = object$intercept, FUN = "+")
+  if (n.components > 0)
+  {
+    Y.pred <- sweep(object$scores[, 1:n.components, drop=F] %*% t(object$loadings[, 1:n.components, drop=F]), MARGIN = 2, STATS = object$intercept, FUN = "+")
+  }else{
+    Y.pred = matrix(0, nrow = nrow(object$scores), ncol = nrow(object$loadings))
+  }
   return(Y.pred)
 }
 
@@ -727,7 +732,7 @@ plot.fqpca_object <- function(x, pve = 0.99, ...)
     Loading = intercept,
     Component = "Intercept")
 
-  non_int <- loadings[, 1:n.components, drop = FALSE]
+  non_int <- loadings[, seq_len(n.components), drop = FALSE]
 
   # Reshape non-intercept loadings into a long format data frame
   fqpc_df <- data.frame(
