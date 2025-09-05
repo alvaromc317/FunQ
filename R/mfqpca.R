@@ -937,7 +937,7 @@ plot.mfqpca_object <- function(x, pve.between = 0.95, pve.within = 0.95, ...)
   # Plot
   p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$Time, y = .data$Loading)) +
     ggplot2::geom_line(color = "steelblue", linewidth = 1) +
-    ggplot2::facet_wrap(~ Component, scales = "free_y", ncol = 3) +
+    ggplot2::facet_wrap(~ Component, scales = "free_y", ncol = 4) +
     ggplot2::labs(title = "Loading Functions", x = "Time", y = "Loading") +
     ggplot2::theme_bw()
 

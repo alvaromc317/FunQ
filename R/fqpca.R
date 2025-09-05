@@ -59,7 +59,7 @@ compute_spline_coefficients_unpenalized <- function(
   row.idx <- 1
   for(i in base::seq(n.obs))
   {
-    scores.i <- scores[i, , drop=F]
+    scores.i <- scores[i, , drop=FALSE]
     tmp.splines <- spline.basis[Y.mask[i, ], , drop = FALSE]
     tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], , drop = FALSE]
     n.time.i <- base::nrow(tmp.splines)
@@ -100,7 +100,7 @@ compute_spline_coefficients_penalized <- function(
   row.idx <- 1
   for(i in base::seq(n.obs))
   {
-    scores.i <- scores[i, , drop=F]
+    scores.i <- scores[i, , drop=FALSE]
     tmp.splines <- spline.basis[Y.mask[i, ], , drop = FALSE]
     tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], , drop = FALSE]
     n.time.i <- base::nrow(tmp.splines)
@@ -548,7 +548,7 @@ fqpca <- function(
     objective.function.array <- c(objective.function.array, objective.function)
 
     convergence.criteria <- base::abs(objective.function.array[i] - objective.function.array[i-1])
-    if(convergence.criteria < tol){convergence = T}
+    if(convergence.criteria < tol){convergence = TRUE}
 
     # Measure computation time
     loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
@@ -698,9 +698,9 @@ fitted.fqpca_object <- function(object, pve=0.95, ...)
   n.components <- obtain_npc(scores=object$scores, pve=pve)
   if (n.components > 0)
   {
-    Y.pred <- sweep(object$scores[, 1:n.components, drop=F] %*% t(object$loadings[, 1:n.components, drop=F]), MARGIN = 2, STATS = object$intercept, FUN = "+")
+    Y.pred <- sweep(object$scores[, 1:n.components, drop=FALSE] %*% t(object$loadings[, 1:n.components, drop=FALSE]), MARGIN = 2, STATS = object$intercept, FUN = "+")
   }else{
-    Y.pred = matrix(object$intercept, nrow = nrow(object$scores), ncol = nrow(object$loadings), byrow=T)
+    Y.pred = matrix(object$intercept, nrow = nrow(object$scores), ncol = nrow(object$loadings), byrow=TRUE)
   }
   return(Y.pred)
 }
