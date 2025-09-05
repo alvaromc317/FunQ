@@ -63,7 +63,7 @@ fqpca_cv_lambda <- function(
 
   if(splines.method != 'conquer'){stop('For a penalized second derivative approach, the splines.method must be conquer')}
   if(!penalized){stop('For a penalized second derivative approach, the penalized parameter must be set to TRUE.')}
-  if(!n.folds == floor(n.folds)){stop('n.folds must be an integer number. Value provided: ', n.folds)}
+  if(n.folds != floor(n.folds)){stop('n.folds must be an integer number. Value provided: ', n.folds)}
   if(!(criteria %in% c('rows', 'points'))){stop('Invalid criteria. Valid criterias are c("rows", "points". Value provided: ', criteria)}
 
   # Check the input parameters except Y and colname
@@ -118,6 +118,7 @@ fqpca_cv_lambda <- function(
       }
 
       npc.reconstruction <- obtain_npc(scores=fqpca_results$scores, pve=pve)
+      if(npc.reconstruction == 0){stop('pve cannot be 0.')}
 
       # Obtain reconstruction
       if(criteria == 'points')
@@ -197,7 +198,7 @@ fqpca_cv_df <- function(
   start_time <- Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
 
-  if(!n.folds == floor(n.folds)){stop('n.folds must be an integer number. Value provided: ', n.folds)}
+  if(n.folds != floor(n.folds)){stop('n.folds must be an integer number. Value provided: ', n.folds)}
   if(!(criteria %in% c('rows', 'points'))){stop('Invalid criteria. Valid criterias are c("rows", "points". Value provided: ', criteria)}
 
   # Check the input parameters except Y and colname
@@ -256,6 +257,7 @@ fqpca_cv_df <- function(
       }
 
       npc.reconstruction <- obtain_npc(scores=fqpca_results$scores, pve=pve)
+      if(npc.reconstruction == 0){stop('pve cannot be 0.')}
 
       # Obtain reconstruction
       if(criteria == 'points')

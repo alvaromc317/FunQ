@@ -30,8 +30,8 @@ kfolds_rows <- create_folds(Y, criteria = 'rows', folds = 3, seed = 1)
 Y.train.list <- kfolds_rows$Y.train.list
 Y.test.list <- kfolds_rows$Y.test.list
 
-kfolds_points <- create_folds(Y, criteria<-'points', folds<-3, seed<-1)
-Y.train.list <- kfolds_rows$Y.train.list
-Y.test.list <- kfolds_rows$Y.test.list
+kfolds_points <- create_folds(Y, criteria='points', folds=3, seed=1)
+Y.train.list <- kfolds_points$Y.train.list
+Y.test.list <- kfolds_points$Y.test.list
 
 }

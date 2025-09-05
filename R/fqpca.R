@@ -21,6 +21,7 @@ compute_scores <- function(Y, Y.mask, intercept, loadings, quantile.value)
     intercept.obs <- intercept[Y.mask[i, ]]
     # Obtain the observation removing missing data and subtract intercept
     Yi <- Y[i, Y.mask[i, ]] - intercept.obs
+    if(length(Yi) < ncol(loadings.obs)){stop('Observation ', i, ' must have a larger number of timepoints than npcs.')}
     scores[i,] <-  quantreg::rq.fit.br(y=Yi, x=loadings.obs, tau=quantile.value)$coefficients
   }
   return(scores)
@@ -572,7 +573,7 @@ fqpca <- function(
 #' @param object An object output of the fqpca function.
 #' @param newdata The N by T matrix of observed time instants to be tested, or the dataframe storing the tf functional vector using the same colname as the one used in the fqpca function.
 #' @param ... further arguments passed to or from other methods.
-#' @return The normalized matrix of scores.
+#' @return The predicted matrix of scores.
 #' @export
 #' @examples
 #'
@@ -626,7 +627,7 @@ predict.fqpca_object <- function(object, newdata, ...)
 #' @param object An object output of the fqpca function.
 #' @param pve If smaller than 1, taken as percentage of explained variability used in Yhat estimation. If greater than 1, taken as number of components  used in Yhat estimation.
 #' @param ... further arguments passed to or from other methods.
-#' @return The normalized matrix of scores.
+#' @return The matrix of fitted values.
 #' @export
 #' @examples
 #'
@@ -663,7 +664,7 @@ fitted.fqpca_object <- function(object, pve=0.95, ...)
   {
     Y.pred <- sweep(object$scores[, 1:n.components, drop=F] %*% t(object$loadings[, 1:n.components, drop=F]), MARGIN = 2, STATS = object$intercept, FUN = "+")
   }else{
-    Y.pred = matrix(0, nrow = nrow(object$scores), ncol = nrow(object$loadings))
+    Y.pred = matrix(object$intercept, nrow = nrow(object$scores), ncol = nrow(object$loadings), byrow=T)
   }
   return(Y.pred)
 }

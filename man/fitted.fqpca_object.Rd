@@ -14,7 +14,7 @@
 \item{...}{further arguments passed to or from other methods.}
 }
 \value{
-The normalized matrix of scores.
+The matrix of fitted values.
 }
 \description{
 S3 method for class 'fqpca_object'. Given an fqpca_object model, estimates Yhat for different pve values.

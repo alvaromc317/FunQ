@@ -74,7 +74,7 @@ obtain_npc <- function(scores, pve)
     npc <- 0
   }else if(pve < 1){
     score.variance <- cumsum(compute_explained_variability(scores))
-    npc <- min(which(score.variance > pve))
+    npc <- min(which(score.variance >= pve))
   }else
   {
     if(!(pve == floor(pve))){stop('pve must be either a floating point number smaller than 1 or an integer number smaller than the number of pc. Value provided: ', pve)}
@@ -428,9 +428,9 @@ kfold_cv_points <- function(Y, folds = 3, seed = NULL)
 #' Y.train.list <- kfolds_rows$Y.train.list
 #' Y.test.list <- kfolds_rows$Y.test.list
 #'
-#' kfolds_points <- create_folds(Y, criteria<-'points', folds<-3, seed<-1)
-#' Y.train.list <- kfolds_rows$Y.train.list
-#' Y.test.list <- kfolds_rows$Y.test.list
+#' kfolds_points <- create_folds(Y, criteria='points', folds=3, seed=1)
+#' Y.train.list <- kfolds_points$Y.train.list
+#' Y.test.list <- kfolds_points$Y.test.list
 #'
 create_folds <- function(Y, criteria = 'points', folds = 3, seed = NULL)
 {
