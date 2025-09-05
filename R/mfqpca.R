@@ -465,7 +465,6 @@ mfqpca <- function(
   inputs <- base::mget(formal_names, envir = environment())
   inputs$data = NULL
   inputs$group = NULL
-  inputs$colname = NULL
 
   # Check the input parameters except Y
   mfqpca_check_params(npc.between=npc.between, npc.within=npc.within, quantile.value=quantile.value, periodic=periodic,
@@ -531,7 +530,8 @@ mfqpca <- function(
   rotation.matrix.within <- rotation.result$rotation.matrix
 
   # Compute objective value function
-  objective.function.array <- compute_objective_value(quantile.value=quantile.value, Y=Y, scores=cbind(scores.between.full, scores.within), intercept=intercept, loadings=cbind(loadings.between, loadings.within))
+  objective.function <- compute_objective_value(quantile.value=quantile.value, Y=Y, scores=cbind(scores.between.full, scores.within), intercept=intercept, loadings=cbind(loadings.between, loadings.within))
+  objective.function.array <- objective.function
 
   loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
 

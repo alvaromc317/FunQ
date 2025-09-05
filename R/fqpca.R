@@ -403,6 +403,7 @@ fqpca <- function(
   n.time <- base::dim(Y)[2]
   Y.axis <- base::seq(0, 1, length.out = n.time)
   Y.mask <- !base::is.na(Y)
+
   # vectorize Y [Y11, ..., Y1T, Y21, ..., Y2T,...YNT]
   Y.list <- lapply(base::seq(n.obs), function(j) Y[j, Y.mask[j, ]])
   Y.vector <- unlist(Y.list, use.names = FALSE)
@@ -450,9 +451,8 @@ fqpca <- function(
   rotation.matrix = rotation.result$rotation.matrix
 
   # Compute objective value function
-  objective.function.array <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores, intercept = intercept,  loadings = loadings)
-
-  last.iteration <- list(scores = scores, intercept = intercept, loadings = loadings, spline.coefficients = spline.coefficients, objective.function=objective.function.array[1], rotation.matrix = rotation.matrix, iteration = 1)
+  objective.function <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores, intercept = intercept,  loadings = loadings)
+  objective.function.array <- objective.function
 
   loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
 
@@ -509,8 +509,6 @@ fqpca <- function(
     objective.function <- compute_objective_value(quantile.value = quantile.value, Y = Y, scores = scores, intercept = intercept, loadings = loadings)
     objective.function.array <- c(objective.function.array, objective.function)
 
-    last.iteration <- list(scores = scores, intercept = intercept, loadings = loadings, spline.coefficients = spline.coefficients, objective.function=objective.function.array[i], rotation.matrix = rotation.matrix, iteration = i)
-
     convergence.criteria <- base::abs(objective.function.array[i] - objective.function.array[i-1])
     if(convergence.criteria < tol){convergence = T}
 
@@ -543,21 +541,21 @@ fqpca <- function(
 
   # EXPLAINED VARIABILITY -----------------------------------------------------
 
-  pve <- compute_explained_variability(last.iteration$scores)
+  pve <- compute_explained_variability(scores)
 
   global.execution.time <- difftime(base::Sys.time(), global.start.time, units = 'secs')
 
   results <- structure(list(
-    scores = last.iteration$scores,
-    intercept = last.iteration$intercept,
-    loadings = last.iteration$loadings,
+    scores = scores,
+    intercept = intercept,
+    loadings = loadings,
     pve = pve,
-    objective.function.value = last.iteration$objective.function,
+    objective.function.value = objective.function,
     objective.function.array = objective.function.array,
     function.warnings = function.warnings,
     execution.time = global.execution.time,
-    rotation.matrix = last.iteration$rotation.matrix,
-    spline.coefficients = last.iteration$spline.coefficients,
+    rotation.matrix = rotation.matrix,
+    spline.coefficients = spline.coefficients,
     spline.basis = spline.basis,
     n.iters = i,
     inputs = inputs),
@@ -723,17 +721,23 @@ plot.fqpca_object <- function(x, pve = 0.99, ...)
     Loading = intercept,
     Component = "Intercept")
 
-  non_int <- loadings[, seq_len(n.components), drop = FALSE]
+  # Handle the case when n.components = 0 (only plot intercept)
+  if (n.components == 0) {
+    plot_data <- intercept_df
+    plot_data$Component <- factor(plot_data$Component, levels = "Intercept")
+  } else {
+    non_int <- loadings[, seq_len(n.components), drop = FALSE]
 
-  # Reshape non-intercept loadings into a long format data frame
-  fqpc_df <- data.frame(
-    Time = rep(seq_len(nrow(non_int)), times = ncol(non_int)),
-    Loading = as.vector(non_int),
-    Component = rep(paste0("FQPC ", seq_len(ncol(non_int))), each = nrow(non_int)))
+    # Reshape non-intercept loadings into a long format data frame
+    fqpc_df <- data.frame(
+      Time = rep(seq_len(nrow(non_int)), times = ncol(non_int)),
+      Loading = as.vector(non_int),
+      Component = rep(paste0("FQPC ", seq_len(ncol(non_int))), each = nrow(non_int)))
 
-  # Combine the intercept and FQPC data frames
-  plot_data <- rbind(intercept_df, fqpc_df)
-  plot_data$Component <- factor(plot_data$Component, levels = c('Intercept', paste0('FQPC ', 1:ncol(non_int))))
+    # Combine the intercept and FQPC data frames
+    plot_data <- rbind(intercept_df, fqpc_df)
+    plot_data$Component <- factor(plot_data$Component, levels = c('Intercept', paste0('FQPC ', 1:ncol(non_int))))
+  }
 
   # Create the GGPlot object with facets displaying each component separately.
   p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$Time, y = .data$Loading)) +
