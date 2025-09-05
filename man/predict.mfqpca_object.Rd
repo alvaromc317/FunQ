@@ -16,10 +16,10 @@
 \item{...}{further arguments passed to or from other methods.}
 }
 \value{
-The normalized matrix of scores.
+List of matrices of predicted scores.
 }
 \description{
-S3 method for class 'fqpca_object' Given a new matrix Y, predicts the value of the scores associated to the given matrix.
+S3 method for class 'mfqpca_object' Given a new matrix Y, predicts the value of the scores associated to the given matrix.
 }
 \examples{
 

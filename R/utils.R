@@ -363,7 +363,7 @@ kfold_cv_rows <- function(Y, folds = 3, seed = NULL)
     train.idx.list[[k]] <- train_rows
   }
 
-  list(Y.train.list = Y.train.list, Y.test.list = Y.test.list)
+  list(Y.train.list = Y.train.list, Y.test.list = Y.test.list, train.idx.list=train.idx.list)
 }
 
 #' @title Split a given matrix Y into k-folds

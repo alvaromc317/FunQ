@@ -102,7 +102,7 @@ fqpca_cv_lambda <- function(
       {
         Y.train <- Y.folds$Y.train.list[[j]]
         Y.test <-  Y.folds$Y.test.list[[j]]
-      } else{stop('Invalid value for criteria. Valid values are observations or curves')}
+      } else{stop('Invalid value for criteria. Valid values are points or rows')}
 
       # Execute model
       fqpca_results <- fqpca(

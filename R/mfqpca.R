@@ -54,6 +54,7 @@ mfqpca_compute_scores_between <- function(Y, Y.mask, group, intercept, loadings,
       }
 
       Y.vector <- Y.vector - intercept.obs
+      if(length(Y.vector) < ncol(loadings.obs)){stop('All subject must have a larger number of timepoints than npcs.')}
       scores[idx.g, ] <- quantreg::rq.fit.br(y = Y.vector, x = loadings.obs, tau = quantile.value)$coefficients
     }
   }
@@ -287,7 +288,7 @@ mfqpca_check_params <- function(npc.between, npc.within, quantile.value, periodi
 
   # Check 'splines.df': integer positive number, larger than 'npc'
   if (!is.numeric(splines.df) || length(splines.df) != 1 ||
-      splines.df %% 1 != 0 || splines.df < npc.between) {
+      splines.df %% 1 != 0 || splines.df < npc.between || splines.df < npc.within) {
     stop("Invalid input for 'splines.df': ", splines.df,
          ". Expected an integer number larger or equal than 'npc.between' (", npc.between, ").")
   }
@@ -675,12 +676,12 @@ mfqpca_reconstruct <- function(scores, loadings, n.comp)
 }
 
 #' @title Predict mfqpca scores
-#' @description S3 method for class 'fqpca_object' Given a new matrix Y, predicts the value of the scores associated to the given matrix.
+#' @description S3 method for class 'mfqpca_object' Given a new matrix Y, predicts the value of the scores associated to the given matrix.
 #' @param object An object output of the fqpca function.
 #' @param newdata The N by T matrix of observed time instants to be tested
 #' @param newdata.group An N dimensional array indicating the hierarchical structure of the data. Elements in the array with the same value indicate they are repeated measures of the same individual.
 #' @param ... further arguments passed to or from other methods.
-#' @return The normalized matrix of scores.
+#' @return List of matrices of predicted scores.
 #' @export
 #' @examples
 #'
