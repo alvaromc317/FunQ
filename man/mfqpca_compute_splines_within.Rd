@@ -30,5 +30,5 @@ mfqpca_compute_splines_within(
 The matrix of spline coefficients splines coefficients.
 }
 \description{
-Inner function to compute the spline coefficients of the mfqpca methodology using conquer2
+Inner function to compute the spline coefficients of the mfqpca methodology
 }

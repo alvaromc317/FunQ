@@ -10,7 +10,13 @@
 #' @param loadings Matrix of loading coefficients.
 #' @param quantile.value The quantile considered.
 #' @return The matrix of between level scores.
-mfqpca_compute_scores_between <- function(Y, Y.mask, group, intercept, loadings, quantile.value)
+mfqpca_compute_scores_between <- function(
+    Y,
+    Y.mask,
+    group,
+    intercept,
+    loadings,
+    quantile.value)
 {
   unique.subjects <- unique(group)
   n.subjects <- length(unique.subjects)
@@ -68,7 +74,11 @@ mfqpca_compute_scores_between <- function(Y, Y.mask, group, intercept, loadings,
 #' @param loadings Matrix of loading coefficients.
 #' @param quantile.value The quantile considered.
 #' @return The matrix of within level scores.
-mfqpca_compute_scores_within <- function(Y, Y.mask, loadings, quantile.value)
+mfqpca_compute_scores_within <- function(
+    Y,
+    Y.mask,
+    loadings,
+    quantile.value)
 {
   # Initialize the matrix of scores
   n.obs <- base::nrow(Y)
@@ -87,15 +97,21 @@ mfqpca_compute_scores_within <- function(Y, Y.mask, loadings, quantile.value)
 # SPLINES ---------------------------------------------------------------------
 
 #' @title Compute spline coefficients between
-#' @description Inner function to compute the spline coefficients of the mfqpca methodology using quantreg
+#' @description Inner function to compute the spline coefficients of the mfqpca methodology
 #' @param Y.vector vectorised version of Y, the \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
 #' @param scores Initial matrix of scores.
 #' @param spline.basis The spline basis matrix.
 #' @param quantile.value The quantile considered.
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
-#' @return The matrix of spline coefficients splines coefficients.
-mfqpca_compute_splines_between <- function(Y.vector, Y.mask, scores, spline.basis, quantile.value, method)
+#' @return The matrix of spline coefficients.
+mfqpca_compute_splines_between <- function(
+    Y.vector,
+    Y.mask,
+    scores,
+    spline.basis,
+    quantile.value,
+    method)
 {
   n.obs <- base::nrow(scores)
   npc <- base::ncol(scores)
@@ -122,7 +138,7 @@ mfqpca_compute_splines_between <- function(Y.vector, Y.mask, scores, spline.basi
 }
 
 #' @title Compute spline coefficients within
-#' @description Inner function to compute the spline coefficients of the mfqpca methodology using conquer2
+#' @description Inner function to compute the spline coefficients of the mfqpca methodology
 #' @param Y \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
 #' @param scores Initial matrix of scores.
@@ -130,7 +146,13 @@ mfqpca_compute_splines_between <- function(Y.vector, Y.mask, scores, spline.basi
 #' @param quantile.value The quantile considered.
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
 #' @return The matrix of spline coefficients splines coefficients.
-mfqpca_compute_splines_within <- function(Y, Y.mask, scores, spline.basis, quantile.value, method)
+mfqpca_compute_splines_within <- function(
+    Y,
+    Y.mask,
+    scores,
+    spline.basis,
+    quantile.value,
+    method)
 {
   n.obs <- base::nrow(Y)
   npc <- base::ncol(scores)
@@ -164,7 +186,9 @@ mfqpca_compute_splines_within <- function(Y, Y.mask, scores, spline.basis, quant
 #' @param spline.basis The spline basis matrix.
 #' @param spline.coefficients the matrix of spline coefficients.
 #' @return The matrix of loadings
-mfqpca_compute_loadings_between <- function(spline.basis, spline.coefficients)
+mfqpca_compute_loadings_between <- function(
+    spline.basis,
+    spline.coefficients)
 {
   intercept.spline.basis <-  spline.basis[, -1]
   intercept.part <- cbind(1, intercept.spline.basis) %*% matrix(spline.coefficients[,1], ncol=1)
@@ -180,7 +204,10 @@ mfqpca_compute_loadings_between <- function(spline.basis, spline.coefficients)
 #' @param intercept population intercept
 #' @param loadings Matrix of loadings.
 #' @return The rotated matrices of loadings and scores and the rotation matrix.
-mfqpca_rotate_scores_and_loadings_between <- function(scores, intercept, loadings)
+mfqpca_rotate_scores_and_loadings_between <- function(
+    scores,
+    intercept,
+    loadings)
 {
   npc <- base::ncol(loadings)
 
@@ -218,7 +245,9 @@ mfqpca_rotate_scores_and_loadings_between <- function(scores, intercept, loading
 #' @param loadings Matrix of loadings.
 #' @param scores Matrix of scores.
 #' @return The rotated matrices of loadings and scores and the rotation matrix.
-mfqpca_rotate_scores_and_loadings_within <- function(scores, loadings)
+mfqpca_rotate_scores_and_loadings_within <- function(
+    scores,
+    loadings)
 {
   npc <- base::ncol(loadings)
 
@@ -259,7 +288,17 @@ mfqpca_rotate_scores_and_loadings_within <- function(scores, loadings)
 #' @param verbose Boolean indicating the verbosity.
 #' @param seed Seed for the random generator number.
 #' @return No return
-mfqpca_check_params <- function(npc.between, npc.within, quantile.value, periodic, splines.df, splines.method, tol, max.iters, verbose, seed)
+mfqpca_check_params <- function(
+    npc.between,
+    npc.within,
+    quantile.value,
+    periodic,
+    splines.df,
+    splines.method,
+    tol,
+    max.iters,
+    verbose,
+    seed)
 {
   # Check 'npc.between': integer number, positive
   if (!is.numeric(npc.between) || length(npc.between) != 1 || npc.between %% 1 != 0 || npc.between <= 0) {
@@ -335,7 +374,10 @@ mfqpca_check_params <- function(npc.between, npc.within, quantile.value, periodi
 #' @return A list containing two elements:
 #'         1. An unnamed matrix of the functional data.
 #'         2. The processed group vector.
-mfqpca_check_input_data <- function(data, group, colname)
+mfqpca_check_input_data <- function(
+    data,
+    group,
+    colname)
 {
 
   # Helper function to check that the length of group matches a given number of rows
@@ -455,9 +497,19 @@ mfqpca_check_input_data <- function(data, group, colname)
 #'
 #' results <- mfqpca(data = Y, group = group, npc.between = 1, npc.within=1, quantile.value = 0.5)
 mfqpca <- function(
-    data, group, colname=NULL, npc.between = 2,  npc.within = 2, quantile.value = 0.5,
-    periodic = TRUE, splines.df = 10, splines.method = 'conquer',
-    tol = 1e-2, max.iters = 10, verbose = FALSE, seed = NULL)
+    data,
+    group,
+    colname=NULL,
+    npc.between = 2,
+    npc.within = 2,
+    quantile.value = 0.5,
+    periodic = TRUE,
+    splines.df = 10,
+    splines.method = 'conquer',
+    tol = 1e-2,
+    max.iters = 10,
+    verbose = FALSE,
+    seed = NULL)
 {
 
   global.start.time <- base::Sys.time()
@@ -664,7 +716,10 @@ mfqpca <- function(
 #' @param scores matrix of scores
 #' @param loadings matrix of loadings
 #' @param n.comp number of components used. If 0 then a matrix of 0s is returned.
-mfqpca_reconstruct <- function(scores, loadings, n.comp)
+mfqpca_reconstruct <- function(
+    scores,
+    loadings,
+    n.comp)
 {
   if (n.comp > 0)
   {

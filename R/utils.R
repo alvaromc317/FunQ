@@ -84,6 +84,23 @@ obtain_npc <- function(scores, pve)
   return(npc)
 }
 
+# OTHERS ----------------------------------------------------------------------
+
+#' @title Compute objective value function.
+#' @description Inner function to compute the objective value of the fqpca methodology at each iteration.
+#' @param Y \eqn{(N \times T)} matrix of observed time instants.
+#' @param quantile.value The quantile considered.
+#' @param scores The matrix of estimated scores.
+#' @param intercept population intercept
+#' @param loadings The matrix of estimated loadings.
+#' @return The objective value function.
+compute_objective_value <- function(Y, quantile.value, scores, intercept, loadings)
+{
+  Y.pred <- sweep(scores %*% t(loadings), MARGIN = 2, STATS = intercept, FUN = "+")
+  objective.value <- quantile_error(Y=Y, Y.pred=Y.pred, quantile.value=quantile.value)
+  return(objective.value)
+}
+
 # TRAIN TEST SPLIT ------------------------------------------------------------
 
 #' @title Split rows of a given matrix Y into train / test

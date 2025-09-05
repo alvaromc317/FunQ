@@ -8,7 +8,12 @@
 #' @param loadings Matrix of loading coefficients.
 #' @param quantile.value The quantile considered.
 #' @return The matrix of scores.
-compute_scores <- function(Y, Y.mask, intercept, loadings, quantile.value)
+compute_scores <- function(
+    Y,
+    Y.mask,
+    intercept,
+    loadings,
+    quantile.value)
 {
   # Initialize the matrix of scores
   n.obs <- base::nrow(Y)
@@ -38,7 +43,13 @@ compute_scores <- function(Y, Y.mask, intercept, loadings, quantile.value)
 #' @param quantile.value The quantile considered.
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
 #' @return The matrix of spline coefficients.
-compute_spline_coefficients_unpenalized <- function(Y.vector, Y.mask, scores, spline.basis, quantile.value, method)
+compute_spline_coefficients_unpenalized <- function(
+    Y.vector,
+    Y.mask,
+    scores,
+    spline.basis,
+    quantile.value,
+    method)
 {
   n.obs <- base::nrow(scores)
   npc <- base::ncol(scores)
@@ -73,7 +84,13 @@ compute_spline_coefficients_unpenalized <- function(Y.vector, Y.mask, scores, sp
 #' @param quantile.value The quantile considered.
 #' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @return The matrix of spline coefficients splines coefficients.
-compute_spline_coefficients_penalized <- function(Y.vector, Y.mask, scores, spline.basis, quantile.value, lambda.ridge)
+compute_spline_coefficients_penalized <- function(
+    Y.vector,
+    Y.mask,
+    scores,
+    spline.basis,
+    quantile.value,
+    lambda.ridge)
 {
   n.obs <- base::nrow(scores)
   npc <- base::ncol(scores)
@@ -111,7 +128,15 @@ compute_spline_coefficients_penalized <- function(Y.vector, Y.mask, scores, spli
 #' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
 #' @param lambda.ridge  Hyper parameter controlling the penalization on the second derivative of the splines. It has effect only with \code{penalized=TRUE} and \code{method='conquer'}.
 #' @return The matrix of spline coefficients.
-compute_spline_coefficients <- function(penalized, Y.vector, Y.mask, scores, spline.basis, quantile.value, method, lambda.ridge)
+compute_spline_coefficients <- function(
+    penalized,
+    Y.vector,
+    Y.mask,
+    scores,
+    spline.basis,
+    quantile.value,
+    method,
+    lambda.ridge)
 {
   if(penalized)
   {
@@ -124,27 +149,14 @@ compute_spline_coefficients <- function(penalized, Y.vector, Y.mask, scores, spl
 
 # OTHER FUNCTIONS -------------------------------------------------------------
 
-#' @title Compute objective value function.
-#' @description Inner function to compute the objective value of the fqpca methodology at each iteration.
-#' @param Y \eqn{(N \times T)} matrix of observed time instants.
-#' @param quantile.value The quantile considered.
-#' @param scores The matrix of estimated scores.
-#' @param intercept population intercept
-#' @param loadings The matrix of estimated loadings.
-#' @return The objective value function.
-compute_objective_value <- function(Y, quantile.value, scores, intercept, loadings)
-{
-  Y.pred <- sweep(scores %*% t(loadings), MARGIN = 2, STATS = intercept, FUN = "+")
-  objective.value <- quantile_error(Y=Y, Y.pred=Y.pred, quantile.value=quantile.value)
-  return(objective.value)
-}
-
 #' @title Compute loadings (aka principal components)
 #' @description Inner function to compute the loadings of the fqpca methodology.
 #' @param spline.basis The spline basis matrix.
 #' @param spline.coefficients the matrix of spline coefficients.
 #' @return The matrix of loadings
-compute_loadings <- function(spline.basis, spline.coefficients)
+compute_loadings <- function(
+    spline.basis,
+    spline.coefficients)
 {
   intercept.spline.basis <-  spline.basis[, -1]
   intercept.part <- c(cbind(1, intercept.spline.basis) %*% matrix(spline.coefficients[,1], ncol=1))
@@ -158,7 +170,10 @@ compute_loadings <- function(spline.basis, spline.coefficients)
 #' @param intercept population intercept
 #' @param loadings Matrix of loadings.
 #' @return The rotated matrices of loadings and scores and the rotation matrix.
-rotate_scores_and_loadings <- function(scores, intercept, loadings)
+rotate_scores_and_loadings <- function(
+    scores,
+    intercept,
+    loadings)
 {
   npc <- base::ncol(loadings)
 
@@ -205,7 +220,18 @@ rotate_scores_and_loadings <- function(scores, intercept, loadings)
 #' @param verbose Boolean indicating the verbosity.
 #' @param seed Seed for the random generator number.
 #' @return No return
-check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, splines.method, penalized, lambda.ridge, tol, max.iters, verbose, seed)
+check_fqpca_params <- function(
+    npc,
+    quantile.value,
+    periodic,
+    splines.df,
+    splines.method,
+    penalized,
+    lambda.ridge,
+    tol,
+    max.iters,
+    verbose,
+    seed)
 {
   # Check 'npc': integer number, positive
   if (!is.numeric(npc) || length(npc) != 1 || npc %% 1 != 0 || npc <= 0) {
@@ -285,7 +311,9 @@ check_fqpca_params <- function(npc, quantile.value, periodic, splines.df, spline
 #' @param data An \eqn{(N \times T)} matrix, a tf object from the tidyfun package or a data.frame containing the functional data as a tf column.
 #' @param colname The name of the column containing the functional data. Use only if data is a dataframe and colname is a column in the dataframe.
 #' @return an unnamed matrix
-check_input_data <- function(data, colname)
+check_input_data <- function(
+    data,
+    colname)
 {
   # Case 1: If data is a matrix, unname and return
   if(is.matrix(data)){return(base::unname(data))}
@@ -367,9 +395,19 @@ check_input_data <- function(data, colname)
 #' loadings <- results$loadings
 #' scores <- results$scores
 fqpca <- function(
-    data, colname = NULL, npc = 2,  quantile.value = 0.5,  periodic = TRUE,
-    splines.df = 10, splines.method = 'conquer', penalized = FALSE,
-    lambda.ridge = 0, tol = 1e-3, max.iters = 20, verbose = FALSE, seed = NULL)
+    data,
+    colname = NULL,
+    npc = 2,
+    quantile.value = 0.5,
+    periodic = TRUE,
+    splines.df = 10,
+    splines.method = 'conquer',
+    penalized = FALSE,
+    lambda.ridge = 0,
+    tol = 1e-3,
+    max.iters = 20,
+    verbose = FALSE,
+    seed = NULL)
 {
   global.start.time <- base::Sys.time()
 
