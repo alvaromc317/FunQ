@@ -46,7 +46,7 @@ quantile_error <- function(Y, Y.pred, quantile.value)
 #' @export
 proportion_under_quantile <- function(Y, Y.pred)
 {
-  mean(Y <= Y.pred, na.rm = T)
+  mean(Y <= Y.pred, na.rm = TRUE)
 }
 
 # VARIABILITY OF SCORES -------------------------------------------------------
@@ -72,14 +72,16 @@ obtain_npc <- function(scores, pve)
     npc <- ncol(scores)
   }else if(pve == 0){
     npc <- 0
-  }else if(pve < 1){
+  }else if(pve < 1 && pve > 0){
     score.variance <- cumsum(compute_explained_variability(scores))
     npc <- min(which(score.variance >= pve))
-  }else
+  }else if(pve >= 1)
   {
     if(!(pve == floor(pve))){stop('pve must be either a floating point number smaller than 1 or an integer number smaller than the number of pc. Value provided: ', pve)}
     if(pve > ncol(scores)){stop('pve must be either a floating point number smaller than 1 or an integer number smaller than the number of pc. Value provided: ', pve)}
     npc <- pve
+  }else{
+    stop('Invalid pve value.')
   }
   return(npc)
 }
@@ -109,7 +111,7 @@ compute_objective_value <- function(Y, quantile.value, scores, intercept, loadin
 #' @param train.pct Float number indicating the % of rows used for training.
 #' @param train.size Integer number indicating number of rows used for training. \code{train.size} is superseded by \code{train.pct}.
 #' @param seed Seed for the random generator number.
-#' @return A list containing a matrix Y.train and a matrix Y.test
+#' @return A list containing a matrix Y.train, a matrix Y.test and a list of training indices.
 train_test_split_rows <- function(Y, train.pct = NULL, train.size = NULL, seed = NULL)
 {
   # Validate inputs
@@ -332,7 +334,7 @@ train_test_split <- function(Y, criteria = 'points', train.pct = NULL, train.siz
 #' @param Y \eqn{(N \times P)} matrix of predictive variables.
 #' @param folds Integer number indicating number of folds.
 #' @param seed Seed for the random generator number.
-#' @return A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
+#' @return A list containing three inside lists, one for training, one for testing and one with training indices.. The length of the inside lists is equal to the number of folds
 kfold_cv_rows <- function(Y, folds = 3, seed = NULL)
 {
   # Validate inputs

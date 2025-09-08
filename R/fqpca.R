@@ -779,7 +779,7 @@ plot.fqpca_object <- function(x, pve = 0.99, ...)
 
   # Create the GGPlot object with facets displaying each component separately.
   p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = .data$Time, y = .data$Loading)) +
-    ggplot2::geom_line(color = "steelblue", linewidth = 1) +
+    ggplot2::geom_line(color = "steelblue") +
     ggplot2::facet_wrap(~ Component, scales = "free_y", ncol = 3) +
     ggplot2::labs(title = "Loading Functions",
                   x = "Time",
