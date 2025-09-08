@@ -70,7 +70,7 @@ fosqr_fqpca_cv_df <- function(
 
   # Check the input parameters except Y
   check_fosqr_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
-                           splines.df=10, splines.method=splines.method,
+                           splines.df=1, splines.method=splines.method,
                            tol=tol, max.iters=max.iters,verbose=verbose.cv, seed=seed)
 
   # Check Y and regressors
