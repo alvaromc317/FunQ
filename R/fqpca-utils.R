@@ -93,16 +93,8 @@ fqpca_cv_lambda <- function(
     {
       if(verbose.cv){message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Fold: ', j)}
 
-      # Access data depending on criteria
-      if(criteria=='rows')
-      {
-        Y.train <- Y.folds$Y.train.list[[j]]
-        Y.test <- Y.folds$Y.test.list[[j]]
-      } else if(criteria == 'points')
-      {
-        Y.train <- Y.folds$Y.train.list[[j]]
-        Y.test <-  Y.folds$Y.test.list[[j]]
-      } else{stop('Invalid value for criteria. Valid values are points or rows')}
+      Y.train <- Y.folds$Y.train.list[[j]]
+      Y.test <- Y.folds$Y.test.list[[j]]
 
       # Execute model
       fqpca_results <- fqpca(
@@ -123,13 +115,13 @@ fqpca_cv_lambda <- function(
       # Obtain reconstruction
       if(criteria == 'points')
       {
-        scores <- fqpca_results$scores[, 1:npc.reconstruction, drop=F]
+        scores <- fqpca_results$scores[, 1:npc.reconstruction, drop=FALSE]
       }else if(criteria=='rows')
       {
         test.scores <- predict.fqpca_object(fqpca_results, Y.test)
-        scores <- test.scores[, 1:npc.reconstruction, drop=F]
+        scores <- test.scores[, 1:npc.reconstruction, drop=FALSE]
       }
-      loadings <- fqpca_results$loadings[, 1:npc.reconstruction, drop=F]
+      loadings <- fqpca_results$loadings[, 1:npc.reconstruction, drop=FALSE]
       intercept <- fqpca_results$intercept
       Y.pred <- sweep(scores %*% t(loadings), MARGIN = 2, STATS = intercept, FUN = "+")
       error.matrix[i, j] <- quantile_error(Y = Y.test, Y.pred = Y.pred, quantile.value = quantile.value)
@@ -200,6 +192,7 @@ fqpca_cv_df <- function(
 
   if(n.folds != floor(n.folds)){stop('n.folds must be an integer number. Value provided: ', n.folds)}
   if(!(criteria %in% c('rows', 'points'))){stop('Invalid criteria. Valid criterias are c("rows", "points". Value provided: ', criteria)}
+  if(!all(splines.df.grid == floor(splines.df.grid))){stop('splines.df.grid must be a positive integer array.')}
 
   # Check the input parameters except Y and colname
   check_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
@@ -232,16 +225,8 @@ fqpca_cv_df <- function(
     {
       if(verbose.cv){message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Fold: ', j)}
 
-      # Access data depending on criteria
-      if(criteria=='rows')
-      {
-        Y.train <- Y.folds$Y.train.list[[j]]
-        Y.test <- Y.folds$Y.test.list[[j]]
-      } else if(criteria == 'points')
-      {
-        Y.train <- Y.folds$Y.train.list[[j]]
-        Y.test <-  Y.folds$Y.test.list[[j]]
-      } else{stop('Invalid value for criteria. Valid values are observations or curves.')}
+      Y.train <- Y.folds$Y.train.list[[j]]
+      Y.test <- Y.folds$Y.test.list[[j]]
 
       # Execute model
       fqpca_results <- fqpca(
@@ -262,13 +247,13 @@ fqpca_cv_df <- function(
       # Obtain reconstruction
       if(criteria == 'points')
       {
-        scores <- fqpca_results$scores[, 1:npc.reconstruction, drop=F]
+        scores <- fqpca_results$scores[, 1:npc.reconstruction, drop=FALSE]
       }else if(criteria=='rows')
       {
         test.scores <- predict.fqpca_object(fqpca_results, Y.test)
-        scores <- test.scores[, 1:npc.reconstruction, drop=F]
+        scores <- test.scores[, 1:npc.reconstruction, drop=FALSE]
       }
-      loadings <- fqpca_results$loadings[, 1:npc.reconstruction, drop=F]
+      loadings <- fqpca_results$loadings[, 1:npc.reconstruction, drop=FALSE]
       intercept <- fqpca_results$intercept
       Y.pred <- sweep(scores %*% t(loadings), MARGIN = 2, STATS = intercept, FUN = "+")
       error.matrix[i, j] <- quantile_error(Y = Y.test, Y.pred = Y.pred, quantile.value = quantile.value)

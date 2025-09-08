@@ -56,8 +56,9 @@ mfqpca_cv_df <- function(
   start_time <- Sys.time()
   if(!base::is.null(seed)){base::set.seed(seed)}
 
-  if(!(n.folds == floor(n.folds))){stop('n.folds must be an integer number. Value provided: ', n.folds)}
+  if(n.folds != floor(n.folds)){stop('n.folds must be an integer number. Value provided: ', n.folds)}
   if(!(criteria %in% c('rows', 'points'))){stop('Invalid criteria. Valid criterias are c("rows", "points". Value provided: ', criteria)}
+  if(!all(splines.df.grid == floor(splines.df.grid))){stop('splines.df.grid must be a positive integer array.')}
 
   # Check the input parameters except Y
   mfqpca_check_params(npc.between=npc.between, npc.within=npc.within, quantile.value=quantile.value, periodic=periodic,
@@ -93,19 +94,17 @@ mfqpca_cv_df <- function(
     {
       if(verbose.cv){message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Fold: ', j)}
 
+      Y.train <- Y.folds$Y.train.list[[j]]
+      Y.test <- Y.folds$Y.test.list[[j]]
+
       # Access data depending on criteria
       if(criteria=='rows')
       {
-        Y.train <- Y.folds$Y.train.list[[j]]
-        Y.test <- Y.folds$Y.test.list[[j]]
         group.train = group[Y.folds$train.idx.list[[j]]]
         group.test = group[-Y.folds$train.idx.list[[j]]]
-      } else if(criteria == 'points')
-      {
-        Y.train <- Y.folds$Y.train.list[[j]]
-        Y.test <-  Y.folds$Y.test.list[[j]]
+      } else{
         group.train = group
-      } else{stop('Invalid value for criteria. Valid values are rows or points')}
+      }
 
       # Execute model
       mfqpca_results <- mfqpca(

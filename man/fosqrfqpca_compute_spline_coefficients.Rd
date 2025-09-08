@@ -2,13 +2,12 @@
 % Please edit documentation in R/fosqr_fqpca.R
 \name{fosqrfqpca_compute_spline_coefficients}
 \alias{fosqrfqpca_compute_spline_coefficients}
-\title{Compute fosqr and fqpca spline coefficients}
+\title{Compute spline coefficients}
 \usage{
 fosqrfqpca_compute_spline_coefficients(
   Y.vector,
   Y.mask,
-  fqpca.scores,
-  regressors,
+  scores,
   spline.basis,
   quantile.value,
   method
@@ -19,9 +18,7 @@ fosqrfqpca_compute_spline_coefficients(
 
 \item{Y.mask}{Mask matrix of the same dimensions as Y indicating which observations in Y are known.}
 
-\item{fqpca.scores}{Matrix of fqpca scores}
-
-\item{regressors}{Matrix of covariates.}
+\item{scores}{Initial matrix of regressors and / or scores}
 
 \item{spline.basis}{The spline basis matrix.}
 
@@ -33,5 +30,5 @@ fosqrfqpca_compute_spline_coefficients(
 The matrix of spline coefficients.
 }
 \description{
-Inner function to compute the spline coefficients of the fosqr-fqpca methodology
+Inner function to compute the spline coefficients of the fosqr - fqpca methodology.
 }

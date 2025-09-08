@@ -76,3 +76,97 @@ test_that("create_folds based on points function; train portion works", {
   expect_equal(expected_partial_output, true_partial_output)
 })
 
+test_that("train_test_split rows: respects train proportion, returns disjoint and complete partition, reproducible with seed", {
+  set.seed(NULL)
+  Y <- matrix(rnorm(50 * 10), nrow = 50, ncol = 10)
+  # Add a couple all-NA rows to exercise stratification
+  Y[c(5, 25), ] <- NA_real_
+
+  split1 <- train_test_split(Y, criteria = "rows", train.pct = 0.6, seed = 123)
+  split2 <- train_test_split(Y, criteria = "rows", train.pct = 0.6, seed = 123)
+
+  expect_equal(split1$train.idx, split2$train.idx)
+
+  # Sizes
+  expect_equal(nrow(split1$Y.train) + nrow(split1$Y.test), nrow(Y))
+  expect_equal(nrow(split1$Y.train), as.integer(round(0.6 * nrow(Y))))
+
+  # Disjointness
+  train_rows <- split1$train.idx
+  test_rows <- setdiff(seq_len(nrow(Y)), train_rows)
+  expect_length(intersect(train_rows, test_rows), 0L)
+  expect_setequal(c(train_rows, test_rows), seq_len(nrow(Y)))
+})
+
+test_that("train_test_split points: preserves matrix shape and approximate proportion of non-NAs in train", {
+  Y <- matrix(rnorm(30 * 20), nrow = 30, ncol = 20)
+  sp <- train_test_split(Y, criteria = "points", train.pct = 0.3, seed = 999)
+
+  expect_equal(dim(sp$Y.train), dim(Y))
+  expect_equal(dim(sp$Y.test), dim(Y))
+
+  # Each element goes either to train or test (not both)
+  mask_train <- !is.na(sp$Y.train)
+  mask_test  <- !is.na(sp$Y.test)
+  expect_true(all(!(mask_train & mask_test)))
+  expect_equal(sum(mask_train) + sum(mask_test), length(Y))
+
+  # Total allocated to train is close to target
+  expect_equal(sum(mask_train), as.integer(round(0.3 * length(Y))))
+})
+
+test_that("kfold_cv_rows: produces k folds of disjoint row partitions covering all rows", {
+  Y <- matrix(rnorm(40 * 12), nrow = 40, ncol = 12)
+  Y[c(3, 7), ] <- NA_real_  # include some all-NA rows
+  k <- 5
+  folds <- create_folds(Y, criteria = "rows", folds = k, seed = 1)
+
+  expect_true(is.list(folds$Y.train.list))
+  expect_true(is.list(folds$Y.test.list))
+  expect_length(folds$Y.train.list, k)
+  expect_length(folds$Y.test.list, k)
+
+  # For each fold, train and test rows form a partition
+  all_rows <- seq_len(nrow(Y))
+  covered <- logical(nrow(Y))
+  for (i in seq_len(k)) {
+    tr <- folds$Y.train.list[[i]]
+    te <- folds$Y.test.list[[i]]
+    expect_equal(ncol(tr), ncol(Y))
+    expect_equal(ncol(te), ncol(Y))
+    expect_equal(nrow(tr) + nrow(te), nrow(Y))
+
+    # Disjointness within fold
+    idx_tr <- folds$train.idx.list[[i]]
+    idx_te <- setdiff(all_rows, idx_tr)
+    expect_length(intersect(idx_tr, idx_te), 0L)
+    covered[idx_te] <- TRUE
+  }
+  # Across folds, every row serves as test at least once
+  expect_true(all(covered))
+})
+
+
+test_that("kfold_cv_points: each matrix element is assigned to exactly one test fold", {
+  Y <- matrix(rnorm(12 * 8), nrow = 12, ncol = 8)
+  k <- 4
+  folds <- create_folds(Y, criteria = "points", folds = k, seed = 7)
+
+  # Sum of test masks across folds equals 1 for every element
+  sum_test_masks <- matrix(0L, nrow = nrow(Y), ncol = ncol(Y))
+  for (i in seq_len(k)) {
+    te <- folds$Y.test.list[[i]]
+    expect_equal(dim(te), dim(Y))
+    sum_test_masks <- sum_test_masks + (!is.na(te))
+  }
+  expect_true(all(sum_test_masks == 1L))
+
+  # Sum of train masks across folds equals k-1 for every element
+  sum_train_masks <- matrix(0L, nrow = nrow(Y), ncol = ncol(Y))
+  for (i in seq_len(k)) {
+    tr <- folds$Y.train.list[[i]]
+    expect_equal(dim(tr), dim(Y))
+    sum_train_masks <- sum_train_masks + (!is.na(tr))
+  }
+  expect_true(all(sum_train_masks == (k - 1L)))
+})

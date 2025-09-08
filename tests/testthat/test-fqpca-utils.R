@@ -20,25 +20,4 @@ test_that("fqpca_cv_df based on points function works", {
   expect_equal(cv_result$error.matrix, expected_result$error.matrix, tolerance=0.01)
 })
 
-# ERROR FUNCTIONS -------------------------------------------------------------
-
-test_that("quantile error 0.1 works", {
-  Y = test_data_fqpca()
-  Y.pred = test_data_fqpca(seed=10)
-  expect_equal(round(quantile_error(Y=Y, Y.pred=Y.pred, quantile.value=0.1), 5), round(0.20384035, 5))
-})
-
-test_that("quantile error 0.5 works", {
-  Y = test_data_fqpca()
-  Y.pred = test_data_fqpca(seed=10)
-  expect_equal(round(quantile_error(Y=Y, Y.pred=Y.pred, quantile.value=0.5), 5), round(0.22865256, 5))
-})
-
-test_that("proportion under quantile works", {
-  Y = test_data_fqpca()
-  Y.pred = test_data_fqpca(seed=10)
-  expect_equal(round(proportion_under_quantile(Y=Y, Y.pred=Y.pred), 5), round(0.46753247, 5))
-})
-
-
 

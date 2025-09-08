@@ -14,7 +14,7 @@ kfold_cv_rows(Y, folds = 3, seed = NULL)
 \item{seed}{Seed for the random generator number.}
 }
 \value{
-A list containing two inside lists, one for training and one for testing. The length of the inside lists is equal to the number of folds
+A list containing three inside lists, one for training, one for testing and one with training indices.. The length of the inside lists is equal to the number of folds
 }
 \description{
 Splits full rows of a given matrix Y into k-folds

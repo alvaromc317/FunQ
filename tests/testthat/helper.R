@@ -8,14 +8,6 @@ test_data_fqpca = function(n_obs=20, n_time=12, proportion_na=0.2, seed=5)
   return(Y)
 }
 
-test_data_cvxr = function(n_obs=20, n_features=2, seed=5)
-{
-  if(!is.null(seed)){set.seed(seed)}
-  x = matrix(rnorm(n_obs*n_features), nrow=n_obs)
-  y = x %*% matrix(1:n_features, nrow=n_features) +  rnorm(n_obs)
-  return(list('x'=x, 'y'=y))
-}
-
 test_data_mfqpca = function(proportion_na=0.2, seed=5)
 {
   if(!is.null(seed)){set.seed(seed)}
@@ -41,4 +33,19 @@ test_data_mfqpca = function(proportion_na=0.2, seed=5)
   Y <- Y + matrix(rnorm(N*n.time, 0, proportion_na), nrow = N)
   Y[sample(N*n.time, as.integer(0.2*N))] <- NA
   return(list(Y, group))
+}
+
+test_data_fosqr_fqpca = function(seed=5)
+{
+  if(!is.null(seed)){set.seed(seed)}
+  n.obs = 150
+  n.time = 144
+  time.grid <- seq(0, 2 * pi, length.out = n.time)
+  b1 = sin(time.grid)
+  pc1 = sin(2 * time.grid)
+  regressors = 5 * matrix(rnorm(n.obs), ncol=1)
+  scores = matrix(10 * rnorm(n.obs), ncol = 1)
+  epsilon.matrix <- 0.1 * matrix(rnorm(n.obs * n.time), nrow = n.obs)
+  Y = 100 + regressors[, 1] %o% b1 + scores[, 1] %o% pc1 + epsilon.matrix
+  return(list(regressors=regressors, Y=Y))
 }
