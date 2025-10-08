@@ -149,9 +149,9 @@ fosqr_fqpca_cv_df <- function(
 
       # Build FQPCA fitted value
       if (npc.reconstruction > 0){
-        fqpca.fitted <- fosqr_fqpca_results$fqpca.scores[, seq_len(npc.reconstruction), drop = FALSE] %*% t(fosqr_fqpca_results$fqpca.loadings[, seq_len(npc.reconstruction), drop = FALSE])
+        fqpca.fitted <- scores[, seq_len(npc.reconstruction), drop = FALSE] %*% t(fosqr_fqpca_results$fqpca.loadings[, seq_len(npc.reconstruction), drop = FALSE])
       }else{
-        fqpca.fitted <- matrix(0, nrow = nrow(fosqr_fqpca_results$fqpca.scores), ncol = nrow(fosqr_fqpca_results$fqpca.loadings))
+        fqpca.fitted <- matrix(0, nrow = nrow(scores), ncol = nrow(fosqr_fqpca_results$fqpca.loadings))
       }
       Y.pred <- fosqr.fitted + fqpca.fitted
       error.matrix[i, j] <- quantile_error(Y = Y.test, Y.pred = Y.pred, quantile.value = quantile.value)

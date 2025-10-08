@@ -120,7 +120,7 @@ fosqrfqpca_compute_loadings_fosqr <- function(
     spline.coefficients)
 {
   intercept.spline.basis <-  spline.basis[, -1]
-  intercept.part <- c(cbind(1, intercept.spline.basis) %*% matrix(spline.coefficients[,1], ncol=1))
+  intercept.part <- c(cbind(1, intercept.spline.basis) %*% spline.coefficients[, 1, drop=FALSE])
   fqpc.part <- spline.basis %*% spline.coefficients[, -1, drop=FALSE]
   return(list(intercept=intercept.part, loadings=fqpc.part))
 }
