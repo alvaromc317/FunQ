@@ -69,9 +69,18 @@ fosqr_fqpca_cv_df <- function(
   if(!all(splines.df.grid == floor(splines.df.grid))){stop('splines.df.grid must be a positive integer array.')}
 
   # Check the input parameters except Y
-  check_fosqr_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
-                           splines.df=max(npc, splines.df.grid), splines.method=splines.method,
-                           tol=tol, max.iters=max.iters,verbose=verbose.cv, seed=seed)
+  check_fosqr_fqpca_params(
+    npc=npc,
+    quantile.value=quantile.value,
+    periodic=periodic,
+    splines.df=max(npc, splines.df.grid),
+    splines.method=splines.method,
+    tol=tol,
+    max.iters=max.iters,
+    verbose=TRUE,
+    estimate.variance=FALSE,
+    n.bootstrap=1,
+    seed=seed)
 
   # Check Y and regressors
   Y <- check_Y(Y)
@@ -122,6 +131,7 @@ fosqr_fqpca_cv_df <- function(
         splines.method = splines.method,
         tol = tol,
         max.iters = max.iters,
+        estimate.variance = FALSE,
         verbose = verbose.fosqr_fqpca,
         seed = seed)
 

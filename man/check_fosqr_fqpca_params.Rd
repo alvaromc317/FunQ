@@ -13,6 +13,8 @@ check_fosqr_fqpca_params(
   tol,
   max.iters,
   verbose,
+  estimate.variance,
+  n.bootstrap,
   seed
 )
 }
@@ -32,6 +34,10 @@ check_fosqr_fqpca_params(
 \item{max.iters}{Maximum number of iterations.}
 
 \item{verbose}{Boolean indicating the verbosity.}
+
+\item{estimate.variance}{Booleand indicating if variance for the FOSQR loadings should be estimated}
+
+\item{n.bootstrap}{Number of bootstrap resamplings used in the estimation of the variance. Only in effect if estimate.variance=TRUE}
 
 \item{seed}{Seed for the random generator number.}
 }

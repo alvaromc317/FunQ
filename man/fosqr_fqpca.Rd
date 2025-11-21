@@ -11,10 +11,12 @@ fosqr_fqpca(
   quantile.value = 0.5,
   periodic = TRUE,
   splines.df = 10,
-  splines.method = "conquer",
+  splines.method = "quantreg",
   tol = 0.001,
   max.iters = 20,
   verbose = FALSE,
+  estimate.variance = FALSE,
+  n.bootstrap = 500,
   seed = NULL
 )
 }
@@ -38,6 +40,10 @@ fosqr_fqpca(
 \item{max.iters}{Maximum number of iterations.}
 
 \item{verbose}{Boolean indicating the verbosity.}
+
+\item{estimate.variance}{Booleand indicating if variance for the FOSQR loadings should be estimated}
+
+\item{n.bootstrap}{Number of bootstrap resamplings used in the estimation of the variance. Only in effect if estimate.variance=TRUE}
 
 \item{seed}{Seed for the random generator number.}
 }

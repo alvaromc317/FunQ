@@ -4,16 +4,14 @@
 \alias{compute_var_sandwich}
 \title{Compute sandwich estimator variance associated to fosqr loadings}
 \usage{
-compute_var_sandwich(n.regressors, model, spline.basis, se.method = "ker")
+compute_var_sandwich(cov.model, n.regressors, spline.basis)
 }
 \arguments{
+\item{cov.model}{fosqr-fqpca splines quantile regression model}
+
 \item{n.regressors}{number of covariates}
 
-\item{model}{fosqr-fqpca splines quantile regression model}
-
 \item{spline.basis}{spline basis matrix}
-
-\item{se.method}{standard error method used by quantreg to obtain the sandwich estimator}
 }
 \value{
 A matrix of variances associated to the fosqr loadings
