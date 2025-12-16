@@ -620,6 +620,353 @@ fosqr_fqpca <- function(
   return(results)
 }
 
+#' @title FOSQR - FQPCA main function for partial results
+#' @description Solves the Function on Scalar Quantile Regression (FOSQR) model
+#' accounting for residual correlation based on Functional Principal Component
+#' Analysis (FQPCA)
+#' @param Y An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.
+#' @param regressors An \eqn{(N \times P)} matrix of covariates.
+#' @param npc The number of estimated components on the FQPCA part (used for modeling residual correlation)
+#' @param quantile.value The quantile considered.
+#' @param periodic Boolean indicating if the data is expected to be periodic (start coincides with end) or not.
+#' @param splines.df Degrees of freedom for the splines.
+#' @param splines.method Method used in the resolution of the splines quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
+#' @param tol Tolerance on the convergence of the algorithm.
+#' @param max.iters Maximum number of iterations.
+#' @param verbose Boolean indicating the verbosity.
+#' @param seed Seed for the random generator number.
+#' @param estimate.variance Booleand indicating if variance for the FOSQR loadings should be estimated
+#' @param n.bootstrap Number of bootstrap resamplings used in the estimation of the variance. Only in effect if estimate.variance=TRUE
+#' @return fosqr_fqpca_object
+#' @export
+#' @examples
+#'
+#' n.obs = 150
+#' n.time = 144
+#' time.grid <- seq(0, 2 * pi, length.out = n.time)
+#'
+#' # Generate regressor and principal component functions
+#' b1 = sin(time.grid)
+#' pc1 = sin(2 * time.grid)
+#'
+#' # Generate covariates and scores
+#' regressors =  5 * matrix(rnorm(n.obs), ncol=1)
+#' scores = matrix(10 * rnorm(n.obs), ncol = 1)
+#' epsilon.matrix <- 0.1 * matrix(rnorm(n.obs * n.time), nrow = n.obs)
+#'
+#' # Build dataset
+#' Y = 100 + regressors[, 1] %o% b1 + scores[, 1] %o% pc1 + epsilon.matrix
+#'
+#' # Add missing observations
+#' Y[sample(n.obs*n.time, as.integer(0.2*n.obs*n.time))] <- NA
+#'
+#' results <- fosqr_fqpca(Y = Y, regressors = regressors, npc = 1, quantile.value = 0.5, seed=1)
+fosqr_fqpca_partial <- function(
+    Y = NULL,
+    regressors = NULL,
+    npc = 2,
+    quantile.value = 0.5,
+    periodic = TRUE,
+    splines.df = 10,
+    splines.method = 'quantreg',
+    tol = 1e-3,
+    max.iters = 20,
+    verbose = FALSE,
+    estimate.variance = FALSE,
+    n.bootstrap = 500,
+    seed = NULL)
+{
+  global.start.time <- base::Sys.time()
+
+  # Get the input parameters
+  formal_names <- base::setdiff(names(formals(sys.function())), "...")
+  inputs <- base::mget(formal_names, envir = environment())
+  inputs$Y = NULL
+  inputs$regressors = NULL
+
+  # Check the input parameters except Y and colname
+  check_fosqr_fqpca_params(
+    npc=npc,
+    quantile.value=quantile.value,
+    periodic=periodic,
+    splines.df=splines.df,
+    splines.method=splines.method,
+    tol=tol,
+    max.iters=max.iters,
+    verbose=verbose,
+    estimate.variance=estimate.variance,
+    n.bootstrap=n.bootstrap,
+    seed=seed)
+
+  # Check Y and colname and return an unnamed matrix
+  Y <- check_Y(Y)
+  regressors_checked <- check_regressors(regressors)
+  regressors <- regressors_checked$regressors
+
+  if(nrow(Y) != nrow(regressors)){stop('nrow(Y) and nrow(regressors) must be the same.')}
+
+  # If seed is provided, set seed for computations
+  if(!base::is.null(seed)){base::set.seed(seed)}
+
+  n.obs <- base::dim(Y)[1]
+  n.time <- base::dim(Y)[2]
+  n.regressors <- base::ncol(regressors)
+  Y.axis <- base::seq(0, 1, length.out = n.time)
+
+  Y.mask <- !base::is.na(Y)
+  Y.list <- lapply(base::seq(n.obs), function(j) Y[j, Y.mask[j, ]])
+  Y.vector <- unlist(Y.list, use.names = FALSE)
+
+  objective.function.array <- numeric(max.iters)
+  partial_results <- vector("list", max.iters) # Initialize partial_results
+
+  function.warnings <- list(splines = FALSE, scores = FALSE, diverging.loop = FALSE, rotation = FALSE)
+
+  spline.basis <- pbs::pbs(
+    Y.axis,
+    degree = 3,
+    df = splines.df,
+    intercept = TRUE,
+    periodic=periodic,
+    Boundary.knots = c(min(Y.axis), max(Y.axis)))
+  n.basis <- base::ncol(spline.basis)
+
+  i <- 1
+  loop.start.time <- base::Sys.time()
+
+  # FOSQR LEVEL
+  spline.coef.result <- fosqrfqpca_compute_spline_coefficients(
+    Y.vector = Y.vector,
+    Y.mask = Y.mask,
+    scores = regressors,
+    spline.basis = spline.basis,
+    quantile.value = quantile.value,
+    method=splines.method)
+  fosqr.spline.coef <- fosqrfqpca_build_splines_coefficients_matrix(
+    model = spline.coef.result$model,
+    npc = n.regressors)
+  fosqr.loadings.list <- fosqrfqpca_compute_loadings_fosqr(
+    spline.basis = spline.basis,
+    spline.coefficients = fosqr.spline.coef)
+  fosqr.intercept <- fosqr.loadings.list$intercept
+  fosqr.loadings <- fosqr.loadings.list$loadings
+  Y.fosqr.hat <- sweep(regressors %*% t(fosqr.loadings), MARGIN = 2, STATS = fosqr.intercept, FUN = "+")
+
+  # FQPCA level
+  fqpca.spline.coef <- base::matrix(stats::rnorm(base::dim(spline.basis)[2] * npc, mean = 0, sd = 1), nrow = base::dim(spline.basis)[2], ncol = npc)
+  fqpca.loadings <- spline.basis %*% fqpca.spline.coef
+  fqpca.scores <- try(fosqrfqpca_compute_scores(
+    Y = Y,
+    Y.mask = Y.mask,
+    Y.fosqr.hat = Y.fosqr.hat,
+    fqpca.loadings = fqpca.loadings,
+    quantile.value = quantile.value),
+    silent = FALSE)
+  if(!is.matrix(fqpca.scores)){stop('Iteration 1. Failed computation of scores')}
+
+  # ROTATION PROCESS
+  rotation.result <- try(fosqrfqpca_rotate_scores_and_loadings(
+    fqpca.loadings = fqpca.loadings,
+    fosqr.intercept = fosqr.intercept,
+    fqpca.scores = fqpca.scores), silent = FALSE)
+  if(inherits(rotation.result, "try-error"))
+  {
+    warning('Iteration 1. Failed rotation process. Skipping rotation on this iteration.')
+    function.warnings$rotation <- TRUE
+    rotation.result <- list(fqpca.loadings = fqpca.loadings,
+                            fqpca.scores = fqpca.scores,
+                            fosqr.intercept = fosqr.intercept,
+                            rotation.matrix = diag(npc))
+  }
+  fqpca.loadings <- rotation.result$fqpca.loadings
+  fqpca.scores <- rotation.result$fqpca.scores
+  fosqr.intercept <- rotation.result$fosqr.intercept
+  rotation.matrix = rotation.result$rotation.matrix
+
+  # Store partial results for Iteration 1
+  partial_results[[i]] <- list(fqpca.scores = fqpca.scores, fqpca.loadings = fqpca.loadings, fosqr.loadings = fosqr.loadings)
+
+  # Compute objective value function
+  objective.function.array[i] <- compute_objective_value(
+    quantile.value=quantile.value,
+    Y=Y,
+    scores=cbind(regressors, fqpca.scores),
+    intercept=fosqr.intercept,
+    loadings=cbind(fosqr.loadings, fqpca.loadings))
+
+  loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
+
+  if(verbose)
+  {
+    message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration ', 1, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
+            '\n', 'Objective function    i   value: ', round(objective.function.array[1], 4),
+            '\n', '____________________________________________________________')
+  }
+
+  convergence <- FALSE
+  for(i in 2:max.iters)
+  {
+    loop.start.time <- base::Sys.time()
+
+    # Obtain splines coefficients
+    spline.coef.result <- try(fosqrfqpca_compute_spline_coefficients(
+      Y.vector = Y.vector,
+      Y.mask = Y.mask,
+      scores = cbind(regressors, fqpca.scores),
+      spline.basis = spline.basis,
+      quantile.value = quantile.value,
+      method=splines.method), silent = FALSE)
+    if(inherits(spline.coef.result, "try-error"))
+    {
+      warning('Iteration ', i, '. Failed computation of spline coefficients. Providing results from previous iteration.')
+      function.warnings$splines <- TRUE
+      break
+    }
+    model <- spline.coef.result$model
+    tensor.matrix <- spline.coef.result$tensor.matrix
+    spline.coefficients <- fosqrfqpca_build_splines_coefficients_matrix(
+      model = model,
+      npc = n.regressors+npc)
+    fosqr.spline.coef <- spline.coefficients[, 1:(n.regressors+1), drop=FALSE]
+    fqpca.spline.coef <- spline.coefficients[, (n.regressors+2):ncol(spline.coefficients), drop=FALSE]
+
+    # Compute loadings
+    fqpca.loadings <- spline.basis %*% fqpca.spline.coef
+    fosqr.loadings.list <- fosqrfqpca_compute_loadings_fosqr(
+      spline.basis = spline.basis,
+      spline.coefficients = fosqr.spline.coef)
+    fosqr.intercept <- fosqr.loadings.list$intercept
+    fosqr.loadings <- fosqr.loadings.list$loadings
+    Y.fosqr.hat <- sweep(regressors %*% t(fosqr.loadings), MARGIN = 2, STATS = fosqr.intercept, FUN = "+")
+
+    # Compute scores
+    fqpca.scores <- try(fosqrfqpca_compute_scores(
+      Y = Y,
+      Y.mask = Y.mask,
+      Y.fosqr.hat = Y.fosqr.hat,
+      fqpca.loadings = fqpca.loadings,
+      quantile.value = quantile.value), silent = FALSE)
+    if(!is.matrix(fqpca.scores))
+    {
+      warning('Iteration ', i, '. Failed computation of scores. Providing results from previous iteration.')
+      function.warnings$scores <- TRUE
+      break
+    }
+
+    # Rotate loadings and scores
+    rotation.result <- try(fosqrfqpca_rotate_scores_and_loadings(
+      fqpca.loadings = fqpca.loadings,
+      fosqr.intercept = fosqr.intercept,
+      fqpca.scores = fqpca.scores), silent = FALSE)
+    if(inherits(rotation.result, "try-error"))
+    {
+      warning('Iteration ', i, '. Failed rotation process. Skipping rotation on this iteration.')
+      function.warnings$rotation <- TRUE
+      rotation.result <- list(fqpca.loadings = fqpca.loadings,
+                              fqpca.scores = fqpca.scores,
+                              fosqr.intercept = fosqr.intercept,
+                              rotation.matrix = diag(npc))
+    }
+    fqpca.loadings <- rotation.result$fqpca.loadings
+    fqpca.scores <- rotation.result$fqpca.scores
+    fosqr.intercept <- rotation.result$fosqr.intercept
+    rotation.matrix = rotation.result$rotation.matrix
+
+    # Store partial results for current Iteration
+    partial_results[[i]] <- list(fqpca.scores = fqpca.scores, fqpca.loadings = fqpca.loadings, fosqr.loadings = fosqr.loadings)
+
+    # Compute objective value function
+    objective.function.array[i] <- compute_objective_value(
+      quantile.value=quantile.value,
+      Y=Y,
+      scores=cbind(regressors, fqpca.scores),
+      intercept=fosqr.intercept,
+      loadings=cbind(fosqr.loadings, fqpca.loadings))
+
+    convergence.criteria <- base::abs(objective.function.array[i] - objective.function.array[i-1])
+    if(convergence.criteria < tol){convergence = TRUE}
+
+    # Measure computation time
+    loop.execution.time <- difftime(base::Sys.time(), loop.start.time, units = 'secs')
+
+    if(verbose)
+    {
+      message(format(Sys.time(), "%Y-%m-%d %H:%M:%S"), '. Iteration ', i, ' completed in ', base::round(loop.execution.time, 3), ' seconds',
+              '\n', 'Objective function (i-1) value: ', base::round(objective.function.array[i-1], 4),
+              '\n', 'Objective function    i   value: ', round(objective.function.array[i], 4),
+              '\n', 'Convergence criteria value    : ', base::round(convergence.criteria, 4),
+              '\n', '____________________________________________________________')
+    }
+
+    if(convergence){break}
+
+    # Avoid computational issues and do early stops if reaching diverging loops.
+    if(i>=3 && (objective.function.array[i] > 10 * objective.function.array[2]))
+    {
+      function.warnings$diverging.loop <- TRUE
+      message('Iteration ', i, '. Breaking diverging loop')
+      break
+    }
+  }
+
+  objective.function.array <- objective.function.array[1:i]
+  partial_results <- partial_results[1:i] # Truncate partial_results
+
+  if(verbose && convergence){message("\u2705 Algorithm converged successfully")}
+  if(i == max.iters & !convergence){warning('\u274C Algorithm reached maximum number of iterations without convergence. Consider increasing the value of max.iters')}
+
+  # EXPLAINED VARIABILITY
+  pve <- compute_explained_variability(fqpca.scores)
+
+  # ESTIMATE VARIANCE
+  if(estimate.variance)
+  {
+
+    if(splines.method == 'quantreg'){
+      cov.model <- summary(model, covariance = TRUE, se = 'ker')$cov
+    }else if(splines.method == 'conquer'){
+      cov.model <- vcov_qr_ker(model = model, X = cbind(1, tensor.matrix))
+    }
+
+    var.analytical <- compute_var_sandwich(
+      n.regressors=n.regressors,
+      cov.model=cov.model,
+      spline.basis=spline.basis)
+
+    var.correction <- compute_var_correction(
+      n.bootstrap = n.bootstrap,
+      fqpca.scores = fqpca.scores,
+      regressors = regressors,
+      fqpca.loadings = fqpca.loadings)
+
+    fosqr.variances <- list(variance = var.analytical+var.correction, var.analytical=var.analytical, var.correction=var.correction)
+  }else{
+    fosqr.variances = NULL
+  }
+
+  # FINAL RESULTS
+  global.execution.time <- difftime(Sys.time(), global.start.time, units = 'secs')
+
+  results <- structure(list(
+    fosqr.intercept = fosqr.intercept,
+    fosqr.loadings = fosqr.loadings,
+    regressors = regressors,
+    fqpca.loadings = fqpca.loadings,
+    fqpca.scores = fqpca.scores,
+    partial_results = partial_results, # Added partial_results to return list
+    fosqr.variances = fosqr.variances,
+    pve = pve,
+    objective.function.array = objective.function.array,
+    execution.time = global.execution.time,
+    function.warnings = function.warnings,
+    rotation.matrix = rotation.matrix,
+    spline.basis = spline.basis,
+    names.regressors = regressors_checked$names.regressors,
+    inputs = inputs),
+    class = "fosqr_fqpca_object")
+  return(results)
+}
+
 # PREDICTIONS -----------------------------------------------------------------
 
 #' @title Predict scores
