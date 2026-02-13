@@ -844,10 +844,10 @@ bandwidth.rq <- function(p, n, hs = TRUE, alpha = 0.05)
   # Bandwidth selection for sparsity estimation two flavors:
   # 	Hall and Sheather(1988, JRSS(B)) rate = O(n^{-1/3})
   # 	Bofinger (1975, Aus. J. Stat)  -- rate = O(n^{-1/5})
-  x0 <- qnorm(p)
-  f0 <- dnorm(x0)
+  x0 <- stats::qnorm(p)
+  f0 <- stats::dnorm(x0)
   if (hs) {
-    n^(-1 / 3) * qnorm(1 - alpha / 2)^(2 / 3) *
+    n^(-1 / 3) * stats::qnorm(1 - alpha / 2)^(2 / 3) *
       ((1.5 * f0^2) / (2 * x0^2 + 1))^(1 / 3)
   } else {
     n^-0.2 * ((4.5 * f0^4) / (2 * x0^2 + 1)^2)^0.2
@@ -893,18 +893,16 @@ get_kernel_cov <- function(x, y, coefficients, tau = 0.5, hs = TRUE)
 
   # Re-scale bandwidth based on residual distribution
   # This matches the implementation in summary.rq for se='ker'
-  scale_factor <- min(sqrt(var(uhat)), (quantile(uhat, .75) - quantile(uhat, .25)) / 1.34)
-  h_scaled <- (qnorm(tau + h) - qnorm(tau - h)) * scale_factor
+  scale_factor <- min(sqrt(stats::var(uhat)), (stats::quantile(uhat, .75) - stats::quantile(uhat, .25)) / 1.34)
+  h_scaled <- (stats::qnorm(tau + h) - stats::qnorm(tau - h)) * scale_factor
 
   # Compute kernel weights using Gaussian kernel
   # f = dnorm(uhat/h)/h
-  f <- dnorm(uhat / h_scaled) / h_scaled
+  f <- stats::dnorm(uhat / h_scaled) / h_scaled
   f <- pmax(f, 1e-8)
 
   # Compute sandwich components
   # fxxinv = (X' diag(f) X)^-1
-  # The original implementation uses QR decomposition of weighted X for stability
-  # weighted_X = sqrt(f) * X
   fxxinv <- diag(p)
   fxxinv <- backsolve(qr(sqrt(f) * x)$qr[1:p, 1:p, drop = FALSE], fxxinv)
   fxxinv <- fxxinv %*% t(fxxinv)
