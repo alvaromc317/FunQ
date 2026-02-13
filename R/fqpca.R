@@ -193,14 +193,29 @@ rotate_scores_and_loadings <- function(
   } else {
     eig_vals_diag <- diag(eig$values)
   }
-  cov.score.pd <- eig$vectors %*% eig_vals_diag %*% t(eig$vectors)
 
-  # Perform rotation
-  svd.decomp <- svd(chol(cov.score.pd) %*% t(loadings))
-  rotation.matrix <- solve(chol(cov.score.pd)) %*% svd.decomp$u %*%
-    diag(svd.decomp$d, nrow=length(svd.decomp$d))
+  cov.score.pd <- base::tcrossprod(eig$vectors %*% eig_vals_diag, eig$vectors)
+  chol_cov <- base::chol(cov.score.pd)
+  svd.decomp <- base::svd(base::tcrossprod(chol_cov, loadings))
+  rotation.matrix <- base::backsolve(chol_cov, base::sweep(svd.decomp$u, 2, svd.decomp$d, "*"))
   scores <- scores %*% rotation.matrix
   loadings <- svd.decomp$v
+
+  # Sign alignment
+  # 1. Find the row indices of the max absolute value for each column
+  max.idx <- apply(base::abs(loadings), 2, which.max)
+
+  # 2. Extract the actual values at these indices using matrix indexing
+  peak.vals <- loadings[base::cbind(max.idx, seq_len(ncol(loadings)))]
+  peak.vals[peak.vals==0] <- 1
+
+  # 3. Determine the signs
+  signs <- base::sign(peak.vals)
+
+  # 4. Apply the signs to columns using sweep
+  loadings  <- base::sweep(loadings, 2, signs, "*")
+  scores    <- base::sweep(scores, 2, signs, "*")
+  rotation.matrix <- base::sweep(rotation.matrix, 2, signs, "*")
 
   results <- list(scores=scores, intercept=intercept, loadings=loadings, rotation.matrix=rotation.matrix)
   return(results)
@@ -522,11 +537,13 @@ fqpca <- function(
     if(is_rank_deficient(loadings)){warning('Loadings matrix is singular.')}
 
     # OBTAIN SCORES
+    scores.prev <- scores
     scores <- try(compute_scores(Y = Y, Y.mask = Y.mask, intercept = intercept, loadings = loadings, quantile.value = quantile.value), silent = FALSE)
     if(!is.matrix(scores))
     {
       warning('Iteration ', i, '. Failed computation of scores. Providing results from previous iteration.')
       function.warnings$scores <- TRUE
+      scores <- scores.prev
       break
     }
 

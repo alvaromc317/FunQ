@@ -127,12 +127,29 @@ fosqrfqpca_rotate_scores_and_loadings <- function(
   } else {
     eig_vals_diag <- diag(eig$values)
   }
-  cov.score.pd <- eig$vectors %*% eig_vals_diag %*% t(eig$vectors)
-  chol_cov <- chol(cov.score.pd)
-  svd.decomp <- base::svd((chol_cov)  %*% t(fqpca.loadings))
-  rotation.matrix <- base::solve(chol_cov) %*% svd.decomp$u %*% base::diag(svd.decomp$d, nrow=length(svd.decomp$d))
+  cov.score.pd <- base::tcrossprod(eig$vectors %*% eig_vals_diag, eig$vectors)
+  chol_cov <- base::chol(cov.score.pd)
+  svd.decomp <- base::svd(base::tcrossprod(chol_cov, fqpca.loadings))
+  rotation.matrix <- base::backsolve(chol_cov, base::sweep(svd.decomp$u, 2, svd.decomp$d, "*"))
   fqpca.scores <- fqpca.scores %*% rotation.matrix
   fqpca.loadings <- svd.decomp$v
+
+  # Sign alignment
+  # 1. Find the row indices of the max absolute value for each column
+  max.idx <- apply(base::abs(fqpca.loadings), 2, which.max)
+
+  # 2. Extract the actual values at these indices using matrix indexing
+  peak.vals <- fqpca.loadings[base::cbind(max.idx, seq_len(ncol(fqpca.loadings)))]
+  peak.vals[peak.vals==0] <- 1
+
+  # 3. Determine the signs
+  signs <- base::sign(peak.vals)
+
+  # 4. Apply the signs to columns using sweep
+  fqpca.loadings  <- base::sweep(fqpca.loadings, 2, signs, "*")
+  fqpca.scores    <- base::sweep(fqpca.scores, 2, signs, "*")
+  rotation.matrix <- base::sweep(rotation.matrix, 2, signs, "*")
+
   results <- list(fqpca.loadings=fqpca.loadings, fqpca.scores=fqpca.scores, fosqr.intercept=fosqr.intercept, rotation.matrix=rotation.matrix)
   return(results)
 }
@@ -499,6 +516,7 @@ fosqr_fqpca <- function(
     Y.fosqr.hat <- sweep(regressors %*% t(fosqr.loadings), MARGIN = 2, STATS = fosqr.intercept, FUN = "+")
 
     # Compute scores
+    fqpca.scores.prev <- fqpca.scores
     fqpca.scores <- try(fosqrfqpca_compute_scores(
       Y = Y,
       Y.mask = Y.mask,
@@ -509,6 +527,7 @@ fosqr_fqpca <- function(
     {
       warning('Iteration ', i, '. Failed computation of scores. Providing results from previous iteration.')
       function.warnings$scores <- TRUE
+      fqpca.scores <- fqpca.scores.prev
       break
     }
 
@@ -903,13 +922,16 @@ get_kernel_cov <- function(x, y, coefficients, tau = 0.5, hs = TRUE)
 
   # Compute sandwich components
   # fxxinv = (X' diag(f) X)^-1
-  fxxinv <- diag(p)
-  fxxinv <- backsolve(qr(sqrt(f) * x)$qr[1:p, 1:p, drop = FALSE], fxxinv)
+  qq <- qr(sqrt(f) * x)
+  fxxinv <- backsolve(qq$qr[1:p, 1:p, drop = FALSE], diag(p))
   fxxinv <- fxxinv %*% t(fxxinv)
+  inv_piv <- order(qq$pivot)
+  fxxinv <- fxxinv[inv_piv, inv_piv]
 
   # Compute final covariance matrix
   # cov = tau(1-tau) * fxxinv * (X'X) * fxxinv
   cov_matrix <- tau * (1 - tau) * fxxinv %*% crossprod(x) %*% fxxinv
+  cov_matrix <- (cov_matrix + t(cov_matrix)) / 2
 
   return(cov_matrix)
 }
@@ -941,13 +963,13 @@ compute_var_sandwich <- function(
   # Intercept block variance
   idx <- block_starts[1]:(block_starts[1] + n.basis - 1L)
   cov.block <- cov.model[idx, idx, drop = FALSE]
-  var.matrix[, 1] <- diag(B_int %*% cov.block %*% t(B_int))
+  var.matrix[, 1] <- rowSums((B_int %*% cov.block) * B_int)
 
   # Slope blocks variance
   for (k in seq_len(n.regressors)) {
     idxk <- block_starts[k + 1L]:(block_starts[k + 1L] + n.basis - 1L)
     cov.block.k <- cov.model[idxk, idxk, drop = FALSE]
-    var.matrix[, k + 1L] <- diag(spline.basis %*% cov.block.k %*% t(spline.basis))
+    var.matrix[, k + 1L] <- rowSums((spline.basis %*% cov.block.k) * spline.basis)
   }
   var.matrix <- pmax(var.matrix, 0)
   return(var.matrix)
