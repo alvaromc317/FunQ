@@ -117,17 +117,11 @@ mfqpca_compute_splines_between <- function(
   npc <- base::ncol(scores)
   n.basis <- base::ncol(spline.basis)
   intercept.spline.basis <-  spline.basis[, -1]
-  tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=(npc+1)*n.basis-1)
-  row.idx <- 1
-  for(i in base::seq(n.obs))
-  {
-    scores.i <- scores[i, , drop=FALSE]
-    tmp.splines <- spline.basis[Y.mask[i, ], , drop = FALSE]
-    tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], , drop = FALSE]
-    n.time.i <- base::nrow(tmp.splines)
-    tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::cbind(tmp.intercept.splines, base::kronecker(scores.i, tmp.splines))
-    row.idx <- row.idx+n.time.i
-  }
+  tensor.matrix <- build_tensor_matrix(
+    scores=scores,
+    Y.mask=Y.mask,
+    spline.basis=spline.basis,
+    intercept.spline.basis=intercept.spline.basis)
   if(method == 'conquer'){
     B.vector <- conquer::conquer(Y=Y.vector, X=tensor.matrix, tau=quantile.value)$coeff
   }else if(method == 'quantreg'){
@@ -159,16 +153,10 @@ mfqpca_compute_splines_within <- function(
   n.basis <- base::ncol(spline.basis)
   Y.list <- lapply(base::seq(n.obs), function(j) Y[j, Y.mask[j, ]])
   Y.vector <- unlist(Y.list, use.names = FALSE)
-  tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=npc*n.basis)
-  row.idx <- 1
-  for(i in base::seq(n.obs))
-  {
-    scores.i <- scores[i, , drop=FALSE]
-    tmp.splines <- spline.basis[Y.mask[i, ], , drop=FALSE]
-    n.time.i <- base::nrow(tmp.splines)
-    tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::kronecker(scores.i, tmp.splines)
-    row.idx <- row.idx+n.time.i
-  }
+  tensor.matrix <- build_tensor_matrix_no_intercept(
+    scores=scores,
+    Y.mask=Y.mask,
+    spline.basis=spline.basis)
   if(method == 'conquer'){
     B.vector <- conquer2::conquer(X=tensor.matrix, Y=Y.vector, tau=quantile.value)$coeff
   }else if(method == 'quantreg')

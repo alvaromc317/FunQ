@@ -50,7 +50,7 @@ fosqr_fqpca_cv_df(
 
 \item{max.iters}{Maximum number of iterations.}
 
-\item{verbose.fosqr_fqpca}{Boolean indicating verbosity of the fqpca function.}
+\item{verbose.fosqr_fqpca}{Boolean indicating verbosity of the fosqr-fqpca function.}
 
 \item{verbose.cv}{Boolean indicating verbosity of the cross-validation process.}
 

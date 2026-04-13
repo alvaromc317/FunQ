@@ -7,7 +7,7 @@
 \method{predict}{fosqr_fqpca_object}(object, newdata, newregressors, ...)
 }
 \arguments{
-\item{object}{An object output of the fqpca function.}
+\item{object}{An object output of the fosqr_fqpca function.}
 
 \item{newdata}{The N by T matrix of observed time instants to be tested, or the tf object.}
 

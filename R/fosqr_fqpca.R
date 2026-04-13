@@ -31,7 +31,7 @@ fosqrfqpca_compute_scores <- function(
 # SPLINES ---------------------------------------------------------------------
 
 #' @title Compute spline coefficients
-#' @description Inner function to compute the spline coefficients of the fosqr - fqpca methodology.
+#' @description Inner function to compute the spline coefficients of the fosqr-fqpca methodology.
 #' @param Y.vector vectorised version of Y, the \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
 #' @param scores Initial matrix of regressors and / or scores
@@ -51,17 +51,11 @@ fosqrfqpca_compute_spline_coefficients <- function(
   npc <- base::ncol(scores)
   n.basis <- base::ncol(spline.basis)
   intercept.spline.basis <-  spline.basis[, -1]
-  tensor.matrix <- base::matrix(0, nrow=base::length(Y.vector), ncol=(npc+1)*n.basis-1)
-  row.idx <- 1
-  for(i in base::seq(n.obs))
-  {
-    scores.i <- scores[i, , drop=FALSE]
-    tmp.splines <- spline.basis[Y.mask[i, ], , drop = FALSE]
-    tmp.intercept.splines <- intercept.spline.basis[Y.mask[i, ], , drop = FALSE]
-    n.time.i <- base::nrow(tmp.splines)
-    tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::cbind(tmp.intercept.splines, base::kronecker(scores.i, tmp.splines))
-    row.idx <- row.idx+n.time.i
-  }
+  tensor.matrix <- build_tensor_matrix(
+    scores=scores,
+    Y.mask=Y.mask,
+    spline.basis=spline.basis,
+    intercept.spline.basis=intercept.spline.basis)
   if(method == 'conquer'){
     model <- conquer::conquer(Y=Y.vector, X=tensor.matrix, tau=quantile.value)
   }else if(method == 'quantreg'){
@@ -83,6 +77,7 @@ fosqrfqpca_build_splines_coefficients_matrix <- function(
 {
   if(!is.null(model$coeff)){B.vector <- model$coeff}
   if(!is.null(model$coefficients)){B.vector <- model$coefficients}
+  if(length(B.vector) %% (npc+1) != 0) stop("Coefficient length mismatch.")
   spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=(npc+1))
   return(spline.coefficients)
 }
@@ -192,7 +187,7 @@ check_regressors <- function(regressors)
 
   # Stop if any column is constant
   if (zero_var_count >= 1) {
-    stop("There are constant regressor columns.")
+    stop("regressors cannot contain constant columns.")
   }
   names.regressors <- colnames(regressors)
   regressors <- base::unname(regressors)
@@ -209,8 +204,6 @@ check_regressors <- function(regressors)
 #' @param tol Tolerance on the convergence of the algorithm.
 #' @param max.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
-#' @param estimate.variance Booleand indicating if variance for the FOSQR loadings should be estimated
-#' @param n.bootstrap Number of bootstrap resamplings used in the estimation of the variance. Only in effect if estimate.variance=TRUE
 #' @param seed Seed for the random generator number.
 #' @return No return
 check_fosqr_fqpca_params <- function(
@@ -222,8 +215,6 @@ check_fosqr_fqpca_params <- function(
     tol,
     max.iters,
     verbose,
-    estimate.variance,
-    n.bootstrap,
     seed)
 {
   # Check 'npc': integer number, positive
@@ -278,18 +269,6 @@ check_fosqr_fqpca_params <- function(
          ". Expected a Boolean value (TRUE or FALSE).")
   }
 
-  # Check 'estimate.variance': Boolean
-  if (!is.logical(estimate.variance) || length(estimate.variance) != 1) {
-    stop("Invalid input for 'estimate.variance': ", estimate.variance,
-         ". Expected a Boolean value (TRUE or FALSE).")
-  }
-
-  # Check 'n.bootstrap': integer number, positive
-  if (!is.numeric(n.bootstrap) || length(n.bootstrap) != 1 || n.bootstrap %% 1 != 0 || n.bootstrap <= 0) {
-    stop("Invalid input for 'n.bootstrap': ", n.bootstrap,
-         ". Expected a positive integer number.")
-  }
-
   # Check 'seed': positive integer number or NULL
   if (!(is.null(seed) || (is.numeric(seed) && length(seed) == 1 &&
                           seed %% 1 == 0 && seed > 0))) {
@@ -315,8 +294,6 @@ check_fosqr_fqpca_params <- function(
 #' @param max.iters Maximum number of iterations.
 #' @param verbose Boolean indicating the verbosity.
 #' @param seed Seed for the random generator number.
-#' @param estimate.variance Booleand indicating if variance for the FOSQR loadings should be estimated
-#' @param n.bootstrap Number of bootstrap resamplings used in the estimation of the variance. Only in effect if estimate.variance=TRUE
 #' @return fosqr_fqpca_object
 #' @export
 #' @examples
@@ -352,8 +329,6 @@ fosqr_fqpca <- function(
     tol = 1e-3,
     max.iters = 20,
     verbose = FALSE,
-    estimate.variance = FALSE,
-    n.bootstrap = 500,
     seed = NULL)
 {
   global.start.time <- base::Sys.time()
@@ -361,8 +336,6 @@ fosqr_fqpca <- function(
   # Get the input parameters
   formal_names <- base::setdiff(names(formals(sys.function())), "...")
   inputs <- base::mget(formal_names, envir = environment())
-  inputs$Y = NULL
-  inputs$regressors = NULL
 
   # Check the input parameters except Y and colname
   check_fosqr_fqpca_params(
@@ -374,11 +347,9 @@ fosqr_fqpca <- function(
     tol=tol,
     max.iters=max.iters,
     verbose=verbose,
-    estimate.variance=estimate.variance,
-    n.bootstrap=n.bootstrap,
     seed=seed)
 
-  # Check Y and colname and return an unnamed matrix
+  # Check Y and return an unnamed matrix
   Y <- check_Y(Y)
   regressors_checked <- check_regressors(regressors)
   regressors <- regressors_checked$regressors
@@ -591,30 +562,6 @@ fosqr_fqpca <- function(
   # EXPLAINED VARIABILITY
   pve <- compute_explained_variability(fqpca.scores)
 
-  # ESTIMATE VARIANCE
-  if(estimate.variance)
-  {
-    if(!is.null(model$coeff)){coefficients <- model$coeff}
-    if(!is.null(model$coefficients)){coefficients <- model$coefficients}
-
-    cov.model <- get_kernel_cov(x = cbind(1, tensor.matrix), y = Y.vector, coefficients = coefficients, tau = quantile.value)
-
-    var.analytical <- compute_var_sandwich(
-      n.regressors=n.regressors,
-      cov.model=cov.model,
-      spline.basis=spline.basis)
-
-    var.correction <- compute_var_correction(
-      n.bootstrap = n.bootstrap,
-      fqpca.scores = fqpca.scores,
-      regressors = regressors,
-      fqpca.loadings = fqpca.loadings)
-
-    fosqr.variances <- list(variance = var.analytical+var.correction, var.analytical=var.analytical, var.correction=var.correction)
-  }else{
-    fosqr.variances = NULL
-  }
-
   # FINAL RESULTS
   global.execution.time <- difftime(Sys.time(), global.start.time, units = 'secs')
 
@@ -624,13 +571,14 @@ fosqr_fqpca <- function(
     regressors = regressors,
     fqpca.loadings = fqpca.loadings,
     fqpca.scores = fqpca.scores,
-    fosqr.variances = fosqr.variances,
     pve = pve,
     objective.function.array = objective.function.array,
     execution.time = global.execution.time,
     function.warnings = function.warnings,
     rotation.matrix = rotation.matrix,
     spline.basis = spline.basis,
+    splines.model = spline.coef.result$model,
+    tensor.matrix = spline.coef.result$tensor.matrix,
     names.regressors = regressors_checked$names.regressors,
     inputs = inputs),
     class = "fosqr_fqpca_object")
@@ -641,7 +589,7 @@ fosqr_fqpca <- function(
 
 #' @title Predict scores
 #' @description S3 method for class 'fosqr_fqpca_object' Given a new matrix Y, predicts the value of the scores associated to the given matrix.
-#' @param object An object output of the fqpca function.
+#' @param object An object output of the fosqr_fqpca function.
 #' @param newdata The N by T matrix of observed time instants to be tested, or the tf object.
 #' @param newregressors The N by p matrix of regressors to be tested
 #' @param ... further arguments passed to or from other methods.
@@ -686,8 +634,7 @@ predict.fosqr_fqpca_object <- function(object, newdata, newregressors, ...)
 
   n.time.model <- nrow(object$fqpca.loadings)
   if(ncol(Y) != n.time.model) {
-    stop("Number of time points in newdata (", ncol(Y),
-         ") does not match the model dimension (", n.time.model, ").")
+    stop("Number of time points in newdata (", ncol(Y),") does not match the model dimension (", n.time.model, ").")
   }
 
   Y.mask <- !base::is.na(Y)
@@ -740,7 +687,7 @@ fitted.fosqr_fqpca_object <- function(object, pve=0.95, ...)
   n.components <- obtain_npc(scores=object$fqpca.scores, pve=pve)
 
   # Build fosqr fitted value
-  fosqr.fitted <- sweep(object$regressors %*% t(object$fosqr.loadings), MARGIN = 2, STATS = object$fosqr.intercept, FUN = "+")
+  fosqr.fitted <- sweep(object$inputs$regressors %*% t(object$fosqr.loadings), MARGIN = 2, STATS = object$fosqr.intercept, FUN = "+")
 
   # Build FQPCA fitted value
   if (n.components > 0){
@@ -750,6 +697,91 @@ fitted.fosqr_fqpca_object <- function(object, pve=0.95, ...)
   }
   Y.pred <- fosqr.fitted + fqpca.fitted
   return(Y.pred)
+}
+
+#' @title Compute variance
+#' @description Generic function to compute variance.
+#' @param object An object for which to compute variance.
+#' @param ... further arguments passed to or from other methods.
+#' @export
+compute_variance <- function(object, ...) {
+  UseMethod("compute_variance")
+}
+
+#' @title Compute variance
+#' @description S3 method for class 'fosqr_fqpca_object'. Given a fosqr_fqpca_object model, estimates the variance associated to the FOSQR loadings.
+#' @param object An object output of the fosqr_fqpca function.
+#' @param pve If smaller than 1, taken as percentage of explained variability used in variance estimation. If greater than 1, taken as number of components used in variance estimation.
+#' @param n.bootstrap Number of bootstrap resamplings used in the estimation of the variance correction.
+#' @param ... further arguments passed to or from other methods.
+#' @return A list containing the estimated total variance, analytical variance, correction variance, and the kernel covariance model.
+#' @export
+#' @method compute_variance fosqr_fqpca_object
+#' @examples
+#'
+#' n.obs = 150
+#' n.time = 144
+#' time.grid <- seq(0, 2 * pi, length.out = n.time)
+#'
+#' # Generate regressor and principal component functions
+#' b1 = sin(time.grid)
+#' pc1 = sin(2 * time.grid)
+#'
+#' # Generate covariates and scores
+#' regressors =  5 * matrix(rnorm(n.obs), ncol=1)
+#' scores = matrix(10 * rnorm(n.obs), ncol = 1)
+#' epsilon.matrix <- 0.1 * matrix(rnorm(n.obs * n.time), nrow = n.obs)
+#'
+#' # Build dataset
+#' Y = 100 + regressors[, 1] %o% b1 + scores[, 1] %o% pc1 + epsilon.matrix
+#'
+#' # Add missing observations
+#' Y[sample(n.obs*n.time, as.integer(0.2*n.obs*n.time))] <- NA
+#'
+#' results <- fosqr_fqpca(Y = Y, regressors=regressors, npc = 1, quantile.value = 0.5, seed=1)
+#' fosqr_variances <- compute_variance(object = results)
+compute_variance.fosqr_fqpca_object <- function(object, pve=0.95, n.bootstrap=1000, ...)
+{
+  if (!base::inherits(object, "fosqr_fqpca_object")){stop('The object must be of class fosqr_fqpca_object')}
+
+  if(!is.null(object$splines.model$coeff)){coefficients <- object$splines.model$coeff}
+  if(!is.null(object$splines.model$coefficients)){coefficients <- object$splines.model$coefficients}
+
+  Y <- object$inputs$Y
+  n.obs <- nrow(Y)
+  Y.mask <- !base::is.na(Y)
+  Y.list <- lapply(base::seq(n.obs), function(j) Y[j, Y.mask[j, ]])
+  Y.vector <- unlist(Y.list, use.names = FALSE)
+
+  n.components <- obtain_npc(scores=object$fqpca.scores, pve=pve)
+
+  cov.model <- get_kernel_cov(
+    x = cbind(1, object$tensor.matrix),
+    y = Y.vector,
+    coefficients = coefficients,
+    tau = object$inputs$quantile.value)
+
+  var.analytical <- compute_var_sandwich(
+    n.regressors=ncol(object$inputs$regressors),
+    cov.model=cov.model,
+    spline.basis=object$spline.basis)
+
+  if (n.components == 0) {
+    var.correction <- matrix(0, nrow = nrow(object$fosqr.loadings), ncol = ncol(object$inputs$regressors) + 1)
+  } else {
+    var.correction <- compute_var_correction(
+      n.bootstrap = n.bootstrap,
+      fqpca.scores = object$fqpca.scores[, seq_len(n.components), drop = FALSE],
+      regressors = object$inputs$regressors,
+      fqpca.loadings = object$fqpca.loadings[, seq_len(n.components), drop = FALSE])
+  }
+
+  fosqr.variances <- list(
+    variance = var.analytical+var.correction,
+    var.analytical=var.analytical,
+    var.correction=var.correction,
+    cov.model=cov.model)
+  return(fosqr.variances)
 }
 
 # BASIC PLOT ------------------------------------------------------------------

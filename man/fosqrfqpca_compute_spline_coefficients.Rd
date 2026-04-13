@@ -30,5 +30,5 @@ fosqrfqpca_compute_spline_coefficients(
 The matrix of spline coefficients.
 }
 \description{
-Inner function to compute the spline coefficients of the fosqr - fqpca methodology.
+Inner function to compute the spline coefficients of the fosqr-fqpca methodology.
 }

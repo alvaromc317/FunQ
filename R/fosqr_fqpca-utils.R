@@ -14,7 +14,7 @@
 #' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
 #' @param tol Tolerance on the convergence of the algorithm.
 #' @param max.iters Maximum number of iterations.
-#' @param verbose.fosqr_fqpca Boolean indicating verbosity of the fqpca function.
+#' @param verbose.fosqr_fqpca Boolean indicating verbosity of the fosqr-fqpca function.
 #' @param verbose.cv Boolean indicating verbosity of the cross-validation process.
 #' @param seed Seed for the random generator number.
 #' @return A list containing the matrices of scores, the matrices of loadings, and a secondary list with extra information.
@@ -78,8 +78,6 @@ fosqr_fqpca_cv_df <- function(
     tol=tol,
     max.iters=max.iters,
     verbose=TRUE,
-    estimate.variance=FALSE,
-    n.bootstrap=1,
     seed=seed)
 
   # Check Y and regressors
@@ -113,8 +111,8 @@ fosqr_fqpca_cv_df <- function(
       Y.test <- Y.folds$Y.test.list[[j]]
       if(criteria == 'rows')
       {
-        regressors.train <- regressors[Y.folds$train.idx.list[[j]], ]
-        regressors.test <- regressors[-Y.folds$train.idx.list[[j]], ]
+        regressors.train <- regressors[Y.folds$train.idx.list[[j]], , drop = FALSE]
+        regressors.test <- regressors[-Y.folds$train.idx.list[[j]], , drop = FALSE]
       }else{
         regressors.train <- regressors
         regressors.test <- regressors
@@ -131,7 +129,6 @@ fosqr_fqpca_cv_df <- function(
         splines.method = splines.method,
         tol = tol,
         max.iters = max.iters,
-        estimate.variance = FALSE,
         verbose = verbose.fosqr_fqpca,
         seed = seed)
 
