@@ -9,7 +9,8 @@ fosqrfqpca_compute_spline_coefficients_variance_estimation(
   Y.mask,
   scores,
   spline.basis,
-  quantile.value
+  quantile.value,
+  method
 )
 }
 \arguments{
@@ -22,10 +23,12 @@ fosqrfqpca_compute_spline_coefficients_variance_estimation(
 \item{spline.basis}{The spline basis matrix.}
 
 \item{quantile.value}{The quantile considered.}
+
+\item{method}{Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.}
 }
 \value{
-The matrix of spline coefficients.
+A list with the matrix of spline coefficients, the flat coefficient vector, and the tensor design matrix.
 }
 \description{
-Inner function to compute the spline coefficients of the fosqr - fqpca methodology using quantreg to estimate the variance for the sandwich estimator.
+Inner function to compute the spline coefficients of the fosqr - fqpca methodology, additionally returning the tensor design matrix and flat coefficient vector needed to estimate the sandwich covariance via \code{get_kernel_cov}.
 }

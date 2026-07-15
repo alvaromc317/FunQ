@@ -65,26 +65,28 @@ fosqrfqpca_compute_spline_coefficients <- function(
   if(method == 'conquer'){
     B.vector <- conquer::conquer(Y=Y.vector, X=tensor.matrix, tau=quantile.value)$coeff
   }else if(method == 'quantreg'){
-    B.vector <- quantreg::rq(Y.vector~tensor.matrix, tau=quantile.value, method='fnb')$coefficients
+    B.vector <- quantreg::rq(Y.vector~tensor.matrix, tau=quantile.value, method='fn')$coefficients
   }
   spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=(npc+1))
   return(spline.coefficients)
 }
 
 #' @title Compute spline coefficients
-#' @description Inner function to compute the spline coefficients of the fosqr - fqpca methodology using quantreg to estimate the variance for the sandwich estimator.
+#' @description Inner function to compute the spline coefficients of the fosqr - fqpca methodology, additionally returning the tensor design matrix and flat coefficient vector needed to estimate the sandwich covariance via \code{get_kernel_cov}.
 #' @param Y.vector vectorised version of Y, the \eqn{(N \times T)} matrix of observed time instants.
 #' @param Y.mask Mask matrix of the same dimensions as Y indicating which observations in Y are known.
 #' @param scores Initial matrix of regressors and / or scores
 #' @param spline.basis The spline basis matrix.
 #' @param quantile.value The quantile considered.
-#' @return The matrix of spline coefficients.
+#' @param method Method used in the resolution of the quantile regression model. It currently accepts the methods \code{c('conquer', 'quantreg')}.
+#' @return A list with the matrix of spline coefficients, the flat coefficient vector, and the tensor design matrix.
 fosqrfqpca_compute_spline_coefficients_variance_estimation <- function(
     Y.vector,
     Y.mask,
     scores,
     spline.basis,
-    quantile.value)
+    quantile.value,
+    method)
 {
   n.obs <- base::nrow(scores)
   npc <- base::ncol(scores)
@@ -101,10 +103,13 @@ fosqrfqpca_compute_spline_coefficients_variance_estimation <- function(
     tensor.matrix[row.idx:(row.idx + n.time.i - 1), ] <- base::cbind(tmp.intercept.splines, base::kronecker(scores.i, tmp.splines))
     row.idx <- row.idx+n.time.i
   }
-  model <- quantreg::rq(Y.vector~tensor.matrix, tau=quantile.value, method='fn')
-  B.vector <- model$coefficients
+  if(method == 'conquer'){
+    B.vector <- conquer::conquer(Y=Y.vector, X=tensor.matrix, tau=quantile.value)$coeff
+  }else if(method == 'quantreg'){
+    B.vector <- quantreg::rq(Y.vector~tensor.matrix, tau=quantile.value, method='fn')$coefficients
+  }
   spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=(npc+1))
-  results <- list(spline.coefficients=spline.coefficients, model=model)
+  results <- list(spline.coefficients=spline.coefficients, B.vector=B.vector, tensor.matrix=tensor.matrix)
   return(results)
 }
 
@@ -775,20 +780,26 @@ compute_variance_fosqr <- function(object, Y, pve=0.95, n.bootstrap=1000)
     Y.mask = Y.mask,
     scores = cbind(object$regressors, object$fqpca.scores[, seq_len(n.components), drop = FALSE]),
     spline.basis = object$spline.basis,
-    quantile.value = object$inputs$quantile.value), silent = FALSE)
+    quantile.value = object$inputs$quantile.value,
+    method = object$inputs$splines.method), silent = FALSE)
 
   spline.coefficients <- spline.coefficients.results$spline.coefficients
-  model <- spline.coefficients.results$model
+  B.vector <- spline.coefficients.results$B.vector
+  tensor.matrix <- spline.coefficients.results$tensor.matrix
 
   fqpca.spline.coef <- spline.coefficients[, (n.regressors+2):ncol(spline.coefficients), drop=FALSE]
   fqpca.loadings <- (object$spline.basis %*% fqpca.spline.coef)[, seq_len(n.components), drop = FALSE]
 
+  cov.model <- get_kernel_cov(
+    x = cbind(1, tensor.matrix),
+    y = Y.vector,
+    coefficients = B.vector,
+    tau = object$inputs$quantile.value)
 
   var.analytical <- compute_var_sandwich(
+    cov.model=cov.model,
     n.regressors=n.regressors,
-    model=model,
-    spline.basis=object$spline.basis,
-    se.method='ker')
+    spline.basis=object$spline.basis)
 
   var.correction <- compute_var_correction(
     n.bootstrap = n.bootstrap,
@@ -799,27 +810,119 @@ compute_variance_fosqr <- function(object, Y, pve=0.95, n.bootstrap=1000)
   return(results)
 }
 
+#' @title Bandwidth selection for sparsity estimation
+#' @description Replicates the bandwidth selection logic used by \code{quantreg::summary.rq(se = 'ker')}, supporting the Hall-Sheather (1988) and Bofinger (1975) rates.
+#' @param p The quantile probability (scalar, e.g., 0.5 for the median).
+#' @param n Sample size.
+#' @param hs Logical, whether to use Hall-Sheather bandwidth selection (default TRUE); otherwise the Bofinger rate is used.
+#' @param alpha Confidence level parameter used by the Hall-Sheather rate.
+#' @return The selected bandwidth (scalar).
+bandwidth.rq <- function(p, n, hs = TRUE, alpha = 0.05)
+{
+  x0 <- stats::qnorm(p)
+  f0 <- stats::dnorm(x0)
+  if (hs) {
+    n^(-1 / 3) * stats::qnorm(1 - alpha / 2)^(2 / 3) *
+      ((1.5 * f0^2) / (2 * x0^2 + 1))^(1 / 3)
+  } else {
+    n^-0.2 * ((4.5 * f0^4) / (2 * x0^2 + 1)^2)^0.2
+  }
+}
+
+#' @title Compute covariance matrix of quantile regression coefficients using kernel estimation
+#' @description Replicates the logic of \code{summary.rq(..., se = 'ker')$cov} from a design matrix, response, coefficient vector, and quantile probability, without requiring a \code{quantreg::rq} model object. This lets the sandwich covariance be computed identically regardless of whether the coefficients were estimated with \code{quantreg::rq} or \code{conquer::conquer}.
+#' @param x The design matrix (n x p). Should include an intercept column if the fit included one.
+#' @param y The response vector (n).
+#' @param coefficients The vector of estimated regression coefficients (p).
+#' @param tau The quantile probability (scalar, e.g., 0.5 for the median).
+#' @param hs Logical, whether to use Hall-Sheather bandwidth selection (default TRUE).
+#' @return A p x p covariance matrix of the coefficients.
+get_kernel_cov <- function(x, y, coefficients, tau = 0.5, hs = TRUE)
+{
+  x <- as.matrix(x)
+  y <- as.vector(y)
+  p <- ncol(x)
+  n <- length(y)
+
+  if (length(coefficients) != p) {
+    stop("Length of coefficients does not match number of columns in x.")
+  }
+  if (nrow(x) != n) {
+    stop("Number of rows in x does not match length of y.")
+  }
+
+  # Calculate residuals
+  uhat <- c(y - x %*% coefficients)
+
+  # Initial bandwidth calculation
+  h <- bandwidth.rq(tau, n, hs = hs)
+
+  # Adjust bandwidth if it extends beyond [0, 1]
+  while ((tau - h < 0) || (tau + h > 1)) {
+    h <- h / 2
+  }
+
+  # Re-scale bandwidth based on residual distribution
+  # This matches the implementation in summary.rq for se='ker'
+  scale_factor <- min(sqrt(stats::var(uhat)), (stats::quantile(uhat, .75) - stats::quantile(uhat, .25)) / 1.34)
+  h_scaled <- (stats::qnorm(tau + h) - stats::qnorm(tau - h)) * scale_factor
+
+  # Compute kernel weights using Gaussian kernel
+  f <- stats::dnorm(uhat / h_scaled) / h_scaled
+  f <- pmax(f, 1e-8)
+
+  # Compute sandwich components
+  # The original implementation uses QR decomposition of weighted X for stability
+  qq <- qr(sqrt(f) * x)
+  fxxinv <- backsolve(qq$qr[1:p, 1:p, drop = FALSE], diag(p))
+  fxxinv <- fxxinv %*% t(fxxinv)
+  inv_piv <- order(qq$pivot)
+  fxxinv <- fxxinv[inv_piv, inv_piv]
+
+  # Compute final covariance matrix
+  # cov = tau(1-tau) * fxxinv * (X'X) * fxxinv
+  cov_matrix <- tau * (1 - tau) * fxxinv %*% crossprod(x) %*% fxxinv
+  cov_matrix <- (cov_matrix + t(cov_matrix)) / 2
+
+  return(cov_matrix)
+}
+
 #' @title Compute sandwich estimator variance associated to fosqr loadings
 #' @description Given a fosqr-fqpca splines coefficients model, estimates variances associated to fosqr loadings.
+#' @param cov.model Covariance matrix of the spline coefficients, as computed by \code{get_kernel_cov}.
 #' @param n.regressors number of covariates
-#' @param model fosqr-fqpca splines quantile regression model
 #' @param spline.basis spline basis matrix
-#' @param se.method standard error method used by quantreg to obtain the sandwich estimator
 #' @return A matrix of variances associated to the fosqr loadings
 compute_var_sandwich <- function(
+    cov.model,
     n.regressors,
-    model,
-    spline.basis,
-    se.method='ker')
+    spline.basis)
 {
-  splines.df <- ncol(spline.basis)
-  cov.model <- summary(model, covariance = TRUE, se = se.method)$cov
-  var.matrix <- sapply(1:(n.regressors+1), function(idx) {
-    indices <- ((idx - 1) * splines.df + 1):(idx * splines.df)
-    cov.block <- cov.model[indices, indices, drop = FALSE]
-    var.loading <- spline.basis %*% cov.block %*% t(spline.basis)
-    diag(var.loading)
-  })
+  # Dimensions from the basis
+  n.time  <- nrow(spline.basis)
+  n.basis <- ncol(spline.basis)
+
+  # Basis used by the intercept block (scalar intercept + non-constant spline cols)
+  B_int <- cbind(1, spline.basis[, -1, drop = FALSE])   # n.time x n.basis
+
+  # Block starts for the covariance (each block has size n.basis)
+  block_starts <- seq.int(1L, by = n.basis, length.out = (n.regressors + 1L))
+
+  # Allocate output: columns = [intercept, slopes...]
+  var.matrix <- matrix(NA_real_, nrow = n.time, ncol = (n.regressors + 1L))
+
+  # Intercept block variance
+  idx <- block_starts[1]:(block_starts[1] + n.basis - 1L)
+  cov.block <- cov.model[idx, idx, drop = FALSE]
+  var.matrix[, 1] <- rowSums((B_int %*% cov.block) * B_int)
+
+  # Slope blocks variance
+  for (k in seq_len(n.regressors)) {
+    idxk <- block_starts[k + 1L]:(block_starts[k + 1L] + n.basis - 1L)
+    cov.block.k <- cov.model[idxk, idxk, drop = FALSE]
+    var.matrix[, k + 1L] <- rowSums((spline.basis %*% cov.block.k) * spline.basis)
+  }
+  var.matrix <- pmax(var.matrix, 0)
   return(var.matrix)
 }
 
