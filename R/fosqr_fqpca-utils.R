@@ -14,7 +14,7 @@
 #' @param criteria Criteria used to divide the data. Valid values are \code{'rows'}, which considers the division based on full rows, or \code{'points'}, which considers the division based on points within the matrix.
 #' @param tol Tolerance on the convergence of the algorithm.
 #' @param max.iters Maximum number of iterations.
-#' @param verbose.fosqr_fqpca Boolean indicating verbosity of the fqpca function.
+#' @param verbose.fosqr_fqpca Boolean indicating verbosity of the fosqr-fqpca function.
 #' @param verbose.cv Boolean indicating verbosity of the cross-validation process.
 #' @param seed Seed for the random generator number.
 #' @return A list containing the matrices of scores, the matrices of loadings, and a secondary list with extra information.
@@ -69,9 +69,16 @@ fosqr_fqpca_cv_df <- function(
   if(!all(splines.df.grid == floor(splines.df.grid))){stop('splines.df.grid must be a positive integer array.')}
 
   # Check the input parameters except Y
-  check_fosqr_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
-                           splines.df=max(npc, splines.df.grid), splines.method=splines.method,
-                           tol=tol, max.iters=max.iters,verbose=verbose.cv, seed=seed)
+  check_fosqr_fqpca_params(
+    npc=npc,
+    quantile.value=quantile.value,
+    periodic=periodic,
+    splines.df=max(npc, splines.df.grid),
+    splines.method=splines.method,
+    tol=tol,
+    max.iters=max.iters,
+    verbose=TRUE,
+    seed=seed)
 
   # Check Y and regressors
   Y <- check_Y(Y)
@@ -104,8 +111,8 @@ fosqr_fqpca_cv_df <- function(
       Y.test <- Y.folds$Y.test.list[[j]]
       if(criteria == 'rows')
       {
-        regressors.train <- regressors[Y.folds$train.idx.list[[j]], ]
-        regressors.test <- regressors[-Y.folds$train.idx.list[[j]], ]
+        regressors.train <- regressors[Y.folds$train.idx.list[[j]], , drop = FALSE]
+        regressors.test <- regressors[-Y.folds$train.idx.list[[j]], , drop = FALSE]
       }else{
         regressors.train <- regressors
         regressors.test <- regressors

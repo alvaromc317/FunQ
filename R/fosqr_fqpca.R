@@ -63,10 +63,25 @@ fosqrfqpca_compute_spline_coefficients <- function(
     row.idx <- row.idx+n.time.i
   }
   if(method == 'conquer'){
-    B.vector <- conquer::conquer(Y=Y.vector, X=tensor.matrix, tau=quantile.value)$coeff
+    model <- conquer::conquer(Y=Y.vector, X=tensor.matrix, tau=quantile.value)
   }else if(method == 'quantreg'){
-    B.vector <- quantreg::rq(Y.vector~tensor.matrix, tau=quantile.value, method='fn')$coefficients
+    model <- quantreg::rq(Y.vector~tensor.matrix, tau=quantile.value, method='fn')
   }
+  return(list(model=model, tensor.matrix=tensor.matrix))
+}
+
+#' @title Build spline coefficients matrix
+#' @description Inner function to build the spline coefficients matrix from the model returned by \code{fosqrfqpca_compute_spline_coefficients}.
+#' @param model The model returned by \code{fosqrfqpca_compute_spline_coefficients} (either a \code{conquer::conquer} or \code{quantreg::rq} model object).
+#' @param npc number of pcs
+#' @return The matrix of spline coefficients
+fosqrfqpca_build_splines_coefficients_matrix <- function(
+    model,
+    npc)
+{
+  if(!is.null(model$coeff)){B.vector <- model$coeff}
+  if(!is.null(model$coefficients)){B.vector <- model$coefficients}
+  if(length(B.vector) %% (npc+1) != 0) stop("Coefficient length mismatch.")
   spline.coefficients <- base::matrix(B.vector, byrow=FALSE, ncol=(npc+1))
   return(spline.coefficients)
 }
@@ -203,7 +218,7 @@ check_regressors <- function(regressors)
 
   # Stop if any column is constant
   if (zero_var_count >= 1) {
-    stop("There are constant regressor columns.")
+    stop("regressors cannot contain constant columns.")
   }
   names.regressors <- colnames(regressors)
   regressors <- base::unname(regressors)
@@ -352,8 +367,6 @@ fosqr_fqpca <- function(
   # Get the input parameters
   formal_names <- base::setdiff(names(formals(sys.function())), "...")
   inputs <- base::mget(formal_names, envir = environment())
-  inputs$Y = NULL
-  inputs$regressors = NULL
 
   # Check the input parameters except Y and colname
   check_fosqr_fqpca_params(npc=npc, quantile.value=quantile.value, periodic=periodic,
@@ -388,8 +401,9 @@ fosqr_fqpca <- function(
   loop.start.time <- base::Sys.time()
 
   # fosqr LEVEL
-  fosqr.spline.coef <- try(fosqrfqpca_compute_spline_coefficients(Y.vector = Y.vector, Y.mask = Y.mask, scores = regressors, spline.basis = spline.basis, quantile.value = quantile.value, method=splines.method), silent = FALSE)
-  if(!is.matrix(fosqr.spline.coef)){stop('Iteration 1. Failed computation of spline coefficients.')}
+  spline.coef.result <- try(fosqrfqpca_compute_spline_coefficients(Y.vector = Y.vector, Y.mask = Y.mask, scores = regressors, spline.basis = spline.basis, quantile.value = quantile.value, method=splines.method), silent = FALSE)
+  if(inherits(spline.coef.result, "try-error")){stop('Iteration 1. Failed computation of spline coefficients.')}
+  fosqr.spline.coef <- fosqrfqpca_build_splines_coefficients_matrix(model = spline.coef.result$model, npc = n.regressors)
   fosqr.loadings.list <- fosqrfqpca_compute_loadings_fosqr(spline.basis = spline.basis, spline.coefficients = fosqr.spline.coef)
   fosqr.intercept <- fosqr.loadings.list$intercept
   fosqr.loadings <- fosqr.loadings.list$loadings
@@ -433,13 +447,14 @@ fosqr_fqpca <- function(
     loop.start.time <- base::Sys.time()
 
     # Obtain splines coefficients
-    spline.coefficients <- try(fosqrfqpca_compute_spline_coefficients(Y.vector = Y.vector, Y.mask = Y.mask, scores = cbind(regressors, fqpca.scores),  spline.basis = spline.basis, quantile.value = quantile.value, method=splines.method), silent = FALSE)
-    if(inherits(spline.coefficients, "try-error"))
+    spline.coef.result <- try(fosqrfqpca_compute_spline_coefficients(Y.vector = Y.vector, Y.mask = Y.mask, scores = cbind(regressors, fqpca.scores),  spline.basis = spline.basis, quantile.value = quantile.value, method=splines.method), silent = FALSE)
+    if(inherits(spline.coef.result, "try-error"))
     {
       warning('Iteration ', i, '. Failed computation of spline coefficients. Providing results from previous iteration.')
       function.warnings$splines <- TRUE
       break
     }
+    spline.coefficients <- fosqrfqpca_build_splines_coefficients_matrix(model = spline.coef.result$model, npc = n.regressors + npc)
     fqpca.spline.coef <- spline.coefficients[, (n.regressors+2):ncol(spline.coefficients), drop=FALSE]
     fosqr.spline.coef <- spline.coefficients[, 1:(n.regressors+1), drop=FALSE]
 
@@ -575,6 +590,11 @@ predict.fosqr_fqpca_object <- function(object, newdata, newregressors, ...)
   regressors_checked <- check_regressors(newregressors)
   regressors <- regressors_checked$regressors
   Y.fosqr.hat <- sweep(regressors %*% t(object$fosqr.loadings), MARGIN = 2, STATS = object$fosqr.intercept, FUN = "+")
+
+  n.time.model <- nrow(object$fqpca.loadings)
+  if(ncol(Y) != n.time.model) {
+    stop("Number of time points in newdata (", ncol(Y),") does not match the model dimension (", n.time.model, ").")
+  }
 
   Y.mask <- !base::is.na(Y)
   n.obs <- base::nrow(Y)
@@ -732,14 +752,24 @@ plot.fosqr_fqpca_object <- function(x, pve = 0.95, ...)
 
 # INFERENCE SECTION -----------------------------------------------------------
 
+#' @title Compute variance
+#' @description Generic function to compute variance.
+#' @param object An object for which to compute variance.
+#' @param ... further arguments passed to or from other methods.
+#' @export
+compute_variance <- function(object, ...) {
+  UseMethod("compute_variance")
+}
+
 #' @title Compute variance associated to fosqr loadings
 #' @description S3 method for class 'fosqr_fqpca_object'. Given a fosqr_fqpca_object model, estimates variances associated to fosqr loadings.
 #' @param object An object output of the fosqr_fqpca function.
-#' @param Y An \eqn{(N \times T)} matrix or a tf object from the tidyfun package.
 #' @param pve If smaller than 1, taken as percentage of explained variability used in Yhat estimation. If greater than 1, taken as number of components  used in Yhat estimation.
 #' @param n.bootstrap An integer number used in the bootstrapping part of the variance estimation.
+#' @param ... further arguments passed to or from other methods.
 #' @return A list containing the two parts of the variance computation and the final variances.
 #' @export
+#' @method compute_variance fosqr_fqpca_object
 #' @examples
 #' n.obs = 150
 #' n.time = 144
@@ -761,11 +791,11 @@ plot.fosqr_fqpca_object <- function(x, pve = 0.95, ...)
 #' Y[sample(n.obs*n.time, as.integer(0.2*n.obs*n.time))] <- NA
 #'
 #' results <- fosqr_fqpca(Y = Y, regressors=regressors, npc = 1, quantile.value = 0.5, seed=1)
-#' variances <- compute_variance_fosqr(object=results, Y=Y, pve=0.95)
-compute_variance_fosqr <- function(object, Y, pve=0.95, n.bootstrap=1000)
+#' variances <- compute_variance(object=results, pve=0.95)
+compute_variance.fosqr_fqpca_object <- function(object, pve=0.95, n.bootstrap=1000, ...)
 {
   if (!base::inherits(object, "fosqr_fqpca_object")){stop('The object must be of class fosqr_fqpca_object')}
-  Y <- check_Y(Y)
+  Y <- check_Y(object$inputs$Y)
   if(nrow(Y) != nrow(object$regressors)){stop('nrow(Y) does not match nrow(regressors).')}
   if(ncol(Y) != nrow(object$fosqr.loadings)){stop('ncol(Y) does not match nrow(fosqr.loadings)')}
 
@@ -787,9 +817,6 @@ compute_variance_fosqr <- function(object, Y, pve=0.95, n.bootstrap=1000)
   B.vector <- spline.coefficients.results$B.vector
   tensor.matrix <- spline.coefficients.results$tensor.matrix
 
-  fqpca.spline.coef <- spline.coefficients[, (n.regressors+2):ncol(spline.coefficients), drop=FALSE]
-  fqpca.loadings <- (object$spline.basis %*% fqpca.spline.coef)[, seq_len(n.components), drop = FALSE]
-
   cov.model <- get_kernel_cov(
     x = cbind(1, tensor.matrix),
     y = Y.vector,
@@ -801,11 +828,17 @@ compute_variance_fosqr <- function(object, Y, pve=0.95, n.bootstrap=1000)
     n.regressors=n.regressors,
     spline.basis=object$spline.basis)
 
-  var.correction <- compute_var_correction(
-    n.bootstrap = n.bootstrap,
-    fqpca.scores = object$fqpca.scores[, seq_len(n.components), drop = FALSE],
-    regressors = object$regressors,
-    fqpca.loadings = fqpca.loadings)
+  if (n.components == 0) {
+    var.correction <- matrix(0, nrow = nrow(object$fosqr.loadings), ncol = n.regressors + 1)
+  } else {
+    fqpca.spline.coef <- spline.coefficients[, (n.regressors+2):ncol(spline.coefficients), drop=FALSE]
+    fqpca.loadings <- (object$spline.basis %*% fqpca.spline.coef)[, seq_len(n.components), drop = FALSE]
+    var.correction <- compute_var_correction(
+      n.bootstrap = n.bootstrap,
+      fqpca.scores = object$fqpca.scores[, seq_len(n.components), drop = FALSE],
+      regressors = object$regressors,
+      fqpca.loadings = fqpca.loadings)
+  }
   results <- list(variance = var.analytical+var.correction, var.analytical=var.analytical, var.correction=var.correction)
   return(results)
 }

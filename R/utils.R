@@ -103,6 +103,103 @@ compute_objective_value <- function(Y, quantile.value, scores, intercept, loadin
   return(objective.value)
 }
 
+#' @title Build Tensor Design Matrix
+#' @description Inner function to construct the tensor product design matrix required for functional data modeling. It efficiently scales the B-spline basis evaluations by the subject-specific functional principal component scores across all observed time points.
+#' @param scores A matrix of functional Principal Component Analysis (fPCA) scores for each subject.
+#' @param Y.mask A logical mask matrix of dimensions (N x T) indicating which time points are observed (`TRUE`) or missing (`FALSE`) for each subject.
+#' @param spline.basis The evaluation matrix of the B-spline basis functions at the time points.
+#' @param intercept.spline.basis The evaluation matrix of the intercept B-spline basis functions.
+#' @return A matrix containing the stacked tensor products of the intercept bases and the scaled spline bases for all valid observations.
+build_tensor_matrix <- function(scores, Y.mask, spline.basis, intercept.spline.basis)
+{
+  # Define dimensions
+  n.obs <- nrow(scores)
+  npc <- ncol(scores)
+  n.basis <- ncol(spline.basis)
+  n.int <- ncol(intercept.spline.basis)
+
+  # Identify the specific time-point indices where each subject has valid observations
+  idx_list <- lapply(seq_len(n.obs), function(i) which(Y.mask[i, ]))
+  n_i <- lengths(idx_list)
+  n_rows <- sum(n_i)
+
+  # Pre-allocate tensor matrix
+  out <- matrix(0, nrow = n_rows, ncol = n.int + npc * n.basis)
+
+  # Pre-calculate the exact column blocks for each score component
+  int_cols <- seq_len(n.int)
+  col_idx  <- lapply(
+    seq_len(npc),
+    function(c) n.int + (c - 1L) * n.basis + seq_len(n.basis))
+
+  pos <- 1L
+  for (i in seq_len(n.obs))
+  {
+    # Retrieve the valid time indices and the observation count for the current subject
+    idx <- idx_list[[i]]
+    ni  <- n_i[i]
+    if (ni == 0L) next
+
+    # Determine the exact row range in the pre-allocated matrix where this subject's data belongs
+    rows <- seq.int(pos, length.out = ni)
+
+    # Subset the standard spline basis for the specific time points where this subject was observed
+    spl <- spline.basis[idx, , drop = FALSE]
+    out[rows, int_cols] <- intercept.spline.basis[idx, , drop = FALSE]
+
+    # Scale the subject's splines by their scores and slot them into the correct pre-calculated column blocks
+    sc <- scores[i, ]
+    for (c in seq_len(npc))
+    {
+      out[rows, col_idx[[c]]] <- spl * sc[c]
+    }
+
+    pos <- pos + ni
+  }
+  return(out)
+}
+
+#' @title Build Tensor Design Matrix
+#' @description Inner function to construct the tensor product design matrix required for functional data modeling. It efficiently scales the B-spline basis evaluations by the subject-specific functional principal component scores across all observed time points.
+#' @param scores A matrix of functional Principal Component Analysis (fPCA) scores for each subject.
+#' @param Y.mask A logical mask matrix of dimensions (N x T) indicating which time points are observed (`TRUE`) or missing (`FALSE`) for each subject.
+#' @param spline.basis The evaluation matrix of the B-spline basis functions at the time points.
+#' @return A matrix containing the stacked tensor products of the spline bases for all valid observations.
+build_tensor_matrix_no_intercept <- function(scores, Y.mask, spline.basis)
+{
+  n.obs   <- nrow(scores)
+  npc     <- ncol(scores)
+  n.basis <- ncol(spline.basis)
+
+  # First pass: count output rows
+  n_rows <- 0L
+  for (i in seq_len(n.obs)) {
+    n_rows <- n_rows + sum(Y.mask[i, ])
+  }
+
+  # Final output only: no large temporary expanded matrices
+  out <- matrix(0, nrow = n_rows, ncol = npc * n.basis)
+
+  pos <- 1L
+  for (i in seq_len(n.obs)) {
+    idx <- which(Y.mask[i, ])
+    ni  <- length(idx)
+    if (ni == 0L) next
+
+    rows <- seq.int(pos, length.out = ni)
+    spl  <- spline.basis[idx, , drop = FALSE]
+
+    for (c in seq_len(npc)) {
+      j0 <- (c - 1L) * n.basis + 1L
+      out[rows, j0:(j0 + n.basis - 1L)] <- spl * scores[i, c]
+    }
+
+    pos <- pos + ni
+  }
+
+  out
+}
+
 # TRAIN TEST SPLIT ------------------------------------------------------------
 
 #' @title Split rows of a given matrix Y into train / test
