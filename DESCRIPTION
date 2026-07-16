@@ -9,6 +9,8 @@ Description: A set of methodologies designed to work with functional data from a
   of functional quantile principal component analysis (FQPCA). 
   There is work in progress to include functions regarding functional regression.
 License: GPL (>= 3) + file LICENSE
+URL: https://alvaromc317.github.io/FunQ/, https://github.com/alvaromc317/FunQ
+BugReports: https://github.com/alvaromc317/FunQ/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:

@@ -46,3 +46,39 @@ reference:
       - train_test_split
       - quantile_error
       - proportion_under_quantile
+  - title: Internal Utilities
+    desc: Internal helper functions not exported by the package
+    contents:
+      - build_tensor_matrix
+      - build_tensor_matrix_sparse
+      - check_flag
+      - check_fqpca_params
+      - check_iters
+      - check_loss
+      - check_nonnegative_number
+      - check_positive_float
+      - check_positive_integer
+      - check_quantile_value
+      - check_regressors
+      - check_seed
+      - check_splines_method
+      - coerce_functional_input
+      - compute_loadings
+      - compute_objective_value
+      - compute_scores
+      - compute_var_correction
+      - compute_var_sandwich
+      - cv_framework
+      - explained_variance_ratio
+      - extract_coefficients
+      - fit_tensor_quantile_regression
+      - get_kernel_cov
+      - kfold_cv_points
+      - kfold_cv_rows
+      - mfqpca_check_params
+      - mfqpca_compute_scores_between
+      - reconstruct_scores_loadings
+      - rotate_factors
+      - select_npc
+      - train_test_split_points
+      - train_test_split_rows
