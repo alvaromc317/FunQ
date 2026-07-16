@@ -44,3 +44,6 @@ inst/doc
 coverage.html
 missing_cov.csv
 lib
+
+# pkgdown site build output (deployed to gh-pages, not tracked on source branches)
+/docs
