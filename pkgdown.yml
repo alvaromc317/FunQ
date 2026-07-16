@@ -1,0 +1,10 @@
+pandoc: 3.8.3
+pkgdown: 2.2.1
+pkgdown_sha: ~
+articles:
+  fqpca: fqpca.html
+  mfqpca: mfqpca.html
+last_built: 2026-07-16T19:48Z
+urls:
+  reference: https://alvaromc317.github.io/FunQ/reference
+  article: https://alvaromc317.github.io/FunQ/articles
