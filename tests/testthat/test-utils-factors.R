@@ -1,0 +1,11 @@
+test_that('rotate_factors function works', {
+  set.seed(5)
+  scores = matrix(rnorm(15), nrow=5)
+  intercept = rnorm(6)
+  loadings = matrix(rnorm(18), nrow=6)
+  results = rotate_factors(scores, loadings, intercept)
+  expected_result = readRDS(test_path("fixtures", "rotation_result.rds"))
+  expect_equal(round(results$loadings, 4), round(expected_result$loadings, 4))
+  expect_equal(round(results$scores, 4), round(expected_result$scores, 4))
+  expect_equal(round(results$rotation.matrix, 4), round(expected_result$rotation.matrix, 4))
+})

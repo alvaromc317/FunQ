@@ -78,8 +78,27 @@ test_that('FOSQR S3 Variance', {
   expect_type(variances, "list")
   expect_true("variance" %in% names(variances))
   expect_true("var.analytical" %in% names(variances))
-  
+
   expect_equal(dim(variances$variance), c(ncol(Y), ncol(regressors) + 1))
+})
+
+test_that('FOSQR S3 Variance matches numeric reference', {
+  data <- test_data_fosqr_fqpca(seed = 4)
+  Y <- data$Y
+  regressors <- data$regressors
+
+  fit <- fosqr(Y = Y[1:20,], regressors=regressors[1:20,,drop=FALSE], splines.df=5, quantile.value = 0.5, seed=1)
+  variances <- compute_variance(fit)
+  expected_result <- readRDS(test_path("fixtures", "fosqr_variance_05.rds"))
+  expect_equal(round(variances$variance, 4), round(expected_result$variance, 4))
+  expect_equal(round(variances$var.analytical, 4), round(expected_result$var.analytical, 4))
+})
+
+test_that('FOSQR S3 methods reject objects of the wrong class', {
+  expect_error(predict.fosqr_object("not_an_object", newregressors=matrix(1, nrow=1, ncol=1)), "must be of class fosqr_object")
+  expect_error(fitted.fosqr_object("not_an_object"), "must be of class fosqr_object")
+  expect_error(compute_variance.fosqr_object("not_an_object"), "must be of class fosqr_object")
+  expect_error(plot.fosqr_object("not_an_object"), "must be of class fosqr_object")
 })
 
 test_that('FOSQR S3 Plot', {

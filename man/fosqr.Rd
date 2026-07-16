@@ -10,7 +10,7 @@ fosqr(
   quantile.value = 0.5,
   periodic = TRUE,
   splines.df = 10,
-  splines.method = "quantreg",
+  splines.method = "conquer",
   verbose = FALSE,
   seed = NULL
 )

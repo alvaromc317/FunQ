@@ -1,0 +1,189 @@
+# TRAIN TEST SPLIT TESTS ------------------------------------------------------
+
+test_that("train_test_split based on rows function; train portion works", {
+  set.seed(5)
+  x = matrix(rnorm(50), nrow=10)
+  train_test_rows = train_test_split(x, criteria='rows', train.pct=0.5, seed=1)
+  Y.train = train_test_rows$Y.train
+  expected_output_train = matrix(c(-0.84085548,1.2276303,0.9005119,0.315915,1.5500604, 1.38435934,-0.8017795,0.9418694,1.109694,-0.8024232, 0.07014277,-0.1575344,0.7067611,1.217104,1.8956680, -0.47216639,-0.5973131,1.4185891,-1.009533,-0.8870085, -0.28577363,0.2408173,-0.6570821,-1.762186,-0.7243285), nrow=5, byrow=T)
+  expect_equal(round(Y.train, 4), round(expected_output_train, 4))
+})
+
+test_that("train_test_split based on rows function; test portion works", {
+  set.seed(5)
+  x = matrix(rnorm(50), nrow=10)
+  train_test_rows = train_test_split(x, criteria='rows', train.pct=0.5, seed=1)
+  Y.test = train_test_rows$Y.test
+  expected_output_test = matrix(c(-1.2554919,-1.0803926,1.4679619,2.2154606,-0.07457892, 1.7114409,-1.0717600,0.8190089,1.4792218,-0.45656894, -0.6029080,-0.1389861,-0.2934818,0.9515738,0.56222336, -0.6353713,-2.1839668,1.4987738,-2.0004727,-0.46024458, 0.1381082,-0.2593554,-0.8527954,-0.1426081,-0.06921116), nrow=5, byrow=T)
+  expect_equal(round(Y.test, 4), round(expected_output_test, 4))
+})
+
+test_that("train_test_split based on points function; train portion works", {
+  set.seed(5)
+  x = matrix(1:50, nrow=10)
+  train_test_rows = train_test_split(x, criteria='points', train.pct=0.5, seed=1)
+  Y.train = train_test_rows$Y.train
+  expected_output_train = matrix(
+    c(1, 2, NA, 4, 5, NA, 7, 8, 9, 10, NA, 12, 13, NA, 15, 16, NA, NA, NA, NA, 21, NA, 23, 24, NA, 26, 27, NA, NA, NA, 31, NA, 33, NA, NA, NA, NA, NA, NA, NA, NA, 42, NA, 44, 45, NA, NA, 48, 49, 50),
+    nrow=10)
+  expect_equal(round(Y.train, 4), round(expected_output_train, 4))
+})
+
+test_that("train_test_split based on points function; test portion works", {
+  set.seed(5)
+  x = matrix(1:50, nrow=10)
+  train_test_rows = train_test_split(x, criteria='points', train.pct=0.5, seed=1)
+  Y.test = train_test_rows$Y.test
+  expected_output_test = matrix(
+    c(NA, NA, 3, NA, NA, 6, NA, NA, NA, NA, 11, NA, NA, 14, NA, NA, 17, 18, 19, 20, NA, 22,  NA, NA, 25, NA, NA, 28, 29, 30, NA, 32, NA, 34, 35, 36, 37, 38, 39, 40, 41, NA, 43, NA,  NA, 46, 47, NA, NA, NA),
+    nrow=10)
+  expect_equal(round(Y.test, 4), round(expected_output_test, 4))
+})
+
+test_that("train_test_split rows: respects train proportion, returns disjoint and complete partition, reproducible with seed", {
+  set.seed(NULL)
+  Y <- matrix(rnorm(50 * 10), nrow = 50, ncol = 10)
+  # Add a couple all-NA rows to exercise stratification
+  Y[c(5, 25), ] <- NA_real_
+
+  split1 <- train_test_split(Y, criteria = "rows", train.pct = 0.6, seed = 123)
+  split2 <- train_test_split(Y, criteria = "rows", train.pct = 0.6, seed = 123)
+
+  expect_equal(split1$train.idx, split2$train.idx)
+
+  # Sizes
+  expect_equal(nrow(split1$Y.train) + nrow(split1$Y.test), nrow(Y))
+  expect_equal(nrow(split1$Y.train), as.integer(round(0.6 * nrow(Y))))
+
+  # Disjointness
+  train_rows <- split1$train.idx
+  test_rows <- setdiff(seq_len(nrow(Y)), train_rows)
+  expect_length(intersect(train_rows, test_rows), 0L)
+  expect_setequal(c(train_rows, test_rows), seq_len(nrow(Y)))
+})
+
+test_that("train_test_split points: preserves matrix shape and approximate proportion of non-NAs in train", {
+  Y <- matrix(rnorm(30 * 20), nrow = 30, ncol = 20)
+  sp <- train_test_split(Y, criteria = "points", train.pct = 0.3, seed = 999)
+
+  expect_equal(dim(sp$Y.train), dim(Y))
+  expect_equal(dim(sp$Y.test), dim(Y))
+
+  # Each element goes either to train or test (not both)
+  mask_train <- !is.na(sp$Y.train)
+  mask_test  <- !is.na(sp$Y.test)
+  expect_true(all(!(mask_train & mask_test)))
+  expect_equal(sum(mask_train) + sum(mask_test), length(Y))
+
+  # Total allocated to train is close to target
+  expect_equal(sum(mask_train), as.integer(round(0.3 * length(Y))))
+})
+
+test_that("train_test_split rows: train.size selects an exact number of rows", {
+  Y <- matrix(rnorm(20 * 5), nrow = 20, ncol = 5)
+  sp <- train_test_split(Y, criteria = "rows", train.size = 8, seed = 42)
+
+  expect_equal(nrow(sp$Y.train), 8L)
+  expect_equal(nrow(sp$Y.train) + nrow(sp$Y.test), nrow(Y))
+  expect_length(intersect(sp$train.idx, setdiff(seq_len(nrow(Y)), sp$train.idx)), 0L)
+})
+
+test_that("train_test_split points: train.size selects an exact number of points", {
+  Y <- matrix(rnorm(10 * 10), nrow = 10, ncol = 10)
+  sp <- train_test_split(Y, criteria = "points", train.size = 30, seed = 42)
+
+  expect_equal(dim(sp$Y.train), dim(Y))
+  expect_equal(sum(!is.na(sp$Y.train)), 30L)
+})
+
+test_that("train_test_split and create_folds error directly on an invalid criteria", {
+  Y <- matrix(rnorm(20), nrow = 5)
+  expect_error(train_test_split(Y, criteria = "invalid", train.pct = 0.5), "Invalid criteria")
+  expect_error(create_folds(Y, criteria = "invalid", folds = 2), "Invalid criteria")
+})
+
+# KFOLDS TESTS ----------------------------------------------------------------
+
+test_that("create_folds based on rows function; train portion works", {
+  set.seed(5)
+  x = matrix(1:50, nrow=10)
+  kfolds = create_folds(x, criteria='rows',folds=3, seed=1)
+  true_partial_output = list(train1=round(kfolds$Y.train.list[[1]], 4),
+                             test1=round(kfolds$Y.test.list[[1]], 4))
+  expected_partial_output = list(
+    train1 = matrix(c(2, 4, 5, 6, 7, 10, 12, 14, 15, 16, 17, 20, 22, 24, 25, 26, 27, 30, 32, 34, 35, 36, 37, 40, 42, 44, 45, 46, 47, 50), nrow=6),
+    test1 = matrix(c(1, 3, 8, 9, 11, 13, 18, 19, 21, 23, 28, 29, 31, 33, 38, 39, 41, 43, 48, 49), nrow=4)
+  )
+  expect_equal(expected_partial_output, true_partial_output)
+})
+
+test_that("create_folds based on points function; train portion works", {
+  set.seed(5)
+  x = matrix(1:50, nrow=10)
+  kfolds = create_folds(x, criteria='points',folds=3, seed=1)
+  true_partial_output = list(train1=round(kfolds$Y.train.list[[1]], 4),
+                             test1=round(kfolds$Y.test.list[[1]], 4))
+  expected_partial_output = list(
+    train1 = matrix(c(NA, 2, 3, 4, NA, NA, 7, NA, 9, 10, 11, NA, 13, NA, 15, 16, NA, NA, NA, 20, 21, 22,  NA, NA, 25, NA, 27, 28, 29, NA, 31, 32, NA, 34, NA, 36, NA, 38, NA, NA, NA, NA, 43, 44,  45, 46, 47, 48, 49, 50),
+                    nrow=10),
+    test1 = matrix(c(1, NA, NA, NA, 5, 6, NA, 8, NA, NA, NA, 12, NA, 14, NA, NA, 17, 18, 19, NA, NA, NA, 23, 24, NA, 26, NA, NA, NA, 30, NA, NA, 33, NA, 35, NA, 37, NA, 39, 40, 41, 42, NA, NA, NA, NA, NA, NA, NA, NA),
+                   nrow=10)
+  )
+  expect_equal(expected_partial_output, true_partial_output)
+})
+
+test_that("kfold_cv_rows: produces k folds of disjoint row partitions covering all rows", {
+  Y <- matrix(rnorm(40 * 12), nrow = 40, ncol = 12)
+  Y[c(3, 7), ] <- NA_real_  # include some all-NA rows
+  k <- 5
+  folds <- create_folds(Y, criteria = "rows", folds = k, seed = 1)
+
+  expect_true(is.list(folds$Y.train.list))
+  expect_true(is.list(folds$Y.test.list))
+  expect_length(folds$Y.train.list, k)
+  expect_length(folds$Y.test.list, k)
+
+  # For each fold, train and test rows form a partition
+  all_rows <- seq_len(nrow(Y))
+  covered <- logical(nrow(Y))
+  for (i in seq_len(k)) {
+    tr <- folds$Y.train.list[[i]]
+    te <- folds$Y.test.list[[i]]
+    expect_equal(ncol(tr), ncol(Y))
+    expect_equal(ncol(te), ncol(Y))
+    expect_equal(nrow(tr) + nrow(te), nrow(Y))
+
+    # Disjointness within fold
+    idx_tr <- folds$train.idx.list[[i]]
+    idx_te <- setdiff(all_rows, idx_tr)
+    expect_length(intersect(idx_tr, idx_te), 0L)
+    covered[idx_te] <- TRUE
+  }
+  # Across folds, every row serves as test at least once
+  expect_true(all(covered))
+})
+
+
+test_that("kfold_cv_points: each matrix element is assigned to exactly one test fold", {
+  Y <- matrix(rnorm(12 * 8), nrow = 12, ncol = 8)
+  k <- 4
+  folds <- create_folds(Y, criteria = "points", folds = k, seed = 7)
+
+  # Sum of test masks across folds equals 1 for every element
+  sum_test_masks <- matrix(0L, nrow = nrow(Y), ncol = ncol(Y))
+  for (i in seq_len(k)) {
+    te <- folds$Y.test.list[[i]]
+    expect_equal(dim(te), dim(Y))
+    sum_test_masks <- sum_test_masks + (!is.na(te))
+  }
+  expect_true(all(sum_test_masks == 1L))
+
+  # Sum of train masks across folds equals k-1 for every element
+  sum_train_masks <- matrix(0L, nrow = nrow(Y), ncol = ncol(Y))
+  for (i in seq_len(k)) {
+    tr <- folds$Y.train.list[[i]]
+    expect_equal(dim(tr), dim(Y))
+    sum_train_masks <- sum_train_masks + (!is.na(tr))
+  }
+  expect_true(all(sum_train_masks == (k - 1L)))
+})

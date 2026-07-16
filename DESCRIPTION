@@ -1,6 +1,6 @@
 Package: FunQ
 Title: Functional Quantile methodologies
-Version: 0.2.0
+Version: 1.0.0
 Authors@R: 
     person("Álvaro", "Méndez-Civieta", , "am5490@cumc.columbia.edu", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-2044-4170"))
@@ -11,9 +11,10 @@ Description: A set of methodologies designed to work with functional data from a
 License: GPL (>= 3) + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Imports:
     quantreg,
+    SparseM,
+    methods,
     conquer,
     conquer2,
     pbs,
@@ -24,6 +25,7 @@ Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0),
+    pkgdown
 Depends:
     R (>= 3.5.0)
 Remotes:
@@ -31,3 +33,4 @@ Remotes:
   alvaromc317/conquer2
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.0.0
+VignetteBuilder: knitr

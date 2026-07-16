@@ -1,0 +1,48 @@
+url: https://alvaromc317.github.io/FunQ/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [github]
+  components:
+    articles:
+      text: Articles
+      menu:
+        - text: Getting Started with FQPCA
+          href: articles/fqpca.html
+        - text: Multilevel Analysis with MFQPCA
+          href: articles/mfqpca.html
+
+reference:
+  - title: Core Methodologies
+    desc: Functions implementing main quantile PCA algorithms
+    contents:
+      - fqpca
+      - mfqpca
+      - fosqr
+      - fosqr_fqpca
+  - title: Parameter Cross-Validation
+    desc: Functions to perform k-fold cross-validation on hyperparameters
+    contents:
+      - fqpca_cv_df
+      - fqpca_cv_lambda
+      - mfqpca_cv_df
+      - fosqr_fqpca_cv_df
+  - title: S3 Methods & Plotting
+    desc: Methods to plot, fit, and predict from fitted model objects
+    contents:
+      - starts_with("fitted")
+      - starts_with("plot")
+      - starts_with("predict")
+      - starts_with("compute_variance")
+  - title: Utilities & Helper Metrics
+    desc: Internal calculations and error metrics
+    contents:
+      - create_folds
+      - train_test_split
+      - quantile_error
+      - proportion_under_quantile

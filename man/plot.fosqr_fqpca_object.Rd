@@ -9,7 +9,7 @@
 \arguments{
 \item{x}{An object output of the fosqr_fqpca function.}
 
-\item{pve}{If smaller than 1, taken as percentage of explained variability used in Yhat estimation. If greater than 1, taken as number of components  used in Yhat estimation.}
+\item{pve}{Percentage of explained variability (between 0 and 1) used to select the number of components in Yhat estimation. Set to NULL to use all components.}
 
 \item{...}{further arguments passed to or from other methods.}
 }

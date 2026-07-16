@@ -5,3 +5,7 @@
 ^\.github$
 ^coverage\.html$
 ^lib$
+^codebase_audit_report\.md$
+^additional_32_33_tests\.md$
+^docs$
+^_pkgdown\.yml$

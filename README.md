@@ -8,313 +8,150 @@
 [![License: GPL
 v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Package
-Version](https://img.shields.io/badge/version-0.1.10-blue.svg)](https://cran.r-project.org/package=yourPackageName)
+Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://cran.r-project.org/package=yourPackageName)
 [![lifecycle](https://img.shields.io/badge/lifecycle-experimental-brightgreen.svg)](https://www.tidyverse.org/lifecycle/)
 <!-- badges: end -->
 
-`FunQ` is an R package that provides methodologies for functional data
-analysis from a quantile regression perspective. It currently implements
-the Functional Quantile Principal Component Analysis (FQPCA) methodology
-explained in detail in [this
-paper](https://doi.org/10.1093/biostatistics/kxae040), which extends
-traditional Functional Principal Component Analysis (FPCA) to the
-quantile regression framework. This allows for a richer understanding of
-functional data by capturing the full curve and time-specific
-probability distributions underlying individual measurements, especially
-useful when data distributions are skewed, vary across subjects, or
-contain outliers.
+`FunQ` is an R package providing methodologies for functional data
+analysis from a quantile perspective. It implements robust Functional
+Quantile Principal Component Analysis (FQPCA) and Multilevel FQPCA
+(MFQPCA).
+
+Unlike mean-based Functional PCA, `FunQ` allows you to model functional
+curves at specific quantile levels (e.g. median or extreme quantiles).
+This is particularly useful when functional curves exhibit skewness,
+subject-specific heteroscedasticity, or outliers.
+
+## Documentation Website
+
+A complete, interactive documentation website is available at: 👉
+**<https://alvaromc317.github.io/FunQ/>**
+
+The website features:
+
+- **[Getting Started with
+  FQPCA](https://alvaromc317.github.io/FunQ/articles/fqpca.html)**: A
+  comprehensive guide on single-level functional quantile decomposition,
+  parameter selection, and plotting.
+- **[Multilevel Analysis with
+  MFQPCA](https://alvaromc317.github.io/FunQ/articles/mfqpca.html)**: A
+  detailed tutorial on handling repeated-measures or hierarchical
+  functional data.
+- **[Function Reference
+  Index](https://alvaromc317.github.io/FunQ/reference/index.html)**:
+  Detailed descriptions and arguments for all exported functions.
+
+------------------------------------------------------------------------
 
 ## Installation
 
-You can install the development version of FunQ from
-[GitHub](https://github.com/) with:
+You can install the development version of `FunQ` from GitHub:
 
 ``` r
 # install.packages("devtools")
 devtools::install_github("alvaromc317/FunQ")
 ```
 
-## Overview
+------------------------------------------------------------------------
 
-`FunQ` provides functions for implementing the Functional Quantile
-Principal Component Analysis methodology. Key features include:
+## Quick Start Example: FQPCA
 
-- Flexible Input Formats: accepts functional data as an $(I\times T)$
-  matrix, a `tf` functional vector, or a `dataframe` containing a column
-  with a `tf` functional vector (using the `data` and `colname`
-  parameters).
-- Handling Missing Data: capable of dealing with irregular time grids
-  and missing data.
-- Smoothness Control: allows control over the smoothness of the results
-  using two approaches:
-  - Spline Degrees of Freedom: Using the `splines.df` parameter to set
-    the degrees of freedom in spline basis reconstruction.
-  - Second Derivative Penalty: experimental method involving a second
-    derivative penalty on the spline coefficients by setting
-    `penalized = TRUE` and specifying `lambda.ridge`. Requires setting
-    `splines.method = "conquer"`.
+Here is a quick demonstration of applying `fqpca` at the median
+($q = 0.5$) with synthetic functional data.
 
-Additionally, the package includes functions for cross-validation of
-parameters such as `splines.df` (`cross_validation_df`) and
-`lambda.ridge` (`cross_validation_lambda`), using the quantile error as
-the reference prediction error metric (`quantile_error` function).
-
-## Example 1: basics of `fqpca`
-
-Let’s start by loading the necessary libraries:
-
-``` r
-# We use the tidy structure of the tidyfun package to deal with the functional data
-devtools::install_github("tidyfun/tidyfun")
-```
+First, load the libraries:
 
 ``` r
 library(FunQ)
-library(fda)
-library(tidyverse)
-library(tidyfun)
+library(ggplot2)
 ```
 
-We use the `tidyfun` package for handling functional data structures.
+### 1. Generating Data
 
-### Generating synthetic data
-
-We generate a synthetic dataset with 200 observations taken every 10
-minutes over a day (144 time points). The data follows the formula:
-
-$$x_i(t) = c_{i1}\text{sin}(t) + c_{i2}\text{cos}(t) + \frac{t}{50} + \varepsilon_i$$
-
-where
-
-- $c_1\sim N(0, 1)$
-- $c_2\sim N(0, 1)$
-- $\varepsilon_i\sim\chi^2(3)$
+We generate a synthetic dataset of 150 curves with 144 time points and
+20% missing observations:
 
 ``` r
 set.seed(5)
 
-n.obs = 200
-n.time = 144
+n.obs <- 150
+n.time <- 144
+Y.axis <- seq(0, 2*pi, length.out = n.time)
 
-# Generate scores
-c1.vals = rnorm(n.obs)
-c2.vals = rnorm(n.obs)
+# Principal component loadings
+pc1 <- sin(Y.axis)
+pc2 <- cos(Y.axis)
 
-# Generate pc's
-pc1 = sin(seq(0, 2*pi, length.out = n.time))
-pc2 = cos(seq(0, 2*pi, length.out = n.time))
+# Subject-specific scores
+c1.vals <- rnorm(n.obs, mean=0, sd=1)
+c2.vals <- rnorm(n.obs, mean=0, sd=0.8)
 
-# Generate data
-Y <- c1.vals * matrix(pc1, nrow = n.obs, ncol=n.time, byrow = TRUE) +
-  c2.vals * matrix(pc2, nrow = n.obs, ncol=n.time, byrow = TRUE) +
-  matrix(seq(1/n.time, 1, length.out=n.time), nrow = n.obs, ncol=n.time, byrow = TRUE)
-
-# Add noise
-Y <- Y + matrix(rchisq(n.obs * n.time, 3), nrow = n.obs)
-
-Y[1:50,] %>% tf::tfd() %>% plot(alpha=0.2)
+# Construct curves and add noise + missing values
+Y <- c1.vals %*% t(pc1) + c2.vals %*% t(pc2) + matrix(rnorm(n.obs * n.time, mean=0, sd=0.4), nrow = n.obs)
+Y[sample(n.obs * n.time, as.integer(0.2 * n.obs * n.time))] <- NA
 ```
 
-<img src="man/figures/README-unnamed-chunk-4-1.png" width="100%" />
+### 2. Fit the Model
 
-The above plot visualizes a subset of the data generated this way. To
-simulate missing data and test the method’s robustness, we introduce 50%
-missing observations:
+Fit the Functional Quantile PCA model:
 
 ``` r
-# Add missing observations
-Y[sample(n.obs*n.time, as.integer(0.5*n.obs*n.time))] <- NA
+results <- fqpca(
+  data = Y,
+  npc = 2,
+  quantile.value = 0.5,
+  periodic = FALSE,
+  splines.df = 10,
+  seed = 5
+)
 ```
 
-### Aplying `fqpca`
+### 3. Plot Loading Functions
 
-We split the data into training and testing sets:
+Use the package’s generic `plot` method to visualize the estimated
+loading functions:
 
 ``` r
-Y.train = Y[1:150,]
-Y.test = Y[151:n.obs,]
+plot(results, pve = 0.95) +
+  theme_minimal() +
+  ggtitle("FQPCA Loading Functions at Median (q = 0.5)")
 ```
 
-We then apply the `fqpca` function to decompose the data in terms of the
-median (`quantile.value = 0.5`), providing a robust alternative to
-mean-based predictions:
+<img src="man/figures/README-unnamed-chunk-5-1.png" alt="" width="100%" />
+
+### 4. Cross-Validation
+
+Use `fqpca_cv_df` to optimize the degrees of freedom parameter:
 
 ``` r
-results = fqpca(data=Y.train, npc=2, quantile.value=0.5, periodic=FALSE)
+df_grid <- c(5, 10, 15)
+cv_result <- fqpca_cv_df(
+  data = Y,
+  splines.df.grid = df_grid,
+  n.folds = 3,
+  criteria = "points",
+  periodic = FALSE,
+  seed = 5,
+  verbose.cv = FALSE
+)
 
-intercept = results$intercept
-loadings = results$loadings
-scores = results$scores
-
-# Recover Y.train based on decomposition
-Y.train.estimated = fitted(results, pve = 0.95)
+# Mean error per grid value across folds
+rowMeans(cv_result$error.matrix)
+#> [1] 0.1662699 0.1640000 0.1639919
 ```
 
-For new observations, we can compute scores using the existing loadings:
+------------------------------------------------------------------------
 
-``` r
-scores.test = predict(results, newdata=Y.test)
-Y.test.estimated = scores.test %*% t(loadings)
-```
+## Citation
 
-Plotting the computed loadings:
+If you use `FunQ` in your research, please cite the corresponding
+methodology papers:
 
-``` r
-plot(results, pve=0.95)
-```
-
-<img src="man/figures/README-unnamed-chunk-9-1.png" width="100%" />
-
-Calculating the quantile error between the reconstructed and true data:
-
-``` r
-quantile_error(Y=Y.train, Y.pred=Y.train.estimated, quantile.value=0.5)
-#> [1] 0.8855793
-```
-
-### Cross validation
-
-We perform cross-validation to optimize the `splines.df` parameter:
-
-``` r
-splines.df.grid = c(5, 10, 15, 20)
-cv_result = fqpca_cv_df(Y, splines.df.grid=splines.df.grid, n.folds=3, verbose.cv=F, periodic=F)
-cv_result$error.matrix
-#>         Fold 1    Fold 2    Fold 3
-#> [1,] 0.9325139 0.9324264 0.9284412
-#> [2,] 0.9314957 0.9301374 0.9319434
-#> [3,] 0.9333027 0.9311306 0.9347273
-#> [4,] 0.9319474 0.9328171 0.9359611
-```
-
-The dimensions of the error matrix are
-`(length(splines.df.grid), n.folds)`. We can determine the optimal
-degrees of freedom by taking the mean of each row and picking the
-minimum.
-
-``` r
-optimal_df = which.min(rowMeans(cv_result$error.matrix))
-paste0('Optimal number of degrees of freedom: ', splines.df.grid[optimal_df])
-#> [1] "Optimal number of degrees of freedom: 5"
-```
-
-## Example 2: Using penalized `fqpca`
-
-In this example, we demonstrate how to apply the second derivative
-penalty approach by setting penalized = TRUE and lambda.ridge = 0.001.
-This method is experimental but has shown promising results.
-
-``` r
-# Apply fqpca with penalization
-results_penalized <- fqpca(data = Y.train, npc = 2, quantile.value = 0.5, penalized = TRUE, lambda.ridge = 0.001, splines.method = "conquer", periodic=F)
-
-# Reconstruct the training data
-Y.train.estimated_penalized <- fitted(results_penalized, pve = 0.95)
-```
-
-The package also includes a function that allows to perform cross
-validation on the hyper-parameter controlling the effect of a second
-derivative penalty on the splines.
-
-``` r
-cv_result = fqpca_cv_lambda(Y, lambda.grid=c(0, 1e-5, 1e-3), n.folds=3, verbose.cv=F, periodic=F)
-cv_result$error.matrix
-#>         Fold 1    Fold 2    Fold 3
-#> [1,] 0.9186360 0.9292940 0.9444793
-#> [2,] 0.9190373 0.9291317 0.9457014
-#> [3,] 0.9187699 0.9285832 0.9456389
-```
-
-The dimensions of the error matrix are `(length(lambda.grid), n.folds)`.
-
-## Example 3: The Canadian Weather dataset
-
-Let’s explore the use of `FunQ` with the well-known Canadian Weather
-dataset. `FunQ` can handle:
-
-- Data matrices
-- `tf` vectors from the `tidyfun` package
-- `data.frames` containing `tf` vectors
-
-### Loading and Visualizing Data
-
-``` r
-matrix.data = t(fda::CanadianWeather$dailyAv[,,1])
-data = tibble(temperature = tf::tfd(matrix.data, arg = 1:365),
-              province = CanadianWeather$province)
-head(data)
-#> # A tibble: 6 × 2
-#>                      temperature province     
-#>                        <tfd_reg> <chr>        
-#> 1 [1]: (1,-4);(2,-3);(3,-3); ... Newfoundland 
-#> 2 [2]: (1,-4);(2,-4);(3,-5); ... Nova Scotia  
-#> 3 [3]: (1,-4);(2,-4);(3,-5); ... Nova Scotia  
-#> 4 [4]: (1,-1);(2,-2);(3,-2); ... Nova Scotia  
-#> 5 [5]: (1,-6);(2,-6);(3,-7); ... Ontario      
-#> 6 [6]: (1,-8);(2,-8);(3,-9); ... New Brunswick
-```
-
-Plotting the temperature data:
-
-``` r
-data %>% 
-  ggplot(aes(y=temperature, color=province)) + 
-  geom_spaghetti() + 
-  theme_light()
-```
-
-<img src="man/figures/README-unnamed-chunk-16-1.png" width="100%" />
-
-### Cross-Validation for `splines.df`
-
-We perform cross-validation to find the optimal `splines.df` value:
-
-``` r
-splines.df.grid = c(5, 10, 15, 20)
-cv_result = fqpca_cv_df(data=data, colname='temperature', splines.df.grid=splines.df.grid, n.folds=3, verbose.cv=F)
-optimal_df = splines.df.grid[which.min(rowMeans(cv_result$error.matrix))]
-paste0('Optimal number of degrees of freedom: ', optimal_df)
-#> [1] "Optimal number of degrees of freedom: 15"
-```
-
-### Building the Final Model
-
-Using the optimal `splines.df`, we fit the fqpca model and examine the
-explained variance:
-
-``` r
-results = fqpca(data=data$temperature, npc=10, quantile.value=0.5, splines.df=optimal_df, seed=5)
-cumsum(results$pve)
-#>  [1] 0.8879854 0.9732351 0.9921668 0.9973594 0.9983525 0.9991421 0.9995907
-#>  [8] 0.9997813 0.9999003 1.0000000
-```
-
-With 3 components, we achieve over 99% of explained variability.
-Plotting the components:
-
-``` r
-plot(results, pve = 0.99)
-```
-
-<img src="man/figures/README-unnamed-chunk-19-1.png" width="100%" />
-
-### Computing various quantile levels
-
-One of the advantages of `FunQ` is its ability to recover the
-distribution of data at different quantile levels. We can compute the
-10%, 50%, and 90% quantile curves:
-
-``` r
-m01 = fqpca(data=data$temperature, npc=10, quantile.value=0.1, splines.df=15, seed=5)
-m05 = fqpca(data=data$temperature, npc=10, quantile.value=0.5, splines.df=15, seed=5)
-m09 = fqpca(data=data$temperature, npc=10, quantile.value=0.9, splines.df=15, seed=5)
-
-Y01 = fitted(m01, pve = 0.99)
-Y05 = fitted(m05, pve = 0.99)
-Y09 = fitted(m09, pve = 0.99)
-```
-
-Now given an observation we can visualize it’s quantile curves along
-with the raw data
-
-<img src="man/figures/README-unnamed-chunk-21-1.png" width="100%" />
+- Álvaro Méndez-Civieta, Ying Wei, Keith M Diaz, Jeff Goldsmith. (2025).
+  **Functional quantile principal component analysis**. *Biostatistics*,
+  26(1), kxae040. DOI:
+  [10.1093/biostatistics/kxae040](https://doi.org/10.1093/biostatistics/kxae040)
+- Álvaro Méndez-Civieta, Ying Wei, Jeff Goldsmith. (2026). **Multilevel
+  functional quantile principal component analysis**. *Biostatistics*,
+  kxag017. DOI:
+  [10.1093/biostatistics/kxag017](https://doi.org/10.1093/biostatistics/kxag017)
